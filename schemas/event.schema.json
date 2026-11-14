@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "kind": {
+      "enum": [
+        "message",
+        "perception"
+      ]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actor": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "content": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "text"
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 131072
+              }
+            },
+            "required": [
+              "type",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "attachment"
+              },
+              "reference": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "media_type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "caption": {
+                "type": "string",
+                "maxLength": 131072
+              }
+            },
+            "required": [
+              "type",
+              "reference",
+              "media_type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "location"
+              },
+              "latitude": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            },
+            "required": [
+              "type",
+              "latitude",
+              "longitude"
+            ]
+          }
+        ]
+      }
+    },
+    "reply_to": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "context": {
+      "type": "object"
+    },
+    "extensions": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "session_id",
+    "kind",
+    "occurred_at",
+    "content"
+  ]
+}

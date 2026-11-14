@@ -1,0 +1,14 @@
+{
+  "protocol": "rp/1",
+  "id": "v1-baseline-request",
+  "method": "event.process",
+  "params": {
+    "event": {
+      "id": "v1-baseline-event",
+      "session_id": "v1-baseline-session",
+      "kind": "message",
+      "occurred_at": "2026-01-01T00:00:00Z",
+      "content": [{"type": "text", "text": "Synthetic compatibility fixture."}]
+    }
+  }
+}

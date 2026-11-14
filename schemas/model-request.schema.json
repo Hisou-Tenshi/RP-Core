@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "messages": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 131072
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ]
+      }
+    },
+    "response_schema": {
+      "type": "object"
+    },
+    "tools": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 131072
+          },
+          "mode": {
+            "enum": [
+              "read",
+              "deferred"
+            ]
+          },
+          "input_schema": {
+            "type": [
+              "object",
+              "boolean"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "mode",
+          "input_schema"
+        ]
+      }
+    }
+  },
+  "required": [
+    "purpose",
+    "messages",
+    "response_schema",
+    "tools"
+  ]
+}

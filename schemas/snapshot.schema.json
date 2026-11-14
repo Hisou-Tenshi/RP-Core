@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "character": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "instructions": {
+          "type": "string",
+          "maxLength": 131072
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "instructions"
+      ]
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 131072
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ]
+      },
+      "maxItems": 1000
+    },
+    "memories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 131072
+      },
+      "maxItems": 128
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 131072
+      },
+      "maxItems": 128
+    },
+    "relationship": {
+      "type": "string",
+      "maxLength": 131072
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 131072
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 131072
+          },
+          "mode": {
+            "enum": [
+              "read",
+              "deferred"
+            ]
+          },
+          "input_schema": {
+            "type": [
+              "object",
+              "boolean"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "mode",
+          "input_schema"
+        ]
+      },
+      "maxItems": 64
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "two_stage": {
+          "type": "boolean"
+        },
+        "allow_silence": {
+          "type": "boolean"
+        },
+        "max_tool_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "history_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "max_messages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "max_message_chars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000
+        }
+      },
+      "required": []
+    },
+    "extensions": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "revision",
+    "character"
+  ]
+}

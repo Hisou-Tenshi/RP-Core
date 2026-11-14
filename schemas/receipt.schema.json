@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "status": {
+      "enum": [
+        "replied",
+        "silent",
+        "maintained"
+      ]
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "kind": {
+            "const": "message"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 131072
+          },
+          "reply_to": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "text"
+        ]
+      },
+      "maxItems": 20
+    },
+    "effects_queued": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "event_id",
+    "session_id",
+    "status",
+    "actions",
+    "effects_queued",
+    "revision"
+  ]
+}

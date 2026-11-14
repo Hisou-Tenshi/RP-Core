@@ -1,0 +1,77 @@
+name: Run private RP instance
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: Opaque event ID only; never put message content or secrets here
+        required: false
+        type: string
+  repository_dispatch:
+    types: [rp_event]
+  schedule:
+    - cron: '*/15 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: private-rp-instance
+  cancel-in-progress: false
+jobs:
+  run:
+    if: ${{ vars.RP_INSTANCE_REPOSITORY != '' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout trusted public framework
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          path: framework
+          persist-credentials: false
+      - name: Install locked framework dependencies
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: '0.13.6'
+          python-version: '3.12'
+          enable-cache: false
+      - run: uv sync --locked
+        working-directory: framework
+      - name: Verify instance repository is private
+        env:
+          GH_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN }}
+          RP_INSTANCE_REPOSITORY: ${{ vars.RP_INSTANCE_REPOSITORY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "$RP_INSTANCE_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo '::error::Invalid instance repository setting.'
+            exit 1
+          fi
+          if ! private="$(gh api "repos/$RP_INSTANCE_REPOSITORY" --jq .private 2>/dev/null)"; then
+            echo '::error::Cannot verify instance repository visibility.'
+            exit 1
+          fi
+          if [ "$private" != true ]; then
+            echo '::error::The instance repository must be private.'
+            exit 1
+          fi
+      - name: Checkout private instance
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: ${{ vars.RP_INSTANCE_REPOSITORY }}
+          ref: ${{ vars.RP_INSTANCE_REF || 'main' }}
+          token: ${{ secrets.RP_INSTANCE_TOKEN }}
+          path: instance
+          fetch-depth: 0
+      - name: Process private queue without publishing payloads
+        working-directory: framework
+        env:
+          RP_ADAPTER_SECRETS: ${{ secrets.RP_ADAPTER_SECRETS }}
+          RP_EVENT_ID: ${{ inputs.event_id || github.event.client_payload.event_id || '' }}
+          GIT_TERMINAL_PROMPT: '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/instance"
+          args=(--manifest "$GITHUB_WORKSPACE/instance/instance.json" --require-remote-persistence)
+          if [ -n "$RP_EVENT_ID" ]; then args+=(--event-id "$RP_EVENT_ID"); fi
+          uv run --no-sync rp-core run-instance "${args[@]}"
+      # No runtime artifacts, public releases, payload echo, or instance caching.

@@ -1,0 +1,8 @@
+{
+  "event_id": "v1-baseline-event",
+  "session_id": "v1-baseline-session",
+  "status": "silent",
+  "actions": [],
+  "effects_queued": 0,
+  "revision": "an-opaque-revision-not-an-integer"
+}

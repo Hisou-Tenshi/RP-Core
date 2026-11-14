@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "const": "rp/1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "method": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "params": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "protocol",
+    "id",
+    "method",
+    "params"
+  ]
+}
