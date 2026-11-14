@@ -1,6 +1,6 @@
 # rp/1 标准 I/O 协议
 
-公开核心与私密适配器的标准边界。JSON Schema 位于 `schemas/`；也可运行 `rp-core schema request` 导出。采用 JSON Schema Draft 2020-12。
+公开编排与驱动的标准边界。0.2 默认部署中，模型、平台、存储与兼容驱动的实现均在公开仓；本文的适配器不代表需要私密仓代码。stdio 是可选接口，纯数据角色仓使用内置 PublicRuntime。JSON Schema 位于 `schemas/`；也可运行 `rp-core schema request` 导出。采用 JSON Schema Draft 2020-12。
 
 ## 传输
 
@@ -60,7 +60,7 @@ kind 为 message 或 perception。时间包含时区。content 支持 text；att
 
 status 为 replied、silent、maintained。沉默是成功状态，actions 为空，日记或调度副作用仍可提交。核心创建文本 message；贴纸等能力可声明为私密 deferred 工具，由适配器转成持久任务或自己的发件箱。
 
-## 私密适配器方法
+## 公开内置驱动方法（可选 stdio）
 
 ### bridge.describe
 
@@ -82,7 +82,7 @@ policy 可配置 two_stage、allow_silence、history_limit、max_tool_rounds、m
 
 输入 purpose、messages、response_schema、tools。purpose 为 reply.plan、reply.render、maintenance.summarize、maintenance.compact、maintenance.reflect。messages 使用 role/content，不采用厂商 SDK 类型。
 
-输出 `{output:{...},tool_calls:[]}`；需要工具时返回 `{tool_calls:[{id,name,arguments}]}`。私密端转换原生结构化输出与工具调用，核心验证结果。它是模型网关协议，不要求厂商直接支持 rp/1。凭证、模型名、重试、容灾与多媒体解析属于私密实现。
+输出 `{output:{...},tool_calls:[]}`；需要工具时返回 `{tool_calls:[{id,name,arguments}]}`。公开模型驱动转换原生结构化输出与工具调用，核心验证结果。它是模型网关协议，不要求厂商直接支持 rp/1。模型名、路由、重试与容灾放公开运行配置；凭证单独从 Secrets 注入，个人上下文来自数据仓。
 
 ### tool.execute 与延迟工具
 
@@ -106,7 +106,7 @@ read：立即调用 tool.execute，输入 session_id、event_id、id、name、ar
 
 run-instance 还要求 runtime.next_event、runtime.finalize，可选 outbox.flush。
 
-- runtime.next_event：输入 event_id（字符串或 null）；返回 event，可另带 method、job、keep_last；无任务返回 event=null。私密端维护持久队列。
+- runtime.next_event：输入 event_id（字符串或 null）；返回 event，可另带 method、job、keep_last；无任务返回 event=null。公开数据驱动维护位于私密仓的持久队列。
 - runtime.finalize：输入 phase（before_delivery/after_delivery/failure）、success；成功返回 durable=true、scope=local/remote。before_delivery 先持久化待发操作，Actions 强制要求 remote。failure 尽力保存现场，不能假报成功。
 - outbox.flush：只投递已提交操作，以 action.id 去重，不重新生成回复。参考实现仅导出文件。
 

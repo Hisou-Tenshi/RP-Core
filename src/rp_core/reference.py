@@ -73,12 +73,14 @@ TOOLS = [
 
 
 class SQLiteAdapter:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, config: dict | None = None):
         self.root = root.resolve()
-        self.state_dir = self.root / "state"
+        self.config = (
+            config if config is not None else loads((self.root / "adapter.json").read_bytes())
+        )
+        self.state_dir = self.root / self.config.get("state_directory", "state")
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.database = self.state_dir / "state.sqlite"
-        self.config = loads((self.root / "adapter.json").read_bytes())
         self.model: JsonlClient | None = None
         with self.connection() as db:
             db.executescript("""
@@ -287,7 +289,7 @@ class SQLiteAdapter:
 
     def next_event(self, params: dict) -> dict:
         selected = params.get("event_id")
-        queue = self.root / "events.jsonl"
+        queue = self.root / self.config.get("events_file", "events.jsonl")
         if queue.is_file():
             with queue.open("rb") as stream, self.connection() as db:
                 while line := stream.readline(MAX_FRAME_BYTES + 1):
@@ -342,7 +344,7 @@ class SQLiteAdapter:
                 stream.flush()
                 os.fsync(stream.fileno())
             temporary.replace(self.state_dir / "outbox.jsonl")
-            db.execute("UPDATE outbox SET exported=1")
+            db.execute("UPDATE outbox SET exported=1 WHERE exported=0")
         return {"exported": len(rows), "delivery": "file-export-only"}
 
     def _git(self, *args: str, allow_difference: bool = False) -> subprocess.CompletedProcess:

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "allowed_user_ids": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": [
+          "integer",
+          "string"
+        ]
+      }
+    },
+    "telegram": {
+      "type": "object",
+      "properties": {
+        "chat_id": {
+          "type": [
+            "integer",
+            "string",
+            "null"
+          ]
+        },
+        "allowed_chat_ids": {
+          "type": "array",
+          "items": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  "required": [
+    "allowed_user_ids"
+  ]
+}

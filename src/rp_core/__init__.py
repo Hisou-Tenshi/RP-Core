@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-"""RP-Core: public orchestration, privately owned integration and state."""
+"""RP-Core: one shared public runtime, data-only private characters."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 PROTOCOL = "rp/1"

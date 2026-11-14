@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "driver": {
+      "enum": [
+        "native",
+        "tenshi-v1"
+      ]
+    },
+    "files": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "identity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "events": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "inbox": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "history": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "knowledge": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "memory": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "relationship": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": []
+    },
+    "session_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "driver"
+  ]
+}

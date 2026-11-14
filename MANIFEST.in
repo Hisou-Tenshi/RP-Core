@@ -2,5 +2,8 @@ include LICENSE NOTICE README.md uv.lock
 recursive-include docs *.md
 recursive-include schemas *.json
 recursive-include scripts *.py
-recursive-include tests *.py *.json
+recursive-include tests *.py *.json *.mjs
 recursive-include .github *.yml
+recursive-include config *.json
+recursive-include examples *.json
+recursive-include integrations *.mjs

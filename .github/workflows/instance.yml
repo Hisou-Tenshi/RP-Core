@@ -1,9 +1,14 @@
-name: Run private RP instance
+name: Run private characters
 on:
   workflow_dispatch:
     inputs:
+      instance_id:
+        description: Registered public instance ID, or all
+        required: true
+        default: tenshi
+        type: string
       event_id:
-        description: Opaque event ID only; never put message content or secrets here
+        description: Opaque event ID only; never put private content here
         required: false
         type: string
   repository_dispatch:
@@ -12,66 +17,87 @@ on:
     - cron: '*/15 * * * *'
 permissions:
   contents: read
-concurrency:
-  group: private-rp-instance
-  cancel-in-progress: false
 jobs:
+  plan:
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.registry.outputs.matrix }}
+      has_instances: ${{ steps.registry.outputs.has_instances }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Resolve registered and configured instances
+        id: registry
+        env:
+          RP_REPOSITORY_VARIABLES: ${{ toJSON(vars) }}
+          RP_SELECTED_INSTANCE: ${{ inputs.instance_id || github.event.client_payload.instance_id || 'all' }}
+        run: python3 scripts/resolve_instances.py --instance "$RP_SELECTED_INSTANCE" --github-output "$GITHUB_OUTPUT"
   run:
-    if: ${{ vars.RP_INSTANCE_REPOSITORY != '' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    needs: plan
+    if: ${{ needs.plan.outputs.has_instances == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    environment: ${{ matrix.environment }}
+    concurrency:
+      group: rp-character-${{ matrix.id }}
+      cancel-in-progress: false
     steps:
-      - name: Checkout trusted public framework
+      - name: Checkout shared public framework
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           path: framework
           persist-credentials: false
-      - name: Install locked framework dependencies
-        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
         with:
           version: '0.13.6'
           python-version: '3.12'
           enable-cache: false
       - run: uv sync --locked
         working-directory: framework
-      - name: Verify instance repository is private
+      - name: Verify data repository is private
         env:
           GH_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN }}
-          RP_INSTANCE_REPOSITORY: ${{ vars.RP_INSTANCE_REPOSITORY }}
+          RP_DATA_REPOSITORY: ${{ vars[matrix.repository_variable] }}
         shell: bash
         run: |
           set -euo pipefail
-          if ! [[ "$RP_INSTANCE_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
-            echo '::error::Invalid instance repository setting.'
-            exit 1
+          if ! [[ "$RP_DATA_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo '::error::Invalid data repository setting.'; exit 1
           fi
-          if ! private="$(gh api "repos/$RP_INSTANCE_REPOSITORY" --jq .private 2>/dev/null)"; then
-            echo '::error::Cannot verify instance repository visibility.'
-            exit 1
+          if ! private="$(gh api "repos/$RP_DATA_REPOSITORY" --jq .private 2>/dev/null)"; then
+            echo '::error::Cannot verify data repository visibility.'; exit 1
           fi
           if [ "$private" != true ]; then
-            echo '::error::The instance repository must be private.'
-            exit 1
+            echo '::error::The data repository must be private.'; exit 1
           fi
-      - name: Checkout private instance
+      - name: Checkout character data
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          repository: ${{ vars.RP_INSTANCE_REPOSITORY }}
-          ref: ${{ vars.RP_INSTANCE_REF || 'main' }}
+          repository: ${{ vars[matrix.repository_variable] }}
           token: ${{ secrets.RP_INSTANCE_TOKEN }}
-          path: instance
+          path: character-data
+          ref: main
           fetch-depth: 0
-      - name: Process private queue without publishing payloads
+      - name: Run only public code against private data
         working-directory: framework
         env:
-          RP_ADAPTER_SECRETS: ${{ secrets.RP_ADAPTER_SECRETS }}
+          RP_MODEL_API_KEY: ${{ secrets.RP_MODEL_API_KEY }}
+          RP_MODEL_BASE_URL: ${{ secrets.RP_MODEL_BASE_URL }}
+          RP_FALLBACK_API_KEY: ${{ secrets.RP_FALLBACK_API_KEY }}
+          RP_TELEGRAM_TOKEN: ${{ secrets.RP_TELEGRAM_TOKEN }}
           RP_EVENT_ID: ${{ inputs.event_id || github.event.client_payload.event_id || '' }}
+          RP_RUNTIME_CONFIG: ${{ matrix.runtime }}
           GIT_TERMINAL_PROMPT: '0'
         shell: bash
         run: |
           set -euo pipefail
-          git config --global --add safe.directory "$GITHUB_WORKSPACE/instance"
-          args=(--manifest "$GITHUB_WORKSPACE/instance/instance.json" --require-remote-persistence)
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/character-data"
+          args=(--config "$RP_RUNTIME_CONFIG" --data-root "$GITHUB_WORKSPACE/character-data" --require-remote-persistence)
           if [ -n "$RP_EVENT_ID" ]; then args+=(--event-id "$RP_EVENT_ID"); fi
-          uv run --no-sync rp-core run-instance "${args[@]}"
-      # No runtime artifacts, public releases, payload echo, or instance caching.
+          uv run --no-sync rp-core run "${args[@]}"
+      # No private scripts, runtime artifacts, public releases, payload echo or cache.

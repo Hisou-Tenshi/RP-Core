@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "driver": "tenshi-v1",
+  "files": {
+    "character": "character.json", "identity": "identity.json", "state": ".rp",
+    "history": "data/tenshi_log.json", "notes": "Tenshi.json",
+    "knowledge": "data/knowledge_base.json", "memory": "data/tenshi_memory.db"
+  }
+}

@@ -193,7 +193,10 @@ class Engine:
         if all_history:
             limit = len(snapshot.get("history", []))
         if limit:
-            messages.extend(deepcopy(snapshot.get("history", [])[-limit:]))
+            messages.extend(
+                {"role": item["role"], "content": item["content"]}
+                for item in snapshot.get("history", [])[-limit:]
+            )
         context = {
             key: snapshot.get(key, default)
             for key, default in [
@@ -281,8 +284,16 @@ class Engine:
                 observations.append(
                     {"tool_call_id": call["id"], "name": call["name"], "result": observed}
                 )
-            messages.append({"role": "assistant", "content": dumps({"tool_calls": calls})})
-            messages.append({"role": "user", "content": dumps({"tool_results": observations})})
+            messages.append(
+                {"role": "assistant", "content": dumps({"tool_calls": calls}), "tool_calls": calls}
+            )
+            messages.append(
+                {
+                    "role": "user",
+                    "content": dumps({"tool_results": observations}),
+                    "tool_results": observations,
+                }
+            )
             all_observations.extend(observations)
         raise AssertionError("unreachable")
 

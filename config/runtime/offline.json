@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "models": {"providers": {"demo": {"driver": "demo"}}, "routes": {"default": ["demo"]}},
+  "policy": {"two_stage": true, "max_tool_rounds": 4, "history_limit": 24},
+  "ingress": {"driver": "none"},
+  "delivery": {"driver": "file"},
+  "persistence": {"driver": "local"},
+  "max_events": 25
+}

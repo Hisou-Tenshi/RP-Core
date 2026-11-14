@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "two_stage": {
+          "type": "boolean"
+        },
+        "allow_silence": {
+          "type": "boolean"
+        },
+        "max_tool_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "history_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "max_messages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "max_message_chars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000
+        }
+      },
+      "required": []
+    },
+    "models": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "driver": {
+                "enum": [
+                  "demo",
+                  "chat-completions"
+                ]
+              },
+              "base_url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "base_url_env": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "api_key_env": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "timeout_seconds": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 180
+              },
+              "attempts": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "parameters": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "driver"
+            ]
+          }
+        },
+        "routes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        }
+      },
+      "required": [
+        "providers",
+        "routes"
+      ]
+    },
+    "delivery": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "enum": [
+            "file",
+            "telegram"
+          ]
+        },
+        "token_env": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "api_base": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "driver"
+      ]
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "enum": [
+            "local",
+            "git"
+          ]
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "driver"
+      ]
+    },
+    "max_events": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "enum": [
+            "none",
+            "telegram-poll"
+          ]
+        },
+        "token_env": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "api_base": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "driver"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "models",
+    "delivery",
+    "persistence"
+  ]
+}

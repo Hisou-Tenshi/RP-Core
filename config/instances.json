@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "instances": [
+    {"id": "tenshi", "repository_variable": "RP_TENSHI_REPOSITORY", "environment": "tenshi", "runtime": "config/runtime/default.json"}
+  ]
+}

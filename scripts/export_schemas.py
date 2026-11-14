@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
+from rp_core import settings  # noqa: F401
 from rp_core.protocol import SCHEMAS
 
 

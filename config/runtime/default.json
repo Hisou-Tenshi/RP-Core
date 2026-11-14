@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "models": {
+    "providers": {
+      "primary": {"driver": "chat-completions", "base_url": "https://openrouter.ai/api/v1", "model": "anthropic/claude-sonnet-4.5", "api_key_env": "RP_MODEL_API_KEY", "timeout_seconds": 90, "attempts": 2, "parameters": {"max_tokens": 2048, "temperature": 0.8}},
+      "fast": {"driver": "chat-completions", "base_url": "https://openrouter.ai/api/v1", "model": "google/gemini-2.5-flash", "api_key_env": "RP_MODEL_API_KEY", "timeout_seconds": 60, "attempts": 2, "parameters": {"max_tokens": 2048, "temperature": 0.7}}
+    },
+    "routes": {"default": ["primary", "fast"], "reply.plan": ["fast", "primary"], "reply.render": ["primary", "fast"], "maintenance.summarize": ["fast", "primary"], "maintenance.compact": ["fast", "primary"], "maintenance.reflect": ["primary", "fast"]}
+  },
+  "policy": {"two_stage": true, "allow_silence": true, "max_tool_rounds": 4, "history_limit": 24, "max_messages": 8, "max_message_chars": 4000},
+  "ingress": {"driver": "telegram-poll", "token_env": "RP_TELEGRAM_TOKEN"},
+  "delivery": {"driver": "telegram", "token_env": "RP_TELEGRAM_TOKEN"},
+  "persistence": {"driver": "git", "branch": "main"},
+  "max_events": 25
+}

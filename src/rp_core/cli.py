@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Callable
-from contextlib import suppress
 from pathlib import Path
 from typing import BinaryIO
 
@@ -23,6 +22,8 @@ from rp_core.protocol import (
     response,
     validate,
 )
+from rp_core.runner import process_queue
+from rp_core.settings import load_io
 from rp_core.transport import JsonlClient
 
 
@@ -95,54 +96,12 @@ def run_instance(
     manifest_path: Path, event_id: str | None = None, *, require_remote: bool = False
 ) -> dict:
     adapter, manifest = open_adapter(manifest_path)
-    counts = {"protocol": PROTOCOL, "processed": 0, "replayed": 0}
     with adapter:
-        engine = Engine(adapter)
-        declared = engine.negotiate()
-        if not {"runtime.next_event", "runtime.finalize"}.issubset(declared["methods"]):
-            raise RPCError("invalid_adapter", "Batch mode requires the runtime adapter methods.")
-        try:
-            for _ in range(manifest.get("max_events", 25)):
-                item = adapter.call("runtime.next_event", {"event_id": event_id})
-                if item.get("event") is None:
-                    break
-                method = item.get("method", "event.process")
-                if method not in ("event.process", "maintenance.run"):
-                    raise RPCError(
-                        "invalid_adapter_response", "Queue returned an unsupported operation."
-                    )
-                result = engine.handle(
-                    method, {key: value for key, value in item.items() if key != "method"}
-                )
-                counts["processed"] += 1
-                counts["replayed"] += int(result.get("replayed", False))
-                if event_id is not None:
-                    break
-            # Persist pending actions before any externally visible delivery.
-            finalized = adapter.call(
-                "runtime.finalize", {"phase": "before_delivery", "success": True}
-            )
-            _check_durability(finalized, require_remote)
-            if "outbox.flush" in declared["methods"]:
-                adapter.call("outbox.flush", {})
-            finalized = adapter.call(
-                "runtime.finalize", {"phase": "after_delivery", "success": True}
-            )
-            _check_durability(finalized, require_remote)
-        except Exception:
-            # Do not log a secondary private-adapter error over the original failure.
-            with suppress(Exception):
-                adapter.call("runtime.finalize", {"phase": "failure", "success": False})
-            raise
-    return counts
-
-
-def _check_durability(result: dict, require_remote: bool) -> None:
-    if result.get("durable") is not True or (require_remote and result.get("scope") != "remote"):
-        raise RPCError(
-            "persistence_unavailable",
-            "Adapter has not confirmed the required persistence.",
-            retryable=True,
+        return process_queue(
+            adapter,
+            max_events=manifest.get("max_events", 25),
+            event_id=event_id,
+            require_remote=require_remote,
         )
 
 
@@ -158,10 +117,25 @@ def main(argv: list[str] | None = None) -> int:
         if command == "run-instance":
             child.add_argument("--event-id")
             child.add_argument("--require-remote-persistence", action="store_true")
+    runtime = commands.add_parser(
+        "run", help="Run public logic against a data-only private repository"
+    )
+    runtime.add_argument("--data-root", type=Path, required=True)
+    runtime.add_argument("--config", type=Path, required=True)
+    runtime.add_argument("--io", type=Path)
+    runtime.add_argument("--event-id")
+    runtime.add_argument("--require-remote-persistence", action="store_true")
+    inspect = commands.add_parser(
+        "inspect-data", help="Validate I/O paths without creating or migrating state"
+    )
+    inspect.add_argument("--data-root", type=Path, required=True)
+    inspect.add_argument("--io", type=Path)
     initialize = commands.add_parser(
         "init-instance", help="Create a synthetic offline private-instance example"
     )
     initialize.add_argument("--path", type=Path, required=True)
+    initialize.add_argument("--demo-event", action="store_true")
+    initialize.add_argument("--driver", choices=["native", "tenshi-v1"], default="native")
     commands.add_parser("demo-model", help="Run the offline scripted model; not a live LLM")
     args = parser.parse_args(argv)
     try:
@@ -177,10 +151,27 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "init-instance":
-            from rp_core.demo import initialize_instance
+            from rp_core.data_init import initialize_data
 
-            initialize_instance(args.path)
-            print(dumps({"initialized": True, "mode": "offline-demo"}))
+            initialize_data(args.path, demo_event=args.demo_event, driver=args.driver)
+            print(dumps({"initialized": True, "mode": "data-only"}))
+        elif args.command == "run":
+            from rp_core.runtime import run_data
+
+            print(
+                dumps(
+                    run_data(
+                        args.data_root,
+                        args.config,
+                        io_path=args.io,
+                        event_id=args.event_id,
+                        require_remote=args.require_remote_persistence,
+                    )
+                )
+            )
+        elif args.command == "inspect-data":
+            io = load_io(args.data_root, args.io)
+            print(dumps({"driver": io["driver"], "bindings_valid": True, "modified": False}))
         elif args.command == "demo-model":
             from rp_core.demo import model_handler
 
