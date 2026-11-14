@@ -211,6 +211,12 @@ def test_workflow_contracts_and_pinned_actions():
         workflow = yaml.safe_load(path.read_text())
         assert workflow["permissions"] == {"contents": "read"}
         for job in workflow["jobs"].values():
+            if job.get("permissions"):
+                assert path.name == "keepalive.yml"
+                assert job["permissions"] == {"contents": "write"}
+                assert "vars.RP_LIVE_ENABLED == 'true'" in job["if"]
+                assert ".github/activity.json" in path.read_text()
+                assert "DATA_REPOSITORY" not in path.read_text()
             for step in job.get("steps", []):
                 if "uses" in step:
                     revision = step["uses"].split("@")[1]

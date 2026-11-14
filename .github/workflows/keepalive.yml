@@ -4,12 +4,14 @@ on:
   schedule:
     - cron: '37 0 1 * *'
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: rp-public-keepalive
   cancel-in-progress: false
 jobs:
   keepalive:
+    permissions:
+      contents: write
     if: ${{ vars.RP_LIVE_ENABLED == 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

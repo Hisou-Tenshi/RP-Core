@@ -1622,7 +1622,7 @@ def _format_project_tree_and_purpose(max_depth: int = 3) -> str:
     lines.append(f"Project root: {base_dir}")
     lines.append("")
 
-    for cur, dirs, files in os.walk(base_dir):
+    for cur, dirs, files in os.walk(base_dir, followlinks=True):
         rel = os.path.relpath(cur, base_dir)
         depth = 0 if rel == "." else rel.count(os.sep) + 1
         if depth > max_depth:

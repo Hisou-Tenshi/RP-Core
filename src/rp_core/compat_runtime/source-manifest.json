@@ -369,10 +369,11 @@
     {
       "path": "src/tenshi_reply.py",
       "source_sha256": "61ad9ba8a197620394acc636e878490080090537f75eb3284b15195436c25d01",
-      "published_sha256": "047b4b820bf5ac0197e9d52bc6c29272e8683841c0ee1876644db685d817170d",
+      "published_sha256": "b3396eaf1f0b1ad97f0c995d1a751b5378d93be0deb37037ba04ce6f82a04bc5",
       "functions": 177,
-      "unchanged_functions": 175,
+      "unchanged_functions": 174,
       "changed_functions": [
+        "_format_project_tree_and_purpose",
         "read_config_file",
         "_main_impl"
       ]

@@ -120,6 +120,8 @@ def import_runtime(source: Path, target: Path):
             end = text.index("_claude_key =", start)
             text = text[:start] + 'PROJECT_ROOT = os.environ["RP_RUNTIME_ROOT"]\n\n' + text[end:]
         elif path.name in ("tenshi_reply.py", "log_update.py"):
+            if path.name == "tenshi_reply.py":
+                text = text.replace("os.walk(base_dir)", "os.walk(base_dir, followlinks=True)")
             text = text.replace(
                 "load_dotenv()", "None  # Environment is supplied explicitly by the public host."
             )

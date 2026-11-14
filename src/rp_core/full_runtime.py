@@ -159,6 +159,14 @@ def view(root: Path):
             (workspace / name).symlink_to(root / name, target_is_directory=True)
         for name in ("src", "scripts", "skills"):
             (workspace / name).symlink_to(CODE / name, target_is_directory=True)
+        public_root = Path(__file__).resolve().parents[2]
+        for name in ("README.md", "LICENSE", "NOTICE", "docs", "config", ".github"):
+            source = public_root / name
+            if source.exists():
+                (workspace / name).symlink_to(source, target_is_directory=source.is_dir())
+        for name in ("character.json", "io.json"):
+            if (root / name).exists():
+                (workspace / name).symlink_to(root / name)
         note = root / "Tenshi.json"
         if not note.exists():
             write_json(note, [])
