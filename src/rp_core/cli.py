@@ -108,6 +108,32 @@ def run_instance(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="RP-Core: public engine, private instance I/O")
     commands = parser.add_subparsers(dest="command", required=True)
+    full = commands.add_parser("full", help="Complete public compatibility runtime")
+    full.add_argument("--data-root", type=Path)
+    full.add_argument(
+        "--task",
+        choices=[
+            "preflight",
+            "prepare",
+            "shadow",
+            "selfcheck",
+            "probe",
+            "reply",
+            "perception",
+            "force-perception",
+            "summary",
+            "archive",
+            "cleanup",
+            "merge-staging",
+        ],
+        default="preflight",
+    )
+    full.add_argument("--shadow-task", choices=["selfcheck", "probe", "reply"], default="selfcheck")
+    full.add_argument("--persist", action="store_true")
+    full.add_argument(
+        "--payload-file", type=Path, help="Private JSON payload for a single full-runtime task"
+    )
+    full.add_argument("--branch", default="main")
     commands.add_parser("capabilities", help="Print supported core capabilities")
     schema = commands.add_parser("schema", help="Print a JSON Schema contract")
     schema.add_argument("name", choices=sorted(SCHEMAS))
@@ -139,7 +165,33 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("demo-model", help="Run the offline scripted model; not a live LLM")
     args = parser.parse_args(argv)
     try:
-        if args.command == "capabilities":
+        if args.command == "full":
+            from rp_core.full_runtime import preflight, prepare, synthetic_shadow
+            from rp_core.full_service import execute, persist
+
+            if args.task == "shadow":
+                result = synthetic_shadow(task=args.shadow_task)
+            elif args.data_root is None:
+                raise RPCError("invalid_params", "This task requires --data-root.")
+            elif args.task == "preflight":
+                result = preflight(args.data_root)
+            elif args.task == "prepare":
+                result = prepare(args.data_root)
+                if args.persist:
+                    persist(args.data_root.resolve(), args.branch)
+            elif args.task == "merge-staging":
+                from rp_core.full_service import merge_staging
+
+                result = merge_staging(args.data_root)
+            else:
+                from rp_core.settings import read_json
+
+                payload = read_json(args.payload_file) if args.payload_file else {}
+                result = execute(
+                    args.data_root, args.task, payload, remote=args.persist, branch=args.branch
+                )
+            print(dumps(result))
+        elif args.command == "capabilities":
             print(dumps(Engine.capabilities()))
         elif args.command == "schema":
             print(

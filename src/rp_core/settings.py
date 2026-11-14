@@ -45,7 +45,7 @@ PROVIDER_SCHEMA = obj(
     },
     ("driver",),
 )
-RUNTIME_SCHEMA = obj(
+NATIVE_RUNTIME_SCHEMA = obj(
     {
         "schema_version": {"const": 1},
         "policy": SCHEMAS["snapshot"]["properties"]["policy"],
@@ -107,6 +107,23 @@ IDENTITY_SCHEMA = obj(
     },
     ("allowed_user_ids",),
 )
+FULL_RUNTIME_SCHEMA = obj(
+    {
+        "schema_version": {"const": 1},
+        "engine": {"const": "full"},
+        "persistence": obj(
+            {"driver": {"enum": ["local", "git"]}, "branch": IDENTIFIER}, ("driver",)
+        ),
+        "max_events": {"type": "integer", "minimum": 1, "maximum": 100},
+        "maintenance_seconds": {
+            "type": "object",
+            "propertyNames": {"enum": ["perception", "summary", "archive", "cleanup", "probe"]},
+            "additionalProperties": {"type": "integer", "minimum": 60},
+        },
+    },
+    ("schema_version", "engine", "persistence"),
+)
+RUNTIME_SCHEMA = {"anyOf": [NATIVE_RUNTIME_SCHEMA, FULL_RUNTIME_SCHEMA]}
 SCHEMAS.update({"data-io": IO_SCHEMA, "runtime": RUNTIME_SCHEMA, "identity": IDENTITY_SCHEMA})
 DEFAULT_FILES = {
     "character": "character.json",
@@ -179,6 +196,8 @@ def load_runtime(path: Path, _seen: tuple = ()) -> dict:
 
         config = merge(base, {key: value for key, value in config.items() if key != "extends"})
     validate(config, RUNTIME_SCHEMA, code="invalid_configuration")
+    if config.get("engine") == "full":
+        return config
     providers = config["models"]["providers"]
     if "default" not in config["models"]["routes"]:
         raise RPCError("invalid_configuration", "A default model route is required.")

@@ -19,7 +19,7 @@ permissions:
   contents: read
 jobs:
   plan:
-    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    if: ${{ vars.RP_LIVE_ENABLED == 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.registry.outputs.matrix }}
@@ -31,10 +31,53 @@ jobs:
       - name: Resolve registered and configured instances
         id: registry
         env:
+          RP_DEFAULT_REPO_AVAILABLE: ${{ secrets.GH_REPO != '' }}
           RP_REPOSITORY_VARIABLES: ${{ toJSON(vars) }}
           RP_SELECTED_INSTANCE: ${{ inputs.instance_id || github.event.client_payload.instance_id || 'all' }}
         run: python3 scripts/resolve_instances.py --instance "$RP_SELECTED_INSTANCE" --github-output "$GITHUB_OUTPUT"
   run:
+    env:
+      ADMIN_ID: ${{ secrets.ADMIN_ID }}
+      AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      CLAUDE_PROXY_BASE_URL: ${{ secrets.CLAUDE_PROXY_BASE_URL }}
+      CLAUDE_PROXY_KEY: ${{ secrets.CLAUDE_PROXY_KEY }}
+      CLAUDE_PROXY_KEY_2: ${{ secrets.CLAUDE_PROXY_KEY_2 }}
+      CLAUDE_PROXY_KEY_BASE: ${{ secrets.CLAUDE_PROXY_KEY_BASE }}
+      CLAUDE_PROXY_KEY_MAX: ${{ secrets.CLAUDE_PROXY_KEY_MAX }}
+      CLAUDE_PROXY_KEY_PRIME: ${{ secrets.CLAUDE_PROXY_KEY_PRIME }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      GAODE_API_KEY: ${{ secrets.GAODE_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_PROXY2_KEY: ${{ secrets.GEMINI_PROXY2_KEY }}
+      GEMINI_PROXY_KEY: ${{ secrets.GEMINI_PROXY_KEY }}
+      GH_REPO: ${{ secrets.GH_REPO }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+      GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
+      GPT_PROXY2_KEY: ${{ secrets.GPT_PROXY2_KEY }}
+      GPT_PROXY_KEY: ${{ secrets.GPT_PROXY_KEY }}
+      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+      GROK_PROXY_KEY: ${{ secrets.GROK_PROXY_KEY }}
+      KEEPALIVE_TOKEN: ${{ secrets.KEEPALIVE_TOKEN }}
+      MAGMAROUTER_API_KEY: ${{ secrets.MAGMAROUTER_API_KEY }}
+      MASTER_KEY_SOURCE: ${{ secrets.MASTER_KEY_SOURCE }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+      PERCEPTION_SCHEDULE_SYNC_SECRET: ${{ secrets.PERCEPTION_SCHEDULE_SYNC_SECRET }}
+      PERCEPTION_SCHEDULE_SYNC_URL: ${{ secrets.PERCEPTION_SCHEDULE_SYNC_URL }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      RP_FALLBACK_API_KEY: ${{ secrets.RP_FALLBACK_API_KEY }}
+      RP_INSTANCE_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN || secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
+      RP_MODEL_API_KEY: ${{ secrets.RP_MODEL_API_KEY }}
+      RP_MODEL_BASE_URL: ${{ secrets.RP_MODEL_BASE_URL }}
+      RP_TELEGRAM_TOKEN: ${{ secrets.RP_TELEGRAM_TOKEN }}
+      TAVILY_KEY: ${{ secrets.TAVILY_KEY }}
+      TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+      TENSHI_BOT_ACTION_TOKEN: ${{ secrets.TENSHI_BOT_ACTION_TOKEN }}
+      TG_TOKEN: ${{ secrets.TG_TOKEN }}
+      TIMEZONE_OFFSET: ${{ secrets.TIMEZONE_OFFSET }}
+      RP_ALLOW_LIVE: '1'
     needs: plan
     if: ${{ needs.plan.outputs.has_instances == 'true' }}
     runs-on: ubuntu-latest
@@ -57,12 +100,12 @@ jobs:
           version: '0.13.6'
           python-version: '3.12'
           enable-cache: false
-      - run: uv sync --locked
+      - run: uv sync --locked --extra full
         working-directory: framework
       - name: Verify data repository is private
         env:
-          GH_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN }}
-          RP_DATA_REPOSITORY: ${{ vars[matrix.repository_variable] }}
+          GH_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN || secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
+          RP_DATA_REPOSITORY: ${{ vars[matrix.repository_variable] || secrets.GH_REPO }}
         shell: bash
         run: |
           set -euo pipefail
@@ -78,8 +121,8 @@ jobs:
       - name: Checkout character data
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          repository: ${{ vars[matrix.repository_variable] }}
-          token: ${{ secrets.RP_INSTANCE_TOKEN }}
+          repository: ${{ vars[matrix.repository_variable] || secrets.GH_REPO }}
+          token: ${{ secrets.RP_INSTANCE_TOKEN || secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
           path: character-data
           ref: main
           fetch-depth: 0

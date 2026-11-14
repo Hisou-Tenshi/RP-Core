@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "engine": "full",
+  "persistence": {"driver": "git", "branch": "main"},
+  "max_events": 25,
+  "maintenance_seconds": {"perception": 900, "summary": 10800, "archive": 604800, "cleanup": 86400, "probe": 86400}
+}

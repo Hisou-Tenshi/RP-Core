@@ -9,12 +9,12 @@ function sameSecret(left, right) {
   return difference === 0;
 }
 
-function safePath(value) {
+export function safePath(value) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_./-]+$/.test(value) || value.startsWith('/') || value.split('/').some(p => p === '..' || p === '.git')) throw new Error('binding');
   return value;
 }
 
-function encode(text) {
+export function encode(text) {
   let binary = '';
   for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
   return btoa(binary);
@@ -24,11 +24,11 @@ function decode(text) {
   return new TextDecoder().decode(Uint8Array.from(atob(text.replace(/\s/g, '')), c => c.charCodeAt(0)));
 }
 
-async function github(path, token, options = {}) {
+export async function github(path, token, options = {}) {
   return fetch('https://api.github.com/' + path, { ...options, headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, 'User-Agent': 'RP-Core-ingress', 'Content-Type': 'application/json', ...(options.headers || {}) } });
 }
 
-async function readData(env, path, optional = false) {
+export async function readData(env, path, optional = false) {
   const response = await github('repos/' + env.DATA_REPOSITORY + '/contents/' + safePath(path) + '?ref=' + encodeURIComponent(env.DATA_BRANCH || 'main'), env.DATA_TOKEN);
   if (optional && response.status === 404) return {};
   if (!response.ok) throw new Error('data');

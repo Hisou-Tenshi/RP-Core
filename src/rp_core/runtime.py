@@ -314,6 +314,12 @@ def run_data(
     require_remote: bool = False,
 ):
     config = load_runtime(config_path)
+    if config.get("engine") == "full":
+        from rp_core.full_service import run_queue
+
+        if io_path is not None:
+            raise RPCError("invalid_data_io", "Full mode uses the private root io.json.")
+        return run_queue(root, config, event_id=event_id, require_remote=require_remote)
     with PublicRuntime(root, config, load_io(root, io_path)) as runtime:
         return process_queue(
             runtime,

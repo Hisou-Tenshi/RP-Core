@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rp-core"
-version = "0.2.0"
+version = "0.3.0"
 description = "Shared roleplay runtime for data-only private character repositories"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "AGPL-3.0-only"
-license-files = ["LICENSE", "NOTICE"]
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_LICENSES.md"]
 dependencies = ["jsonschema>=4.23,<5"]
 
 [project.urls]
@@ -18,6 +18,8 @@ Documentation = "https://github.com/Hisou-Tenshi/RP-Core/tree/main/docs"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.11,<1", "build>=1.2,<2", "setuptools>=77", "pyyaml>=6,<7"]
+
+full = ["python-telegram-bot==22.8","requests==2.34.2","httpx==0.28.1","httpx2==2.13.0","geopy==2.5.0","google-genai==1.65.0","google-api-core==2.37.0","anthropic==1.5.0","openai==3.14.0","zai-sdk==0.2.3","python-dotenv==1.2.3","numpy==2.2.6; python_version < \"3.12\"","numpy==2.5.3; python_version >= \"3.12\"","faiss-cpu==1.15.0","cryptography==50.0.1","ddgs==9.16.0","duckduckgo-search==8.1.1","pypdf==6.18.1","pillow==12.3.0","pillow-heif==1.7.0"]
 
 [project.scripts]
 rp-core = "rp_core.cli:main"
@@ -29,9 +31,13 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.ruff]
+extend-exclude = ["src/rp_core/compat_runtime", "validation/compat_tests"]
 target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S"]
 ignore = ["E501", "S101", "S603", "S607"]
+
+[tool.setuptools.package-data]
+rp_core = ["compat_runtime/skills/*.md", "compat_runtime/source-manifest.json"]

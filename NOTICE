@@ -1,8 +1,12 @@
-RP-Core is independently implemented roleplay infrastructure.
+RP-Core: shared roleplay infrastructure.
 Copyright (C) 2026 RP-Core contributors.
 Source code and original examples are licensed under AGPL-3.0-only.
+
+The complete compatibility runtime includes adapted MIT-licensed Tenshi code.
+See THIRD_PARTY_LICENSES.md for upstream attribution and permission notice.
+Source provenance and scoped adaptations are recorded in the source manifest.
+No private source Git history or personal instance data is included.
 
 The synthetic example refers to Hinanawi Tenshi from Touhou Project.
 Character names and third-party intellectual property remain with their
 respective rights holders. No third-party visual/audio assets are included.
-No personal data or source history from the original private instance is included.

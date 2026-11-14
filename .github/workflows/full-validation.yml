@@ -1,0 +1,108 @@
+name: Validate full runtime
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Isolated validation or private interface preparation; never changes the live bot
+        type: choice
+        default: preflight
+        options: [preflight, selfcheck, probe, reply, prepare-io]
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: rp-full-validation
+      cancel-in-progress: false
+    env:
+      ADMIN_ID: ${{ secrets.ADMIN_ID }}
+      AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      CLAUDE_PROXY_BASE_URL: ${{ secrets.CLAUDE_PROXY_BASE_URL }}
+      CLAUDE_PROXY_KEY: ${{ secrets.CLAUDE_PROXY_KEY }}
+      CLAUDE_PROXY_KEY_2: ${{ secrets.CLAUDE_PROXY_KEY_2 }}
+      CLAUDE_PROXY_KEY_BASE: ${{ secrets.CLAUDE_PROXY_KEY_BASE }}
+      CLAUDE_PROXY_KEY_MAX: ${{ secrets.CLAUDE_PROXY_KEY_MAX }}
+      CLAUDE_PROXY_KEY_PRIME: ${{ secrets.CLAUDE_PROXY_KEY_PRIME }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      GAODE_API_KEY: ${{ secrets.GAODE_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_PROXY2_KEY: ${{ secrets.GEMINI_PROXY2_KEY }}
+      GEMINI_PROXY_KEY: ${{ secrets.GEMINI_PROXY_KEY }}
+      GH_REPO: ${{ secrets.GH_REPO }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+      GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
+      GPT_PROXY2_KEY: ${{ secrets.GPT_PROXY2_KEY }}
+      GPT_PROXY_KEY: ${{ secrets.GPT_PROXY_KEY }}
+      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+      GROK_PROXY_KEY: ${{ secrets.GROK_PROXY_KEY }}
+      KEEPALIVE_TOKEN: ${{ secrets.KEEPALIVE_TOKEN }}
+      MAGMAROUTER_API_KEY: ${{ secrets.MAGMAROUTER_API_KEY }}
+      MASTER_KEY_SOURCE: ${{ secrets.MASTER_KEY_SOURCE }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+      PERCEPTION_SCHEDULE_SYNC_SECRET: ${{ secrets.PERCEPTION_SCHEDULE_SYNC_SECRET }}
+      PERCEPTION_SCHEDULE_SYNC_URL: ${{ secrets.PERCEPTION_SCHEDULE_SYNC_URL }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      RP_FALLBACK_API_KEY: ${{ secrets.RP_FALLBACK_API_KEY }}
+      RP_INSTANCE_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN }}
+      RP_MODEL_API_KEY: ${{ secrets.RP_MODEL_API_KEY }}
+      RP_MODEL_BASE_URL: ${{ secrets.RP_MODEL_BASE_URL }}
+      RP_TELEGRAM_TOKEN: ${{ secrets.RP_TELEGRAM_TOKEN }}
+      TAVILY_KEY: ${{ secrets.TAVILY_KEY }}
+      TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+      TENSHI_BOT_ACTION_TOKEN: ${{ secrets.TENSHI_BOT_ACTION_TOKEN }}
+      TG_TOKEN: ${{ secrets.TG_TOKEN }}
+      TIMEZONE_OFFSET: ${{ secrets.TIMEZONE_OFFSET }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          path: framework
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9
+        with:
+          version: '0.13.6'
+          python-version: '3.12'
+          enable-cache: false
+      - run: uv sync --locked --extra full
+        working-directory: framework
+      - name: Verify private data access without executing private code
+        env:
+          GH_TOKEN: ${{ secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! private="$(gh api "repos/$GH_REPO" --jq .private 2>/dev/null)" || [ "$private" != true ]; then
+            echo '::error::Private repository access validation failed.'; exit 1
+          fi
+      - name: Checkout private data only
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: ${{ secrets.GH_REPO }}
+          token: ${{ secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
+          ref: main
+          path: character-data
+          fetch-depth: 0
+      - name: Validate interface and installed dependencies
+        working-directory: framework
+        run: uv run --no-sync rp-core full --task preflight --data-root ../character-data
+      - name: Run isolated synthetic validation
+        if: ${{ inputs.mode == 'selfcheck' || inputs.mode == 'probe' || inputs.mode == 'reply' }}
+        working-directory: framework
+        env:
+          RP_SHADOW_TASK: ${{ inputs.mode }}
+        run: uv run --no-sync rp-core full --task shadow --shadow-task "$RP_SHADOW_TASK"
+      - name: Prepare private I/O on a separate branch
+        if: ${{ inputs.mode == 'prepare-io' }}
+        working-directory: framework
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C ../character-data checkout -B rp-core-full-io
+          git -C ../character-data push origin HEAD:refs/heads/rp-core-full-io
+          uv run --no-sync rp-core full --task prepare --data-root ../character-data --persist --branch rp-core-full-io
+      # Deliberately no artifacts, private output, model caches or production dispatch.

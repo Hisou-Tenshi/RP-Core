@@ -7,3 +7,6 @@ recursive-include .github *.yml
 recursive-include config *.json
 recursive-include examples *.json
 recursive-include integrations *.mjs
+recursive-include src/rp_core/compat_runtime *.py *.json *.md
+recursive-include validation *.py
+include THIRD_PARTY_LICENSES.md

@@ -51,6 +51,10 @@ def main():
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
     try:
+        if os.environ.get("RP_DEFAULT_REPO_AVAILABLE") == "true":
+            configured = json.loads(os.environ.get("RP_REPOSITORY_VARIABLES", "{}"))
+            configured.setdefault("RP_TENSHI_REPOSITORY", "configured")
+            os.environ["RP_REPOSITORY_VARIABLES"] = json.dumps(configured)
         variables = (
             json.loads(os.environ["RP_REPOSITORY_VARIABLES"])
             if "RP_REPOSITORY_VARIABLES" in os.environ

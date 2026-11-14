@@ -1,0 +1,487 @@
+{
+  "schema_version": 1,
+  "basis": "Tenshi runtime; code only",
+  "files": [
+    {
+      "path": "src/api_resilience.py",
+      "source_sha256": "bdb39872cd6403e7b3f1f9f3c30f21f334458ab95a00917cd9d569fea74e085f",
+      "published_sha256": "76d3c329c83618dca1ae928f33f9d1669799151585bb15f59c574efa2186a905",
+      "functions": 28,
+      "unchanged_functions": 28,
+      "changed_functions": []
+    },
+    {
+      "path": "src/bond_reflect.py",
+      "source_sha256": "1400342ff76ce2cd4bc20ccd9a8493791d325acec16ef3e68d1ba2dd198fe10e",
+      "published_sha256": "1f6794267281d4b4a5045909fad821f6f867e27c8fb1550a8b1f1317b0f146e0",
+      "functions": 41,
+      "unchanged_functions": 41,
+      "changed_functions": []
+    },
+    {
+      "path": "src/bond_state.py",
+      "source_sha256": "9719bb16968cf22968f4e79e0290a25f9f27eca304cd920dc6a8ee30a88b81f3",
+      "published_sha256": "0294a2f712870a2dc8c643a0b5c19b3018b9e512ea7bba09875aa6faa0810d80",
+      "functions": 11,
+      "unchanged_functions": 11,
+      "changed_functions": []
+    },
+    {
+      "path": "src/config/__init__.py",
+      "source_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "published_sha256": "fe9dbbb6011b2e725132a30c561aaee713ba155352b16391fe6e5d255117eed0",
+      "functions": 0,
+      "unchanged_functions": 0,
+      "changed_functions": []
+    },
+    {
+      "path": "src/config/env_boot.py",
+      "source_sha256": "bf3bd9c413fc293f77fcf0c06e964e7eede3510703fe5f97f1637d0b9a4274f7",
+      "published_sha256": "b1937d3df90a561ea0397d77ffb1de489600fa6e2761d5424fad7d039b9a2e8e",
+      "functions": 1,
+      "unchanged_functions": 1,
+      "changed_functions": []
+    },
+    {
+      "path": "src/config/fixed.py",
+      "source_sha256": "e6cccb8ee4710a9c5d0ca5167dc52eb5970a608a6757d110e00573fbe9ce15cf",
+      "published_sha256": "0c708c237e218e3431fb9e45d256d04b58d995fc6362276e2b2247172ebe6afd",
+      "functions": 0,
+      "unchanged_functions": 0,
+      "changed_functions": []
+    },
+    {
+      "path": "src/config/models.py",
+      "source_sha256": "35e9ba62466c17d1f4ab3014891c640d3891be95cebb575faa583d53733a8375",
+      "published_sha256": "d740a817eb1e67c79f015f850cf80e66020691a74ff0779fb12ef54a469e6ad4",
+      "functions": 61,
+      "unchanged_functions": 61,
+      "changed_functions": []
+    },
+    {
+      "path": "src/config/prompts.py",
+      "source_sha256": "b485676fc17837bfbbc9bd967cf26618566832d40f06af475a04e12236fe7123",
+      "published_sha256": "84769927f9bf3f6c66cdb0fa0c2daea64d076ef383ad951358b1560fe6fd16fc",
+      "functions": 0,
+      "unchanged_functions": 0,
+      "changed_functions": []
+    },
+    {
+      "path": "src/config/providers.py",
+      "source_sha256": "f31029f533cd425b9936c9a37f07cc8eb4d163ac1f1d7e414ec41f63d4488d62",
+      "published_sha256": "f7f81c158d94aa898b528d9168d259c813ce543960135970b253126fea4d99fe",
+      "functions": 4,
+      "unchanged_functions": 4,
+      "changed_functions": []
+    },
+    {
+      "path": "src/config/tunable.py",
+      "source_sha256": "0b3139e06fed41e088dc1b0727398baa7214a640a29915e228b7881b541c3fe8",
+      "published_sha256": "87d785c9ac058eba8640a389689c22354febfd9ab859a91d06f9f6e9f5488248",
+      "functions": 4,
+      "unchanged_functions": 4,
+      "changed_functions": []
+    },
+    {
+      "path": "src/context_compression.py",
+      "source_sha256": "918d0a7927669dd4579dfb0635de2f2a88f58dbc1f09aa2b11f8c0456b052030",
+      "published_sha256": "99dbf8f01e2932636ecfac6f10e75ac0c47c27ecedbe0e800ad62e0005457b81",
+      "functions": 34,
+      "unchanged_functions": 34,
+      "changed_functions": []
+    },
+    {
+      "path": "src/deepseek_modules.py",
+      "source_sha256": "3209934cb93f3463c4bd2d68e621e3351c11672e7225af02c43597d118949bed",
+      "published_sha256": "968d0302d550b91e0665016da4bea577b6255e0fe3cc24fd3d887bad7e45abe1",
+      "functions": 12,
+      "unchanged_functions": 12,
+      "changed_functions": []
+    },
+    {
+      "path": "src/deferred_intent.py",
+      "source_sha256": "101d84712c7720d1e11e835f1417b6f0e6521552479549b6b45eea7234316a5c",
+      "published_sha256": "54b3c46b392ecbe5305afa056832973a878a92bb4af4cdc9ef81350c518230af",
+      "functions": 12,
+      "unchanged_functions": 12,
+      "changed_functions": []
+    },
+    {
+      "path": "src/embedding_client.py",
+      "source_sha256": "718f4c992ffa73f32f2627b79143b24006206d7e4f7be88575423a31b9094dc3",
+      "published_sha256": "866f7da308eb93607ad01faf0a3bd1a6524b865f3ee2fcb2b1a68bc119046aa1",
+      "functions": 11,
+      "unchanged_functions": 11,
+      "changed_functions": []
+    },
+    {
+      "path": "src/error_text.py",
+      "source_sha256": "70d0d8172390eb29c553f2efd12b22460763aa9f342b5ab9ce35cbf061aeb28f",
+      "published_sha256": "083b5723fa972697f8f03fa8600dd37daee3b9c4125631150cc851a5c337103d",
+      "functions": 6,
+      "unchanged_functions": 6,
+      "changed_functions": []
+    },
+    {
+      "path": "src/fetch_tools.py",
+      "source_sha256": "4af16a9182761776401f95d7688a0f8e625c0a62581e91bc0996ebea2f5fef2f",
+      "published_sha256": "383e0d22ba28f7d8acfb6f2385392d452d08861fdc84814237648e48b4d6d382",
+      "functions": 17,
+      "unchanged_functions": 17,
+      "changed_functions": []
+    },
+    {
+      "path": "src/gemini_dual.py",
+      "source_sha256": "9f07cd86e6743d04331d666afe71c9b4a3b9fc9a78d2c18c1afd0ad28959356e",
+      "published_sha256": "8bc3a95f67d2ae78bffd1da517202aa9ddf412bf0fc768114d3ea67046363a84",
+      "functions": 7,
+      "unchanged_functions": 7,
+      "changed_functions": []
+    },
+    {
+      "path": "src/glm_modules.py",
+      "source_sha256": "69c4f697b64f0f278298335852e5de7b89a59e392a8dc3e968fd5e729a69950d",
+      "published_sha256": "6e5676dd1e6d63e8efae2618b23e230048a04a9e6a50395e75f0be380b4e4a54",
+      "functions": 14,
+      "unchanged_functions": 14,
+      "changed_functions": []
+    },
+    {
+      "path": "src/grok_modules.py",
+      "source_sha256": "e3d52c16709beed310f79657993c513cbe84146c47e3e30b5d41cdfda78d29d6",
+      "published_sha256": "84506719cf5121d94aef1a8a13a5548dcd492cc6fdbabdaa59bec9500ed6b299",
+      "functions": 35,
+      "unchanged_functions": 35,
+      "changed_functions": []
+    },
+    {
+      "path": "src/image_utils.py",
+      "source_sha256": "70dcdd161beefd14c5f39ef87e70396a3b3303fe418642484152d828f7c0514a",
+      "published_sha256": "c68c5c1b5af497b7aa7f958b9fcf628258a2e2c7bec5c1f7842f919bd94f7bcd",
+      "functions": 16,
+      "unchanged_functions": 16,
+      "changed_functions": []
+    },
+    {
+      "path": "src/kb_apply.py",
+      "source_sha256": "07cf9852f3099dd25ef3730e036c7b1daca82db8ee6cd01bcf7b43b3f8528ff7",
+      "published_sha256": "be69601f2a59198ee0ecbe1b358c362c82ca44d523a6b2fd1c6d6b7e783026bf",
+      "functions": 26,
+      "unchanged_functions": 26,
+      "changed_functions": []
+    },
+    {
+      "path": "src/kb_storage.py",
+      "source_sha256": "64965ee53cc5379544b797d9e00ca2dc0bf0093634ab1da3bf72d17a7a1596df",
+      "published_sha256": "ada2f20d5903c473ccb44b06891ba9567f22be28e57898aae92fa86a6d204ce2",
+      "functions": 31,
+      "unchanged_functions": 31,
+      "changed_functions": []
+    },
+    {
+      "path": "src/llm_compat.py",
+      "source_sha256": "7648ce94abc4e67d222ada9015db282af926ebcdaeddbeaa672f1a0816d4a683",
+      "published_sha256": "eeedbb8d18e786289f69474479458a5380da1b011cdcf8e789a5312f973111a2",
+      "functions": 6,
+      "unchanged_functions": 6,
+      "changed_functions": []
+    },
+    {
+      "path": "src/llm_routing.py",
+      "source_sha256": "50a0f14c3e1ccbfcc86b7ce3f81a1d3423884f6f148b807e6b9985f51b957eaf",
+      "published_sha256": "0319d7942f1556d503cc426d66a0a854b8147963cbcfb272aa5cbe5ceb016889",
+      "functions": 27,
+      "unchanged_functions": 27,
+      "changed_functions": []
+    },
+    {
+      "path": "src/llm_tool_schema.py",
+      "source_sha256": "21a4b581251a6fee14e160fdac976ceb1d4ff5291226ea6589414d339dfec48b",
+      "published_sha256": "3d08748ab494243023223bddb419a0e2b51ca573da107f9b666f6586eec69c3d",
+      "functions": 8,
+      "unchanged_functions": 8,
+      "changed_functions": []
+    },
+    {
+      "path": "src/llm_tool_text.py",
+      "source_sha256": "19e69b1a78244aecf7acf9ea9e77a5bb343ef6f270e79161577b13fa4f9e7460",
+      "published_sha256": "a3fe0672e178e4b79c79440277ee36ef68eabd0567bb4d662d6e7453e5ee1692",
+      "functions": 33,
+      "unchanged_functions": 33,
+      "changed_functions": []
+    },
+    {
+      "path": "src/log_update.py",
+      "source_sha256": "59cd669f681c71b66cc85bf9a2e4caa843c0daf8621254e2d50ca4287a1b5785",
+      "published_sha256": "c84a17617f846d111a5c581b77054fc3b24d028a0395a75406b79b2ec51fc225",
+      "functions": 42,
+      "unchanged_functions": 40,
+      "changed_functions": [
+        "commit_memory_changes",
+        "push_knowledge_base_and_check_success"
+      ]
+    },
+    {
+      "path": "src/message_split.py",
+      "source_sha256": "0247a8b00b1ac9e1a548d0d53de3f8e1ceffc15e44a1816ce45900c0a28f068d",
+      "published_sha256": "290dbb519aff0328d8c91fd3d4a2487aa7f6d32851ea9b676ca4cf68a542dcf2",
+      "functions": 11,
+      "unchanged_functions": 11,
+      "changed_functions": []
+    },
+    {
+      "path": "src/migrate_memory.py",
+      "source_sha256": "8f68f4a6f80349ab340bb4f81832cbd8876a6e41ebcd477f67fbf2c21c23d3a3",
+      "published_sha256": "b98ae340c9dd12512979fcf737ee3c9be88d5894ca92472edca5f2431f885e1b",
+      "functions": 1,
+      "unchanged_functions": 1,
+      "changed_functions": []
+    },
+    {
+      "path": "src/perception_layer.py",
+      "source_sha256": "9fde353a70c59ec7b682ef0375e3ee5cc80a7b83a3259b5e016a66757bb5a88c",
+      "published_sha256": "76d37b2d8098914c6e652a42d138ccc7855e264b8f454c0a6057cb75fa10a3bf",
+      "functions": 29,
+      "unchanged_functions": 27,
+      "changed_functions": [
+        "get_recent_commits",
+        "_maybe_reply_if_unreplied_before_probability"
+      ]
+    },
+    {
+      "path": "src/perception_policy.py",
+      "source_sha256": "6690e4c3dff5a46edfb0f4c983a943ee85a40a46007d79f21585a8464e256f43",
+      "published_sha256": "2dbae10470b7d704ba3df973fcc79e6be0b4a12b730e576c44daafef9066905a",
+      "functions": 6,
+      "unchanged_functions": 6,
+      "changed_functions": []
+    },
+    {
+      "path": "src/perception_schedule.py",
+      "source_sha256": "9bb65f0dc85c2afc3b37ac5c2ce36671e5bc912f8477a92c0baa66f1f677b85a",
+      "published_sha256": "99b6a6bd3331ef0686de16d282600b122d2daf6936922205697607c24e1b92be",
+      "functions": 30,
+      "unchanged_functions": 30,
+      "changed_functions": []
+    },
+    {
+      "path": "src/perception_state.py",
+      "source_sha256": "a3ba21083257e40e1b3e8ec4c562ff8c8916db22fa0cc7611139b79f949e1408",
+      "published_sha256": "d5019aca729e5f2d662b4a2f57d55ee039c4d3f234154dfdb0af2c6f68718812",
+      "functions": 6,
+      "unchanged_functions": 6,
+      "changed_functions": []
+    },
+    {
+      "path": "src/provider_health.py",
+      "source_sha256": "0565fc283dda467d68f6a0bdac09be05e8253f27f25d4a67c4ae4affc212e7b6",
+      "published_sha256": "27b5cd1a690280d5b1e3580760b89ae8b422f0f6a2690ffeccbbd63e7827f0ee",
+      "functions": 14,
+      "unchanged_functions": 14,
+      "changed_functions": []
+    },
+    {
+      "path": "src/rag_modules.py",
+      "source_sha256": "55c7cb1c0ec2dcc11580d962766d68c20f70ed6517cd3a2b1da6e7656253d666",
+      "published_sha256": "fe7316c0fecd0c51b80f6923885f1b317583485da2a57027fb2661efe2d0da8b",
+      "functions": 10,
+      "unchanged_functions": 9,
+      "changed_functions": [
+        "TenshiRAG.load_cache"
+      ]
+    },
+    {
+      "path": "src/reactions.py",
+      "source_sha256": "570913bd7264096e67d67cf770575eaad72a14cad8e3335610b193d9b9e175b8",
+      "published_sha256": "9850a4f5d930b8d9ac289628e5acedd7095a24f5529851cbac6becc0b0cf89b6",
+      "functions": 15,
+      "unchanged_functions": 15,
+      "changed_functions": []
+    },
+    {
+      "path": "src/reply_budget.py",
+      "source_sha256": "73ae2366c87e9717801c84416b98408f4cf3bb43dbc7bbd2999c398a92b3c078",
+      "published_sha256": "d07be026e4bdf905438d5602a4a9941a60cce5fee894a6a34203fb858556b167",
+      "functions": 7,
+      "unchanged_functions": 7,
+      "changed_functions": []
+    },
+    {
+      "path": "src/reply_streaming.py",
+      "source_sha256": "01e07b85ee76835898deeb0ce9a3ebb3a76364ff751c8a37175311718e5f8c25",
+      "published_sha256": "62822a4532a0ab4ac8b8750d35857308fff27b10639edce26f0502db9e45b2ef",
+      "functions": 27,
+      "unchanged_functions": 27,
+      "changed_functions": []
+    },
+    {
+      "path": "src/reply_two_stage.py",
+      "source_sha256": "be5bd61442437ed3eb17757470c30df3d1515e68fc922ac14662f342f45a1255",
+      "published_sha256": "c5819abc734ff5b5af962336a4e60a973f91a1de70e0928dbc7c9c7172657563",
+      "functions": 20,
+      "unchanged_functions": 20,
+      "changed_functions": []
+    },
+    {
+      "path": "src/sdk_compat.py",
+      "source_sha256": "73886d1e90bff43bd762b2442bd9464951bd239a58c4bc8ed7de66178d092abd",
+      "published_sha256": "b44f1e35a3d7fb0a96a7626e80302d43ffd2a38c923c680c85764b7fc2e5ba99",
+      "functions": 2,
+      "unchanged_functions": 2,
+      "changed_functions": []
+    },
+    {
+      "path": "src/stickers.py",
+      "source_sha256": "5749a862354b5cb0de6af180d35815a89761d5a803cb70118d024db8f157b6a7",
+      "published_sha256": "9ab3bd4dd8d957064e3ee96b5c102dee9dee2648c4555404c48b30db735149bc",
+      "functions": 27,
+      "unchanged_functions": 27,
+      "changed_functions": []
+    },
+    {
+      "path": "src/telegram_tenshi_logger.py",
+      "source_sha256": "8f0fe5f5bbbc74726b3ad7ba3b6857f7f28be99c6042f9f72b69cf130b975d87",
+      "published_sha256": "60ad164b5cd90db9e8f9499ce6fa9bd46942f4f99d5b5fc864ceaba0370c8370",
+      "functions": 19,
+      "unchanged_functions": 19,
+      "changed_functions": []
+    },
+    {
+      "path": "src/tenshi_config.py",
+      "source_sha256": "bd7e40510d3bdf7c449746f7793d85aaa8975350b0f75b10f634951fcdb88336",
+      "published_sha256": "a5c88987aaa159984eb9db02978cfd254111d66593528bdbd2bfb3233349902b",
+      "functions": 1,
+      "unchanged_functions": 1,
+      "changed_functions": []
+    },
+    {
+      "path": "src/tenshi_memory_manager.py",
+      "source_sha256": "a85e17ebf21ed63d4bccf8c5752b6f54cfc1c79b0b67bd8c2c112c07e525bec4",
+      "published_sha256": "c332c18fb16b7a557e0f418acf21e0ab5de848eb5ac7ca2a439da225d4d7881d",
+      "functions": 18,
+      "unchanged_functions": 15,
+      "changed_functions": [
+        "TenshiMemoryManager.__init__",
+        "TenshiMemoryManager._init_db",
+        "TenshiMemoryManager.search_hybrid"
+      ]
+    },
+    {
+      "path": "src/tenshi_reply.py",
+      "source_sha256": "61ad9ba8a197620394acc636e878490080090537f75eb3284b15195436c25d01",
+      "published_sha256": "047b4b820bf5ac0197e9d52bc6c29272e8683841c0ee1876644db685d817170d",
+      "functions": 177,
+      "unchanged_functions": 175,
+      "changed_functions": [
+        "read_config_file",
+        "_main_impl"
+      ]
+    },
+    {
+      "path": "src/tenshi_skills.py",
+      "source_sha256": "72b3a421dceb2ac8b6cd3b5c6fda0c6b49340fc6b79a242fa9a289e8f9d531b8",
+      "published_sha256": "053409e2700e588e31ade3c67813ad6ada3c43137fa0ea7742006a4e92aa3630",
+      "functions": 4,
+      "unchanged_functions": 4,
+      "changed_functions": []
+    },
+    {
+      "path": "src/tenshi_tool_exec.py",
+      "source_sha256": "023fc77f7ecfb63b3e6b4e3a971ff4127647250a412b7223a1dcf1b245de6510",
+      "published_sha256": "1bbbb300c5a45807d92944720c18b12f4736219e5a270481e35d22b655447360",
+      "functions": 1,
+      "unchanged_functions": 1,
+      "changed_functions": []
+    },
+    {
+      "path": "src/tenshi_utils.py",
+      "source_sha256": "3addcbb9aaa55bfb51e5406791caef4551ab37595dbc2951a09f09ebfa11b205",
+      "published_sha256": "daa1f28f54dafc43ee1a2e4c0e301c289c2323e3179209941ce7902a5478eefb",
+      "functions": 39,
+      "unchanged_functions": 39,
+      "changed_functions": []
+    },
+    {
+      "path": "src/user_location.py",
+      "source_sha256": "f77dec9c959e7888c673888105ebaa4cef627af3c9bb4487bbeac4e3f230c15f",
+      "published_sha256": "954bec89aec2375a0916c3e071872f0be8a2cb91718700c6d2d57394709a31f6",
+      "functions": 13,
+      "unchanged_functions": 13,
+      "changed_functions": []
+    },
+    {
+      "path": "src/weather_utils.py",
+      "source_sha256": "d2a179dd26fe86b274cbc4ecf36495166e0019d8afc4ab797773119e753fc6f9",
+      "published_sha256": "97865fee44e2ce93e5200b16a1737b582247f526e6e21fa01db15f4d6e37be07",
+      "functions": 14,
+      "unchanged_functions": 14,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/tenshi_git_sync.py",
+      "source_sha256": "895afddf24e6eba449309ad8c637b70485d97f9d8a895894493b485a36d0c669",
+      "published_sha256": "a79e4c0ab9671da95e79049a9840e144fa6d1c2464901d8a2a1e668813771fb0",
+      "functions": 47,
+      "unchanged_functions": 47,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/weekly_archive_tenshi_log.py",
+      "source_sha256": "4896876a7f29ba7f1464e1065ba0923fbfdc31a33c8fe46ca98bab47ad9554be",
+      "published_sha256": "fd448f98f9f664434ff3b9448ef0ace84e6dc73ef36f1494f4f48ebd3d8ea925",
+      "functions": 13,
+      "unchanged_functions": 13,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/probe_provider_paths.py",
+      "source_sha256": "927c4234673e0ed60942c7aac32fb4e80a89a544b2d44d62dde5e15cd55b3f89",
+      "published_sha256": "33b066699074d86564d0b9f9158217bfda3046453e9f400ef60accc59785ffca",
+      "functions": 52,
+      "unchanged_functions": 52,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/build_provider_health_dashboard.py",
+      "source_sha256": "22058df128a62f48b342ce8fd354af2fc1f572fecf10cd551a17adfc0bf2e938",
+      "published_sha256": "0647f3a9e4ddc233cf426b2dd2dd01573464d77ed925d6438a2fe3b0af3198eb",
+      "functions": 54,
+      "unchanged_functions": 54,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/clean_tenshi_log.py",
+      "source_sha256": "b755b1b17118ca3866973f7fba9ef703059a5cb03ed75721733ac982150b0d12",
+      "published_sha256": "b41a19db2b27e909eaeb3c62f22014cfb14cf6606be1f6374406bc64693326a3",
+      "functions": 4,
+      "unchanged_functions": 4,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/deps_selfcheck.py",
+      "source_sha256": "42b35007a812d10dca4294bc9c68739f1914e72eece1988f483dbd158b14787b",
+      "published_sha256": "c9a6c18c39c270e76a0a5f626a027802a7ff37e420fa2903073aace5c44ccae5",
+      "functions": 5,
+      "unchanged_functions": 5,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/sticker_catalog_build.py",
+      "source_sha256": "dae3290b3d39137dbe9e3e913f337307f9e4361d669fb005a1a7158fba2f357b",
+      "published_sha256": "e92c312ef8e89944a600d888b9ad4f22132671780c8b0cd59636574b00728196",
+      "functions": 10,
+      "unchanged_functions": 10,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/tenshi_notes_crypto.py",
+      "source_sha256": "c4f7b94d817cc22d0733f00d6d362122d65c8ee56404eb5b4cc0afeb4c3ff43e",
+      "published_sha256": "29b780a034f267c337b3bd27e80aff4ea1dedc92b13ba283da020845dafbfe84",
+      "functions": 8,
+      "unchanged_functions": 7,
+      "changed_functions": [
+        "_project_root"
+      ]
+    }
+  ]
+}
