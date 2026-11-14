@@ -353,7 +353,10 @@ def synthetic_shadow(*, task="selfcheck"):
         result["real_telegram_calls"] = 0
         result["delivery_captured"] = trace.exists() and trace.stat().st_size > 0
         history = read_json(root / "data/tenshi_log.json", [])
-        if task == "reply" and not any(item.get("bot_answer") for item in history):
+        messages = [
+            message for conversation in history for message in conversation.get("chat_history", [])
+        ]
+        if task == "reply" and not any(item.get("bot_answer") for item in messages):
             raise RPCError(
                 "shadow_incomplete", "The synthetic reply did not produce a persisted answer."
             )

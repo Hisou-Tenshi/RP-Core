@@ -277,3 +277,25 @@ def test_real_shallow_private_git_persistence(root, monkeypatch):
     service.persist(shallow)
     stored = git("--git-dir", str(remote), "show", "main:.rp/synthetic.json")
     assert json.loads(stored) == {"preserved": True}
+
+
+def test_shadow_reply_checks_nested_legacy_history(monkeypatch):
+    def fake(root, task, **kwargs):
+        write_json(
+            root / "data/tenshi_log.json",
+            [
+                {
+                    "conversation_id": "1",
+                    "chat_history": [{"msg_id": "1", "bot_answer": "Synthetic reply"}],
+                }
+            ],
+        )
+        (root / "logs").mkdir(exist_ok=True)
+        (root / "logs/shadow-delivery.jsonl").write_text("{}")
+        return {"status": "completed"}
+
+    monkeypatch.setattr(host, "run_full", fake)
+    result = host.synthetic_shadow(task="reply")
+    assert result["status"] == "completed"
+    assert result["delivery_captured"] is True
+    assert result["real_telegram_calls"] == 0
