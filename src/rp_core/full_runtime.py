@@ -125,8 +125,10 @@ def prepare(root: Path) -> dict:
 def validate_layout(root: Path):
     io = load_io(root)
     expected = {**DEFAULT_FILES, "state": ".rp"}
-    if io["driver"] != "tenshi-v1" or any(
-        io["files"][key] != value for key, value in expected.items()
+    if (
+        io["driver"] != "tenshi-v1"
+        or io.get("session_map")
+        or any(io["files"][key] != value for key, value in expected.items())
     ):
         raise RPCError(
             "unsupported_full_layout",
@@ -330,24 +332,60 @@ def run_full(
         }
 
 
+def shadow_diagnostics(root: Path):
+    """Expose only fixed error-class labels, never log or prompt excerpts."""
+    text = ""
+    for path in (root / "logs").glob("*"):
+        if path.is_file() and path.suffix in (".log", ".txt", ".jsonl"):
+            text += path.read_text(encoding="utf-8", errors="replace")[-500_000:]
+    return [
+        name
+        for name in (
+            "AuthenticationError",
+            "PermissionDeniedError",
+            "BadRequestError",
+            "APIConnectionError",
+            "APITimeoutError",
+            "RateLimitError",
+            "ModuleNotFoundError",
+            "ImportError",
+            "KeyError",
+            "AttributeError",
+            "ValueError",
+            "TimeoutError",
+            "ClientError",
+            "ServerError",
+        )
+        if name in text
+    ]
+
+
 def synthetic_shadow(*, task="selfcheck"):
     """Use credentials only with a newly created synthetic character and history."""
     with tempfile.TemporaryDirectory(prefix="rp-full-shadow-") as temporary:
         root = Path(temporary)
         initialize_data(root, driver="tenshi-v1")
-        result = run_full(
-            root,
-            task,
-            shadow=True,
-            payload={
-                "text": "这是一条合成测试消息，请只回复：测试成功。",
-                "chat_id": 1,
-                "user_id": 1,
-                "msg_id": 1,
-                "date": 1794614400,
-            },
-            timeout=600,
-        )
+        try:
+            result = run_full(
+                root,
+                task,
+                shadow=True,
+                payload={
+                    "text": "这是一条合成测试消息，请只回复：测试成功。",
+                    "chat_id": 1,
+                    "user_id": 1,
+                    "msg_id": 1,
+                    "date": 1794614400,
+                },
+                timeout=600,
+            )
+        except RPCError as error:
+            raise RPCError(
+                error.code,
+                error.message
+                + " Synthetic diagnostic markers: "
+                + ", ".join(shadow_diagnostics(root)),
+            ) from None
         trace = root / "logs/shadow-delivery.jsonl"
         result["synthetic_data_only"] = True
         result["real_telegram_calls"] = 0
@@ -358,6 +396,8 @@ def synthetic_shadow(*, task="selfcheck"):
         ]
         if task == "reply" and not any(item.get("bot_answer") for item in messages):
             raise RPCError(
-                "shadow_incomplete", "The synthetic reply did not produce a persisted answer."
+                "shadow_incomplete",
+                "The synthetic reply did not produce a persisted answer. Diagnostic markers: "
+                + ", ".join(shadow_diagnostics(root)),
             )
         return result

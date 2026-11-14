@@ -299,3 +299,13 @@ def test_shadow_reply_checks_nested_legacy_history(monkeypatch):
     assert result["status"] == "completed"
     assert result["delivery_captured"] is True
     assert result["real_telegram_calls"] == 0
+
+
+def test_shadow_diagnostics_never_return_private_log_excerpts(tmp_path):
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "logs/process.log").write_text(
+        "Synthetic private prompt and credential: keep-private; APITimeoutError"
+    )
+    result = host.shadow_diagnostics(tmp_path)
+    assert result == ["APITimeoutError", "TimeoutError"]
+    assert "keep-private" not in json.dumps(result)
