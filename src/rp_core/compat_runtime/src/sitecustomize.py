@@ -12,6 +12,41 @@ if os.environ.get("RP_SHADOW") == "1":
             raise OSError("Telegram delivery is disabled in shadow mode.")
         return _original_dns(host, *args, **kwargs)
     socket.getaddrinfo = _safe_dns
+    # Streaming/stickers/reactions use requests directly instead of telegram.Bot.
+    import itertools
+    import json
+    from pathlib import Path
+    from urllib.parse import urlsplit
+    import requests
+    _real_request = requests.sessions.Session.request
+    _message_ids = itertools.count(1)
+    def _trace(method, body):
+        if os.environ.get("RP_SHADOW_TRACE"):
+            with Path(os.environ["RP_SHADOW_TRACE"]).open("a", encoding="utf-8") as stream:
+                stream.write(json.dumps({"method": method, "text": body.get("text", "")}, ensure_ascii=False) + chr(10))
+    def _shadow_request(self, method, url, *args, **kwargs):
+        parsed = urlsplit(str(url))
+        if parsed.hostname != "api.telegram.org":
+            return _real_request(self, method, url, *args, **kwargs)
+        operation = parsed.path.rsplit("/", 1)[-1]
+        allowed = {"sendMessage", "editMessageText", "sendChatAction", "sendSticker", "deleteMessage", "setMessageReaction", "getMe"}
+        if operation not in allowed:
+            raise RuntimeError("Use synthetic local media for shadow tests.")
+        body = kwargs.get("json") or kwargs.get("data") or {}
+        _trace(operation, body)
+        if operation == "getMe":
+            result = {"id": 1, "is_bot": True, "first_name": "Synthetic", "username": "shadow_character"}
+        elif operation in {"sendMessage", "editMessageText", "sendSticker"}:
+            result = {"message_id": body.get("message_id") or next(_message_ids), "date": 1794614400, "chat": {"id": body.get("chat_id", 1), "type": "private"}, "text": body.get("text", "")}
+        else:
+            result = True
+        response = requests.Response()
+        response.status_code = 200
+        response._content = json.dumps({"ok": True, "result": result}).encode()
+        response.headers["Content-Type"] = "application/json"
+        response.url = "https://shadow.invalid/" + operation
+        return response
+    requests.sessions.Session.request = _shadow_request
     class ShadowBot:
         def __init__(self, *args, **kwargs):
             self.id = 1

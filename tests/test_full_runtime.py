@@ -291,7 +291,7 @@ def test_shadow_reply_checks_nested_legacy_history(monkeypatch):
             ],
         )
         (root / "logs").mkdir(exist_ok=True)
-        (root / "logs/shadow-delivery.jsonl").write_text("{}")
+        (root / "logs/shadow-delivery.jsonl").write_text('{"method":"send_message"}')
         return {"status": "completed"}
 
     monkeypatch.setattr(host, "run_full", fake)
@@ -309,3 +309,71 @@ def test_shadow_diagnostics_never_return_private_log_excerpts(tmp_path):
     result = host.shadow_diagnostics(tmp_path)
     assert result == ["APITimeoutError", "TimeoutError"]
     assert "keep-private" not in json.dumps(result)
+
+
+def test_shadow_captures_direct_http_streaming_and_blocks_real_dns(tmp_path):
+    import os
+    import subprocess
+    import sys
+
+    pytest.importorskip("telegram")
+    trace = tmp_path / "trace.jsonl"
+    code = """
+import json, requests, socket
+r = requests.post('https://api.telegram.org/bot1:synthetic/sendMessage', json={'chat_id':1,'text':'synthetic'})
+r.raise_for_status()
+assert r.json()['ok'] is True
+try:
+    socket.getaddrinfo('api.telegram.org',443)
+except OSError:
+    blocked=True
+else:
+    blocked=False
+print(json.dumps({'blocked':blocked, 'fake_url':r.url.startswith('https://shadow.invalid/')}))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        env={
+            **os.environ,
+            "PYTHONPATH": str(host.CODE / "src"),
+            "RP_SHADOW": "1",
+            "RP_UNIT_TESTS": "1",
+            "RP_SHADOW_TRACE": str(trace),
+        },
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(result.stdout) == {"blocked": True, "fake_url": True}
+    assert json.loads(trace.read_text())["method"] == "sendMessage"
+
+
+def test_probe_summary_never_exposes_route_keys_or_urls(monkeypatch):
+    def fake(root, task, **kwargs):
+        write_json(
+            root / "data/provider_health.json",
+            {
+                "providers": {
+                    "claude": {
+                        "enabled": True,
+                        "paths": {
+                            "private-route": {
+                                "ok": True,
+                                "key_masked": "keep-private",
+                                "base_url": "keep-private",
+                            }
+                        },
+                    },
+                    "private-provider": {"enabled": True, "paths": {}},
+                }
+            },
+        )
+        return {"status": "completed"}
+
+    monkeypatch.setattr(host, "run_full", fake)
+    result = host.synthetic_shadow(task="probe")
+    assert result["providers"] == {
+        "claude": {"enabled": True, "available_paths": 1, "checked_paths": 1}
+    }
+    assert "keep-private" not in json.dumps(result)
+    assert "private-provider" not in json.dumps(result)

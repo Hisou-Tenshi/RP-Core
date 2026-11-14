@@ -366,6 +366,10 @@ def synthetic_shadow(*, task="selfcheck"):
         root = Path(temporary)
         initialize_data(root, driver="tenshi-v1")
         try:
+            if task == "reply":
+                # A new synthetic instance has no production health cache.
+                # Probe first so the normal health gate can avoid dead routes.
+                run_full(root, "probe", shadow=True, timeout=240)
             result = run_full(
                 root,
                 task,
@@ -389,7 +393,37 @@ def synthetic_shadow(*, task="selfcheck"):
         trace = root / "logs/shadow-delivery.jsonl"
         result["synthetic_data_only"] = True
         result["real_telegram_calls"] = 0
-        result["delivery_captured"] = trace.exists() and trace.stat().st_size > 0
+        deliveries = (
+            [json.loads(line) for line in trace.read_text().splitlines()] if trace.exists() else []
+        )
+        result["delivery_captured"] = any(
+            item.get("method")
+            in {"send_message", "sendMessage", "editMessageText", "sendSticker", "send_sticker"}
+            for item in deliveries
+        )
+        if task in ("probe", "reply"):
+            health = read_json(root / "data/provider_health.json", {}).get("providers", {})
+            result["providers"] = {
+                name: {
+                    "enabled": bool(entry.get("enabled")),
+                    "available_paths": sum(
+                        bool(path.get("ok")) for path in entry.get("paths", {}).values()
+                    ),
+                    "checked_paths": len(entry.get("paths", {})),
+                }
+                for name, entry in health.items()
+                if name
+                in {
+                    "claude",
+                    "gemini",
+                    "deepseek",
+                    "gpt",
+                    "glm",
+                    "magmarouter",
+                    "openrouter",
+                    "grok",
+                }
+            }
         history = read_json(root / "data/tenshi_log.json", [])
         messages = [
             message for conversation in history for message in conversation.get("chat_history", [])
@@ -399,5 +433,10 @@ def synthetic_shadow(*, task="selfcheck"):
                 "shadow_incomplete",
                 "The synthetic reply did not produce a persisted answer. Diagnostic markers: "
                 + ", ".join(shadow_diagnostics(root)),
+            )
+        if task == "reply" and not result["delivery_captured"]:
+            raise RPCError(
+                "shadow_delivery_missing",
+                "The synthetic reply was not captured by a shadow Telegram transport.",
             )
         return result

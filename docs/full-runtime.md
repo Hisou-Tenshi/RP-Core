@@ -67,8 +67,8 @@ Validate full runtime 工作流默认 preflight：只验证私密仓访问和依
 
 - selfcheck：离线 SDK 参数兼容性；
 - probe：供应商连接/模型列表探活，不等同于真实生成成功；
-- reply：真实模型生成合成回复，Telegram 对象在子进程内替换成假对象，
-  并阻断 Telegram DNS、禁用旧定时同步 URL，绝不读取私密历史作为提示词；
+- reply：先只读探测供应商通路，生成本次测试的健康缓存，再由真实模型生成合成回复。Telegram SDK 与 requests 直连 HTTP 都在子进程内替换成假发送器，
+  并阻断 Telegram DNS、禁用旧定时同步 URL，绝不读取私密历史作为提示词；历史写入和发送捕获必须同时通过，公开结果只包含通路可用数量，不含地址、密钥或消息内容；
 - prepare-io：仅在私密仓 rp-core-full-io 分支新增数据接口，保留 main。
 
 Calling 的 TG_TOKEN、TENSHI_BOT_ACTION_TOKEN、GH_REPO 会分别映射到原运行时的

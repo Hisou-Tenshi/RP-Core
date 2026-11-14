@@ -39,5 +39,6 @@ jobs:
           version: '0.13.6'
           python-version: '3.12'
       - run: uv sync --locked --extra dev --extra full
+      - run: uv run --no-sync pytest tests/test_full_runtime.py -q
       - run: uv run --no-sync python scripts/run_compat_tests.py
       - run: uv run --no-sync rp-core full --task shadow
