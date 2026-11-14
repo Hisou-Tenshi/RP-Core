@@ -196,9 +196,8 @@ def test_public_source_manifest_matches_published_bytes():
     manifest = json.loads((host.CODE / "source-manifest.json").read_text())
     assert len(manifest["files"]) == 58
     for item in manifest["files"]:
-        assert (
-            hashlib.sha256((host.CODE / item["path"]).read_bytes()).hexdigest()
-            == item["published_sha256"]
+        assert hashlib.sha256((host.CODE / item["path"]).read_bytes()).hexdigest() == item.get(
+            "reviewed_sha256", item["published_sha256"]
         )
 
 

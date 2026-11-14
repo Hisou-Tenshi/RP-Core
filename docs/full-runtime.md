@@ -126,3 +126,17 @@ Telegram 后决定修正回执还是重试。Telegram API 与 Git 之间无法�
 月度 keepalive 与角色执行共用 RP_LIVE_ENABLED 开关，仅更新公开的
 .github/activity.json，不访问私密角色数据。写权限可使用现有 KEEPALIVE_TOKEN，
 否则使用工作流自身的令牌；角色回复、摘要、归档、健康检查仍由统一角色任务执行。
+
+## 后续只维护公开仓
+
+日常修改直接发生在本公开仓；无需再次读取 Tenshi 私仓的 Python 源码。
+scripts/import_compat_runtime.py 仅用于最初的代码导入审查，不是构建或运行前置步骤。
+修改公开运行时并完成审查后，运行：
+
+    python scripts/audit_public.py
+    python scripts/review_runtime_manifest.py --refresh
+    python scripts/review_runtime_manifest.py --check
+
+原始 source_sha256 / published_sha256 与函数 AST 数量保留为初次导入的来源记录；
+后续公开修改由 reviewed_sha256 和正常 Git 提交记录。所有角色在后续执行时使用
+同一公开提交，不需要在各私密仓更新代码、复制脚本或重建数据库。

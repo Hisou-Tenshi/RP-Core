@@ -26,6 +26,7 @@ jobs:
       - run: uv run --no-sync ruff format --check .
       - run: uv run --no-sync python scripts/export_schemas.py --check
       - run: uv run --no-sync python scripts/audit_public.py
+      - run: uv run --no-sync python scripts/review_runtime_manifest.py --check
       - run: uv run --no-sync python -m build --no-isolation
 
   full-runtime:
