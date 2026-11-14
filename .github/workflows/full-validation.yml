@@ -86,7 +86,8 @@ jobs:
           token: ${{ secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
           ref: main
           path: character-data
-          fetch-depth: 0
+          fetch-depth: 1
+          filter: blob:none
       - name: Validate interface and installed dependencies
         working-directory: framework
         run: uv run --no-sync rp-core full --task preflight --data-root ../character-data

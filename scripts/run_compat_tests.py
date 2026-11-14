@@ -65,7 +65,7 @@ def main():
         env = {
             key: value
             for key, value in os.environ.items()
-            if not any(part in key.upper() for part in ("API_KEY", "TOKEN", "SECRET", "MASTER_KEY"))
+            if not any(part in key.upper() for part in ("KEY", "TOKEN", "SECRET", "PASSWORD"))
         }
         env.update(
             {

@@ -125,7 +125,8 @@ jobs:
           token: ${{ secrets.RP_INSTANCE_TOKEN || secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
           path: character-data
           ref: main
-          fetch-depth: 0
+          fetch-depth: 1
+          filter: blob:none
       - name: Run only public code against private data
         working-directory: framework
         env:

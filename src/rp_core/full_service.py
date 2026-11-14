@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -27,6 +28,30 @@ def merge_staging(root: Path):
     (root / "logs").mkdir(exist_ok=True)
     env = environment(root, root, shadow=False)
     with (root / "logs/merge-staging.log").open("ab") as log:
+        shallow = subprocess.run(
+            ["git", "rev-parse", "--is-shallow-repository"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+        )
+        pending = subprocess.run(
+            ["git", "ls-remote", "--heads", "origin", "bot-staging/*"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+        )
+        if shallow.stdout.strip() == b"true" and pending.returncode == 0 and pending.stdout.strip():
+            # Fetch ancestry only when needed; retain the partial clone's blob filter.
+            history = subprocess.run(
+                ["git", "fetch", "--unshallow", "--filter=blob:none", "origin", "main"],
+                cwd=root,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                timeout=600,
+                check=False,
+            )
+            if history.returncode:
+                raise RPCError("persistence_failed", "Recovery ancestry could not be fetched.")
         result = subprocess.run(
             [
                 sys.executable,
@@ -149,6 +174,42 @@ def persist(root: Path, branch="main"):
         )
     sanitize_logs(root, env)
     if result.returncode:
+        with output.open("ab") as log:
+            recovery = subprocess.run(
+                [
+                    sys.executable,
+                    str(CODE / "scripts/tenshi_git_sync.py"),
+                    "--repo",
+                    str(root),
+                    "push",
+                    "--tier",
+                    "edge",
+                    "--branch",
+                    branch,
+                    "--run-id",
+                    uuid.uuid4().hex,
+                    "--workflow",
+                    "rp-core-recovery",
+                    "--message",
+                    "Preserve private RP recovery state [skip ci]",
+                    "--push-when-clean",
+                    "--files",
+                    *files,
+                ],
+                env=env,
+                cwd=root,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                timeout=600,
+                check=False,
+            )
+        sanitize_logs(root, env)
+        if recovery.returncode == 0:
+            raise RPCError(
+                "persistence_staged",
+                "State was preserved on a private recovery branch; reconcile before further delivery.",
+                retryable=True,
+            )
         raise RPCError(
             "persistence_failed",
             "Private persistence failed; inspect the private sync log before retrying.",

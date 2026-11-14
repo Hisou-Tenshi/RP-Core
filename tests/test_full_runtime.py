@@ -230,3 +230,50 @@ def test_legacy_numpy_cache_roundtrips_without_reembedding():
         result = load(io.BytesIO(pickle.dumps(cache, protocol=protocol)))
         assert result["model"] == cache["model"]
         np.testing.assert_array_equal(result["embeddings"]["sample"], cache["embeddings"]["sample"])
+
+
+def test_persistence_uses_private_recovery_branch_after_main_failure(root, monkeypatch):
+    from types import SimpleNamespace
+
+    commands = []
+
+    def fake(command, **kwargs):
+        commands.append(command)
+        if command[:2] == ["git", "rev-parse"]:
+            return SimpleNamespace(returncode=0, stdout=str(root).encode())
+        if command[0] == "git":
+            return SimpleNamespace(returncode=0, stdout=b"")
+        tier = command[command.index("--tier") + 1]
+        return SimpleNamespace(returncode=1 if tier == "reply" else 0)
+
+    monkeypatch.setattr(service.subprocess, "run", fake)
+    with pytest.raises(RPCError) as error:
+        service.persist(root)
+    assert error.value.code == "persistence_staged"
+    assert commands[-1][commands[-1].index("--tier") + 1] == "edge"
+
+
+def test_real_shallow_private_git_persistence(root, monkeypatch):
+    import subprocess
+
+    monkeypatch.setenv("GIT_TERMINAL_PROMPT", "0")
+
+    def git(*args, cwd=root):
+        return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True).stdout
+
+    remote = root.parent / (root.name + "-origin.git")
+    git("init", "--bare", str(remote))
+    git("init", "-b", "main")
+    git("config", "user.name", "Synthetic author")
+    git("config", "user.email", "synthetic@example.invalid")
+    git("add", ".")
+    git("commit", "-m", "Synthetic data")
+    git("remote", "add", "origin", str(remote))
+    git("push", "origin", "main")
+    shallow = root.parent / (root.name + "-shallow")
+    git("clone", "--depth", "1", "--branch", "main", remote.as_uri(), str(shallow))
+    assert git("rev-parse", "--is-shallow-repository", cwd=shallow).strip() == b"true"
+    write_json(shallow / ".rp/synthetic.json", {"preserved": True})
+    service.persist(shallow)
+    stored = git("--git-dir", str(remote), "show", "main:.rp/synthetic.json")
+    assert json.loads(stored) == {"preserved": True}
