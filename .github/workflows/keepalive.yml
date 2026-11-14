@@ -1,0 +1,40 @@
+name: Monthly public keepalive
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 0 1 * *'
+permissions:
+  contents: write
+concurrency:
+  group: rp-public-keepalive
+  cancel-in-progress: false
+jobs:
+  keepalive:
+    if: ${{ vars.RP_LIVE_ENABLED == 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          token: ${{ secrets.KEEPALIVE_TOKEN || github.token }}
+          fetch-depth: 1
+      - run: python3 scripts/keepalive.py
+      - name: Commit public marker only
+        env:
+          RP_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -- .github/activity.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Refresh public activity marker [skip ci]'
+          for attempt in 1 2 3; do
+            git fetch origin "$RP_BRANCH"
+            if ! git rebase "origin/$RP_BRANCH"; then
+              git rebase --abort; exit 1
+            fi
+            if git push origin "HEAD:refs/heads/$RP_BRANCH"; then exit 0; fi
+          done
+          exit 1
