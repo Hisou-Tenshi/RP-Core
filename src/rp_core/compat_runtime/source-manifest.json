@@ -99,7 +99,8 @@
       "published_sha256": "968d0302d550b91e0665016da4bea577b6255e0fe3cc24fd3d887bad7e45abe1",
       "functions": 12,
       "unchanged_functions": 12,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "41435c24b90b657ca800efc83b54cd26c6d6f11159c8139a12c252c25e688cc1"
     },
     {
       "path": "src/deferred_intent.py",
@@ -115,7 +116,8 @@
       "published_sha256": "866f7da308eb93607ad01faf0a3bd1a6524b865f3ee2fcb2b1a68bc119046aa1",
       "functions": 11,
       "unchanged_functions": 11,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "b09aa2d181069144d6948c937c7e6769fccf373bf8836a006fe88159abbace91"
     },
     {
       "path": "src/error_text.py",
@@ -140,7 +142,7 @@
       "functions": 7,
       "unchanged_functions": 7,
       "changed_functions": [],
-      "reviewed_sha256": "dd20b6c5624bfdffe0b9a0c447b43803149c15a8b61312e65eabf479d23ebc64"
+      "reviewed_sha256": "02a2e3050838b6b5cc34370bad3119ff4a7e37240f0f4965933927ff0e929c7c"
     },
     {
       "path": "src/glm_modules.py",
@@ -148,7 +150,8 @@
       "published_sha256": "6e5676dd1e6d63e8efae2618b23e230048a04a9e6a50395e75f0be380b4e4a54",
       "functions": 14,
       "unchanged_functions": 14,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "fb66b2f56b86a2cbf027575eaa961e9d497d19901534e735e321ac5d988902b9"
     },
     {
       "path": "src/grok_modules.py",
@@ -156,7 +159,8 @@
       "published_sha256": "84506719cf5121d94aef1a8a13a5548dcd492cc6fdbabdaa59bec9500ed6b299",
       "functions": 35,
       "unchanged_functions": 35,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "ed6a8794af9acad11968aa0c63ba5e07bc5f2602fe26dc2537fa599f08b413b8"
     },
     {
       "path": "src/image_utils.py",
@@ -189,7 +193,7 @@
       "functions": 6,
       "unchanged_functions": 6,
       "changed_functions": [],
-      "reviewed_sha256": "e86167bca2758f74132fbb32aac866f0632ad39a92390b7429693412f21d2004"
+      "reviewed_sha256": "341d09f12830e95f82a835bc5d2d0c999ccb85c91d47772f4913a0925334e812"
     },
     {
       "path": "src/llm_routing.py",
@@ -225,7 +229,8 @@
       "changed_functions": [
         "commit_memory_changes",
         "push_knowledge_base_and_check_success"
-      ]
+      ],
+      "reviewed_sha256": "e5734f159cd3c8c25e7ff7a45b6980828cf8dde92f48ade547849a2316e6fcc9"
     },
     {
       "path": "src/message_split.py",
@@ -252,7 +257,8 @@
       "changed_functions": [
         "get_recent_commits",
         "_maybe_reply_if_unreplied_before_probability"
-      ]
+      ],
+      "reviewed_sha256": "378eff60a3eece0237dd35136567888cebc09cc743cbd5a906fc09e24d5eea0d"
     },
     {
       "path": "src/perception_policy.py",
@@ -295,7 +301,8 @@
       "unchanged_functions": 9,
       "changed_functions": [
         "TenshiRAG.load_cache"
-      ]
+      ],
+      "reviewed_sha256": "6c1f584624a6d8db5f28e8808fccb35071df844672374e7d72ee3c8b754c21ac"
     },
     {
       "path": "src/reactions.py",
@@ -319,7 +326,8 @@
       "published_sha256": "62822a4532a0ab4ac8b8750d35857308fff27b10639edce26f0502db9e45b2ef",
       "functions": 27,
       "unchanged_functions": 27,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "70dd6f0e17f3031466bb853e604a4ec3fdc4d8a7a07495663072ce9de7929524"
     },
     {
       "path": "src/reply_two_stage.py",
@@ -351,7 +359,8 @@
       "published_sha256": "60ad164b5cd90db9e8f9499ce6fa9bd46942f4f99d5b5fc864ceaba0370c8370",
       "functions": 19,
       "unchanged_functions": 19,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "10a2ca80a4bd2980f8bb1e6186867be014195e3e88da23243c4658734b6aca19"
     },
     {
       "path": "src/tenshi_config.py",
@@ -383,7 +392,8 @@
         "_format_project_tree_and_purpose",
         "read_config_file",
         "_main_impl"
-      ]
+      ],
+      "reviewed_sha256": "3cf66fe5c4cc3a34ee97f223e602c5bf313b458a7d9c3c3a27927bdc5d266207"
     },
     {
       "path": "src/tenshi_skills.py",
@@ -399,7 +409,8 @@
       "published_sha256": "1bbbb300c5a45807d92944720c18b12f4736219e5a270481e35d22b655447360",
       "functions": 1,
       "unchanged_functions": 1,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "ad3b0b1a2f78a10061d04fb1b679a015d5be30e65aa9b61fef2a2fa41751b0ce"
     },
     {
       "path": "src/tenshi_utils.py",
@@ -407,7 +418,8 @@
       "published_sha256": "daa1f28f54dafc43ee1a2e4c0e301c289c2323e3179209941ce7902a5478eefb",
       "functions": 39,
       "unchanged_functions": 39,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "9b185607f7e8a23ff2c582506ab946653e2bb8c2a11002e95c3a47de8c8e52bf"
     },
     {
       "path": "src/user_location.py",

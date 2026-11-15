@@ -18,7 +18,11 @@
 from __future__ import annotations
 
 import threading
+import time
+from contextvars import copy_context
 from typing import Any, Callable, TypeVar
+
+from _rp_cancellation import CallCancelled, CallScope, current_scope, ensure_active, remaining_timeout
 
 import httpx
 import tenshi_config
@@ -45,28 +49,44 @@ def call_with_deadline(
     """在独立守护线程里执行 fn,超过 timeout_sec 未返回就抛 LlmDeadlineExceeded。
 
     * timeout_sec 为 None 或 <= 0 时：不设上限,直接同步执行 fn（保持原行为）。
-    * 超时只是「放弃等待」：底层请求由它自己的 SDK 读写超时收尾,结果被丢弃;
-      线程是 daemon,不会拖住进程退出。
+    * 超时取消当前调用作用域；SDK 请求由自身网络超时收尾，后续请求、流式回调
+      和工具执行在公共边界检查取消标记。已经开始的 I/O 无法由线程强行撤销。
     * fn 自身抛出的异常原样向上抛(不吞、不包装),调用方按原有 except 逻辑降级。
     """
+    ensure_active()
     if timeout_sec is None or float(timeout_sec) <= 0:
         return fn()
 
+    timeout_sec = remaining_timeout(timeout_sec)
     box: dict = {}
     done = threading.Event()
+    scope = CallScope(
+        deadline=time.monotonic() + float(timeout_sec), parent=current_scope.get()
+    )
+    context = copy_context()
 
     def _runner() -> None:
+        token = current_scope.set(scope)
         try:
-            box["result"] = fn()
+            ensure_active()
+            result = fn()
+            scope.check()
+            box["result"] = result
+        except CallCancelled:
+            box["error"] = LlmDeadlineExceeded(f"{label} 已取消")
         except BaseException as exc:
             box["error"] = exc
         finally:
+            current_scope.reset(token)
             done.set()
 
-    worker = threading.Thread(target=_runner, name=f"llm-deadline:{label}", daemon=True)
+    worker = threading.Thread(
+        target=lambda: context.run(_runner), name=f"llm-deadline:{label}", daemon=True
+    )
     worker.start()
 
     if not done.wait(float(timeout_sec)):
+        scope.cancelled.set()
         raise LlmDeadlineExceeded(f"{label} 在 {float(timeout_sec):.1f}s 内无返回")
     if "error" in box:
         raise box["error"]
@@ -76,10 +96,10 @@ def call_with_deadline(
 def build_llm_timeout() -> httpx.Timeout:
     """依配置构造读写超时(SDK 默认 600s 静默太久;connect 单独给较短值)。"""
     return httpx.Timeout(
-        connect=tenshi_config.LLM_CLIENT_CONNECT_TIMEOUT_SEC,
-        read=tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC,
-        write=tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC,
-        pool=tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC,
+        connect=remaining_timeout(tenshi_config.LLM_CLIENT_CONNECT_TIMEOUT_SEC),
+        read=remaining_timeout(tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC),
+        write=remaining_timeout(tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC),
+        pool=remaining_timeout(tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC),
     )
 
 
@@ -105,10 +125,10 @@ def build_sdk_timeout(sdk_module: Any, *, connect: float | None = None, read: fl
 
     return sdk_compat.build_sdk_timeout(
         sdk_module,
-        connect=float(
+        connect=remaining_timeout(
             connect if connect is not None else tenshi_config.LLM_CLIENT_CONNECT_TIMEOUT_SEC
         ),
-        read=float(read if read is not None else tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC),
+        read=remaining_timeout(read if read is not None else tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC),
     )
 
 

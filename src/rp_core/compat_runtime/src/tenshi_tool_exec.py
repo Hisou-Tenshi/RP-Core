@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from _rp_cancellation import ensure_tools_allowed
+
 from fetch_tools import FETCH_MAX_CALLS_PER_TURN, fetch_url_tool
 from tenshi_skills import read_skill
 
@@ -47,7 +49,8 @@ def execute_tenshi_tool(
     schedule_perception_fn: Callable,
     extract_note_ids_fn: Callable | None = None,
 ) -> str:
-    """Dispatch a single tool call. Raises no exceptions — returns error strings."""
+    """Dispatch a tool only while its originating call still owns execution."""
+    ensure_tools_allowed()
     args = args if isinstance(args, dict) else {}
     name = (name or "").strip()
 

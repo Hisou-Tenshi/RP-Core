@@ -5,6 +5,9 @@ import pickle
 import hashlib
 import logging
 import warnings
+import threading
+from concurrent.futures import Future
+from _rp_cancellation import CallCancelled, ensure_active
 import numpy as np
 import tenshi_config
 from embedding_client import build_embedding_client
@@ -25,7 +28,18 @@ CACHE_FORMAT_VERSION = 2
 QUERY_CACHE_KEY_PREFIX = "__query__|"
 
 class TenshiRAG:
-    def __init__(self, db_path=None):
+    _coordination_init_lock = threading.Lock()
+
+    def _ensure_embedding_coordination(self):
+        # Restored/test instances may bypass __init__.
+        with self._coordination_init_lock:
+            if not hasattr(self, "_embedding_lock"):
+                self._embedding_lock = threading.RLock()
+                self._embedding_inflight = {}
+
+    def __init__(self, db_path=None, *, memory_manager=None):
+        self._embedding_lock = threading.RLock()
+        self._embedding_inflight = {}
         self.embedding_cache = {}
         self.cache_modified = False
         self.kb_data = {}
@@ -46,7 +60,7 @@ class TenshiRAG:
         self._embedding_failure_logged = False
 
 
-        self.memory_manager = TenshiMemoryManager(db_path=db_path)
+        self.memory_manager = memory_manager if memory_manager is not None else TenshiMemoryManager(db_path=db_path)
 
         self.load_cache()
         self.load_data()
@@ -101,6 +115,7 @@ class TenshiRAG:
                  logger.warning("在 Actions 环境中未找到 embedding 缓存文件。本次运行会更慢且成本更高。")
 
     def save_cache(self):
+        self._ensure_embedding_coordination()
         if not self.cache_modified:
             return
 
@@ -111,13 +126,15 @@ class TenshiRAG:
             temp_path = tenshi_config.CACHE_FILE_PATH + ".tmp"
 
 
+            with self._embedding_lock:
+                snapshot = dict(self.embedding_cache)
             payload = {
                 "format": CACHE_FORMAT_VERSION,
                 "model": self.embedding_model,
                 "dim": self.embedding_dim,
                 "embeddings": {
                     k: np.asarray(v, dtype=np.float32)
-                    for k, v in self.embedding_cache.items()
+                    for k, v in snapshot.items()
                     if np.asarray(v).shape == (self.embedding_dim,)
                 },
             }
@@ -192,74 +209,104 @@ class TenshiRAG:
             return hashlib.md5((QUERY_CACHE_KEY_PREFIX + text).encode('utf-8')).hexdigest()
         return hashlib.md5(text.encode('utf-8')).hexdigest()
 
-    def get_embedding(self, text, purpose="document"):
-        """使用 Qwen MaaS 获取 embedding，并提供缓存/回退（SQLite + Pickle 回退）。
-
-        purpose：document（候选条目入库，默认）/ query（检索查询）。
-        保留旧签名默认 ``document``，外部既有调用不用改。
-        失败时返回 EMBEDDING_DIM 维零向量；**不回退 Gemini**。
-        """
-        if not text:
-            return np.zeros(self.embedding_dim, dtype=np.float32)
-
-        text_value = str(text)
-        if purpose not in ("document", "query"):
-            purpose = "document"
-        text_hash = self._embedding_cache_key(text_value, purpose)
-
-
-
-        if getattr(self, 'memory_manager', None):
-            cached = self.memory_manager.get_cached_embedding(
-                text_hash, model=self.embedding_model
-            )
+    def _cached_embedding(self, text_hash):
+        manager = getattr(self, "memory_manager", None)
+        if manager:
+            cached = manager.get_cached_embedding(text_hash, model=self.embedding_model)
             if cached is not None and np.asarray(cached).shape == (self.embedding_dim,):
+                return np.asarray(cached, dtype=np.float32)
+        cached = self.embedding_cache.get(text_hash)
+        if cached is not None and np.asarray(cached).shape == (self.embedding_dim,):
+            return np.asarray(cached, dtype=np.float32)
+        return None
 
-                return np.array(cached, dtype=np.float32)
+    def get_embedding(self, text, purpose="document"):
+        return self.get_embeddings([text], purpose=purpose)[0]
 
+    def get_embeddings(self, texts, purpose="document"):
+        """Batch cache misses and share concurrent work for identical requests.
 
-        if text_hash in self.embedding_cache:
-            emb = np.asarray(self.embedding_cache[text_hash], dtype=np.float32)
-            if emb.shape == (self.embedding_dim,):
-
-                if getattr(self, 'memory_manager', None):
-                    self.memory_manager.save_cached_embedding(
-                        text_hash, emb, model=self.embedding_model
-                    )
-                return emb
-
-
-        try:
-            emb = np.asarray(self.client.embed(text_value, purpose=purpose), dtype=np.float32)
-        except Exception as e:
-            if not getattr(self, '_embedding_failure_logged', False):
-                logger.warning(
-                    f"embedding 调用失败，降级为零向量（后续同类失败只记 debug）："
-                    f"{format_exception_inline(e)}"
-                )
-                self._embedding_failure_logged = True
-            else:
-                logger.debug(f"embedding 调用失败：{format_exception_inline(e)}")
-            return np.zeros(self.embedding_dim, dtype=np.float32)
-
-        if emb.shape != (self.embedding_dim,):
-            logger.warning(
-                f"embedding 维度不符：{tuple(emb.shape)} != ({self.embedding_dim},)，返回零向量。"
-            )
-            return np.zeros(self.embedding_dim, dtype=np.float32)
-        if not np.any(emb):
-            logger.warning("embedding API 返回零向量，本次不写入缓存。")
-            return emb
-
-
-        self.embedding_cache[text_hash] = emb
-        self.cache_modified = True
-        if getattr(self, 'memory_manager', None):
-            self.memory_manager.save_cached_embedding(
-                text_hash, emb, model=self.embedding_model
-            )
-        self._embedding_failure_logged = False
-        return emb
+        Keys include model, dimension and purpose. The lock only covers cache/
+        flight bookkeeping; different text batches can perform network I/O in parallel.
+        Failed/zero vectors are shared with current waiters but never cached.
+        """
+        ensure_active()
+        self._ensure_embedding_coordination()
+        purpose = purpose if purpose in ("query", "document") else "document"
+        zero = lambda: np.zeros(self.embedding_dim, dtype=np.float32)
+        pending, leaders = [], {}
+        with self._embedding_lock:
+            for text in texts:
+                if not text:
+                    pending.append(zero())
+                    continue
+                value = str(text)
+                text_hash = self._embedding_cache_key(value, purpose)
+                cached = self._cached_embedding(text_hash)
+                if cached is not None:
+                    pending.append(cached)
+                    continue
+                key = (self.embedding_model, self.embedding_dim, purpose, text_hash)
+                future = self._embedding_inflight.get(key)
+                if future is None:
+                    future = Future()
+                    self._embedding_inflight[key] = future
+                    leaders[key] = (value, future)
+                pending.append(future)
+        if leaders:
+            try:
+                values = [value for value, _ in leaders.values()]
+                ensure_active()
+                try:
+                    if len(values) > 1 and callable(getattr(self.client, "embed_batch", None)):
+                        vectors = self.client.embed_batch(values, purpose=purpose)
+                    else:
+                        vectors = [self.client.embed(value, purpose=purpose) for value in values]
+                    if len(vectors) != len(values):
+                        raise ValueError("Embedding batch length mismatch")
+                except Exception as error:
+                    logger.warning(f"embedding 调用失败，当前批次不缓存：{format_exception_inline(error)}")
+                    vectors = [zero() for _ in values]
+                ensure_active()
+                for (key, (_, future)), vector in zip(leaders.items(), vectors):
+                    emb = np.asarray(vector, dtype=np.float32)
+                    if emb.shape != (self.embedding_dim,) or not np.isfinite(emb).all():
+                        emb = zero()
+                    with self._embedding_lock:
+                        if np.any(emb):
+                            self.embedding_cache[key[-1]] = emb
+                            self.cache_modified = True
+                            if getattr(self, "memory_manager", None):
+                                self.memory_manager.save_cached_embedding(
+                                    key[-1], emb, model=self.embedding_model
+                                )
+                        future.set_result(emb)
+            except BaseException as error:
+                for _, future in leaders.values():
+                    if not future.done():
+                        if isinstance(error, CallCancelled):
+                            future.set_result(zero())
+                        else:
+                            future.set_exception(error)
+                raise
+            finally:
+                with self._embedding_lock:
+                    for key in leaders:
+                        self._embedding_inflight.pop(key, None)
+        results = []
+        for value in pending:
+            ensure_active()
+            if isinstance(value, Future):
+                # Respect a waiting caller's own cancellation/deadline as well.
+                while not value.done():
+                    ensure_active()
+                    try:
+                        value.result(timeout=0.05)
+                    except TimeoutError:
+                        continue
+                value = value.result()
+            results.append(np.asarray(value, dtype=np.float32).copy())
+        return results
 
 
     def retrieve_items(self, query, items, top_k=3, embedding_key=None, threshold=None):

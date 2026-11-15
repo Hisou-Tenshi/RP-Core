@@ -162,6 +162,10 @@ def select_unreplied_run(history: Any) -> List[Dict[str, Any]]:
 
         if msg.get("perception_event"):
             continue
+        if msg.get("rp_delivery_quarantined"):
+            # It may already have reached Telegram. Only explicit reconciliation
+            # can reopen it; a new user turn must not silently retry this one.
+            break
         has_answer = msg.get("bot_answer") and str(msg.get("bot_answer")).strip()
         is_replied_flag = msg.get("replied_flag", False)
         if (not has_answer) and (not is_replied_flag):

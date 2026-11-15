@@ -1,7 +1,17 @@
 {
   "schema_version": 1,
   "engine": "full",
-  "persistence": {"driver": "git", "branch": "main"},
+  "persistence": {
+    "driver": "git",
+    "branch": "main"
+  },
   "max_events": 25,
-  "maintenance_seconds": {"summary": 10800, "archive": 604800, "cleanup": 86400, "probe": 86400}
+  "maintenance_seconds": {
+    "summary": 10800,
+    "archive": 604800,
+    "daily-backup": 86400,
+    "weekly-backup": 604800,
+    "cleanup": 86400,
+    "probe": 86400
+  }
 }

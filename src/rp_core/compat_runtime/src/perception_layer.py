@@ -1273,7 +1273,8 @@ async def _run_perception_impl(
             grade_tier="medium",
             system_prompt=system_prompt,
             messages_payload=payload,
-            filtered_claude_tools=CLAUDE_TOOLS,
+            filtered_claude_tools=[],
+            tools_enabled=False,
         )
         return out[0] if out else ""
 
@@ -1297,6 +1298,7 @@ async def _run_perception_impl(
     if pending_intent:
         round_ctx.fired = True
 
+    telegram_failed = False
     try:
         telegram_sent = False
         bot = Bot(token=tenshi_config.TELEGRAM_TOKEN)
@@ -1389,6 +1391,8 @@ async def _run_perception_impl(
             if sticker_name:
                 if await _send_sticker_one(sticker_name, first=not telegram_sent):
                     telegram_sent = True
+                else:
+                    telegram_failed = True
                 continue
             if i > 0:
 
@@ -1399,6 +1403,7 @@ async def _run_perception_impl(
         if telegram_sent:
             logger.info("Telegram message sent successfully.")
     except Exception as e:
+        telegram_failed = True
         logger.error(f"Failed to send Telegram message: {format_exception_inline(e)}")
 
 
@@ -1414,7 +1419,7 @@ async def _run_perception_impl(
                         thinking_content=thinking_content)
     if scheduled_force:
         complete_scheduled_trigger(schedule_trigger_at_ms or None)
-    return 0
+    return 1 if telegram_failed else 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tenshi Perception Layer')

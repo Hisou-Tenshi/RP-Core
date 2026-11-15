@@ -23,6 +23,8 @@
 
 from __future__ import annotations
 
+from _rp_cancellation import ensure_active
+
 import logging
 import random
 import time
@@ -195,6 +197,7 @@ class EmbeddingClient:
         last_err: Exception | None = None
         for attempt in range(1, self.max_attempts + 1):
             try:
+                ensure_active()
                 return self._client.embeddings.create(
                     model=self.model,
                     input=batch,

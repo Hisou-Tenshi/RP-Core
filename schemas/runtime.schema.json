@@ -233,7 +233,9 @@
               "summary",
               "archive",
               "cleanup",
-              "probe"
+              "probe",
+              "daily-backup",
+              "weekly-backup"
             ]
           },
           "additionalProperties": {

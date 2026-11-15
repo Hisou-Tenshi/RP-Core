@@ -35,6 +35,8 @@
 
 from __future__ import annotations
 
+from _rp_cancellation import ensure_active
+
 import threading
 
 import tenshi_config
@@ -231,6 +233,7 @@ def call_glm(
     """
     client, _ = _client_for_path(llm_path)
     try:
+        ensure_active()
         completion = client.chat.completions.create(
             model=_normalize_model_name_for_path(model_name),
             messages=_to_glm_messages(system_prompt, messages),
@@ -301,6 +304,7 @@ def call_glm_with_tools(
             **_thinking_kwargs(tools=tools or [], agent_complex=agent_complex),
         }
         if not use_stream:
+            ensure_active()
             completion = client.chat.completions.create(**kwargs)
             choice_msg = completion.choices[0].message
             content = getattr(choice_msg, "content", None) or ""
@@ -308,6 +312,7 @@ def call_glm_with_tools(
             tool_calls = _normalize_tool_calls(raw_tool_calls) if raw_tool_calls else []
             return content, tool_calls, assistant_message_dict(choice_msg)
 
+        ensure_active()
         stream = client.chat.completions.create(**kwargs)
         content_parts: list[str] = []
         reasoning_parts: list[str] = []
@@ -325,8 +330,10 @@ def call_glm_with_tools(
             if text:
                 content_parts.append(text)
                 if callable(stream_callback):
+                    ensure_active()
                     stream_callback(text)
                 if callable(on_stream_token):
+                    ensure_active()
                     on_stream_token(text)
             _accumulate_stream_tool_calls(tool_calls_by_index, getattr(delta, "tool_calls", None))
 
@@ -360,6 +367,7 @@ def glm_generate_json(
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
+    ensure_active()
     completion = client.chat.completions.create(
         model=_normalize_model_name_for_path(model_name),
         messages=messages,

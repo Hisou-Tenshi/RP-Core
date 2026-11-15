@@ -83,6 +83,7 @@ jobs:
       TIMEZONE_OFFSET: ${{ secrets.TIMEZONE_OFFSET }}
       RP_ALLOW_LIVE: '1'
       RP_INSTANCE_ID: ${{ matrix.id }}
+      RP_DATA_REPOSITORY: ${{ vars[matrix.repository_variable] || secrets.GH_REPO }}
     needs: plan
     if: ${{ needs.plan.outputs.has_instances == 'true' }}
     runs-on: ubuntu-latest

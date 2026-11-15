@@ -34,6 +34,8 @@ def test_full_config_is_public_and_has_maintenance():
         "archive",
         "cleanup",
         "probe",
+        "daily-backup",
+        "weekly-backup",
     }
 
 
@@ -160,7 +162,9 @@ def test_queue_processes_once_and_orders_numeric_messages(root, monkeypatch):
     queue(root, "b", 2)
     calls = []
     monkeypatch.setattr(
-        service, "run_full", lambda root, task, payload: calls.append(payload["msg_id"])
+        service,
+        "run_full",
+        lambda root, task, payload: calls.append(payload["msg_id"]) or {"status": "sent"},
     )
     config = {"persistence": {"driver": "local"}}
     assert service.run_queue(root, config)["processed"] == 2
@@ -177,10 +181,22 @@ def test_queue_failure_requires_reconciliation(root, monkeypatch):
 
     monkeypatch.setattr(service, "run_full", fail)
     config = {"persistence": {"driver": "local"}}
-    with pytest.raises(RuntimeError):
-        service.run_queue(root, config)
-    with pytest.raises(RPCError, match="reconcile"):
-        service.run_queue(root, config)
+    assert service.run_queue(root, config)["quarantined"] == 1
+    # The same ambiguous event is isolated, never blindly resent.
+    assert service.run_queue(root, config)["quarantined"] == 1
+    write_json(root / "inbox/probe.json", {"full_task": "probe", "legacy_payload": {}})
+    calls = []
+
+    def succeed(root, task, **kwargs):
+        calls.append(task)
+        return {"status": "completed"}
+
+    monkeypatch.setattr(service, "run_full", succeed)
+    config["maintenance_seconds"] = {"cleanup": 60}
+    result = service.run_queue(root, config)
+    assert result["processed"] == 1
+    assert result["quarantined"] == 1
+    assert calls == ["probe", "cleanup"]
 
 
 def test_unauthorized_event_never_reaches_model(root, monkeypatch):

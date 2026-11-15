@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
+
+from _rp_cancellation import ensure_active
 import os
 import logging
 import json
@@ -206,6 +208,7 @@ def _call_openai_compat_text(
     api_messages = _messages_to_openai_format(system_prompt, messages)
     try:
         if not callable(stream_callback):
+            ensure_active()
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=api_messages,
@@ -215,6 +218,7 @@ def _call_openai_compat_text(
             content = completion.choices[0].message.content or ""
             return content, ""
 
+        ensure_active()
         stream = client.chat.completions.create(
             model=model_name,
             messages=api_messages,
@@ -233,6 +237,7 @@ def _call_openai_compat_text(
                 continue
             parts.append(delta)
             try:
+                ensure_active()
                 stream_callback(delta)
             except Exception:
                 pass
@@ -314,6 +319,7 @@ def call_openrouter_vision(
     }
 
     def _do():
+        ensure_active()
         completion = client.chat.completions.create(**payload)
         return completion.choices[0].message.content or ""
 
@@ -415,6 +421,7 @@ def _chat_completions_create(client, kwargs: dict, *, label: str):
     判死（这次事故就是这么烧掉的）。去掉后仍失败时异常照常抛出，上层继续换通路/换模型。
     """
     try:
+        ensure_active()
         return client.chat.completions.create(**kwargs)
     except Exception as exc:
         if "reasoning_effort" not in kwargs or not _mentions_reasoning_effort(exc):
@@ -426,6 +433,7 @@ def _chat_completions_create(client, kwargs: dict, *, label: str):
 
     retry = {k: v for k, v in kwargs.items() if k != "reasoning_effort"}
     try:
+        ensure_active()
         result = client.chat.completions.create(**retry)
     except Exception as exc:
         logger.error(f"{label}：去掉 reasoning_effort 后仍失败：{format_exception_inline(exc)}")
@@ -491,6 +499,7 @@ def call_grok(model_name, system_prompt, messages, llm_path=None):
 
     try:
 
+        ensure_active()
         completion = client.chat.completions.create(
             model=model_name,
             messages=grok_messages,
@@ -532,6 +541,7 @@ def _call_openai_compat_with_tools(
     )
     api_messages = _messages_to_openai_format_with_tools(system_prompt, messages)
     try:
+        ensure_active()
         completion = client.chat.completions.create(
             model=model_name,
             messages=api_messages,
@@ -602,6 +612,7 @@ def call_grok_with_tools(model_name, system_prompt, messages, tools, llm_path=No
     grok_messages = _messages_to_openai_format_with_tools(system_prompt, messages)
 
     try:
+        ensure_active()
         completion = client.chat.completions.create(
             model=model_name,
             messages=grok_messages,

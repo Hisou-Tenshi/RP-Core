@@ -91,6 +91,19 @@ async def _notify_no_reply(bot: Bot, chat_id: int) -> None:
         logger.warning(f"发送「主动不回」小提醒失败：{format_exception_inline(e)}")
 
 
+def _write_runtime_result(status: str) -> None:
+    """Write an atomic, private outcome marker for the full-runtime host."""
+    path = os.environ.get("RP_RESULT_PATH")
+    if not path:
+        return
+    temporary = path + ".tmp"
+    with open(temporary, "w", encoding="utf-8") as result_file:
+        json.dump({"status": status}, result_file)
+        result_file.flush()
+        os.fsync(result_file.fileno())
+    os.replace(temporary, path)
+
+
 def _log_message_is_intentional_no_send(msg_id, user_id) -> bool:
     """子进程非 0 退出时再确认一次：这条消息是不是崩溃前已经落盘了主动不回。"""
     try:
@@ -547,9 +560,10 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
     这个函数还包含了一些关于随机触发的逻辑（目前被注释掉了），以及对日志的详细记录，以便在处理过程中能够追踪每一步的状态和可能出现的问题。
     '''
 
+    delivery_started = False
     if int(user_id) != int(tenshi_config.ADMIN_ID):
         logger.warning(f"未授权访问尝试：{user_id}")
-        return
+        return "retryable_failure"
 
     logger.info(f"正在处理来自 {user_id} 的消息。随机触发：{is_random_trigger}，位置：{location_data}")
 
@@ -572,7 +586,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
     """
     if is_random_trigger:
         logger.info("随机触发已被天子下令禁用。")
-        return
+        return "no_send"
 
 
 
@@ -624,9 +638,11 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
         )
         if not saved:
             logger.warning("定位写入 KB 失败。")
+            if not text and not local_files:
+                return "retryable_failure"
         if not text and not local_files:
             logger.info("仅定位更新，已写入 KB，跳过日志与回复。")
-            return
+            return "no_send"
 
     should_reply = True
 
@@ -657,8 +673,9 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                 try:
                     with open(LOG_FILE, 'r', encoding='utf-8') as f:
                         current_logs = json.load(f)
-                except:
-                    current_logs = []
+                except (OSError, ValueError):
+                    # A failed read must not silently replace existing private history.
+                    raise
 
             current_logs, _ = ensure_tenshi_log_newest_first(current_logs)
 
@@ -685,8 +702,16 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
             if (text or local_files) and message_already_replied(
                 target_conversation.get('chat_history'), msg_id
             ):
-                logger.warning(f"重复投递的消息已回复过，跳过（msg_id={msg_id}）")
-                return
+                existing = next(
+                    entry for entry in target_conversation.get("chat_history", [])
+                    if isinstance(entry, dict) and str(entry.get("msg_id")) == str(msg_id)
+                )
+                if existing.get("no_send") or str(existing.get("bot_decision", "")).upper() == "SILENCE":
+                    return "no_send"
+                if existing.get("rp_delivery_quarantined") or existing.get("delivery_status") != "sent":
+                    return "delivery_unknown"
+                logger.warning(f"重复投递的消息已确认送达，跳过（msg_id={msg_id}）")
+                return "already_completed"
 
             if text or local_files:
                 message_entry = {
@@ -712,7 +737,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
         logger.info(f"已保存到日志。是否需要回复：{should_reply}")
 
         if not should_reply:
-            return
+            return "no_send"
 
 
         reply_script_path = os.path.join(BASE_DIR, 'src', 'tenshi_reply.py')
@@ -729,6 +754,8 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
 
         env["PYTHONUNBUFFERED"] = "1"
 
+        _write_runtime_result("delivery_unknown")
+        delivery_started = True
         typing_task = asyncio.create_task(_typing_indicator_loop(bot, chat_id))
         process = await asyncio.create_subprocess_exec(
             sys.executable, "-u", reply_script_path,
@@ -765,7 +792,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                 partial_saved=bool(recovered),
                 partial_chars=len(recovered_text),
             )
-            return
+            return "delivery_unknown"
         finally:
             typing_task.cancel()
             try:
@@ -818,7 +845,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                                         except Exception as e:
                                             logger.warning(f"删除 SILENCE 占位消息失败（message_id={bot_message_id}）：{format_exception_inline(e)}")
                                     logger.info(f"消息 {msg_id} 最终判定为 SILENCE，跳过 Telegram 发送。")
-                                    return
+                                    return "no_send"
 
 
 
@@ -826,7 +853,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                                 if is_intentional_no_send(msg):
                                     logger.info(f"消息 {msg_id} 是天子主动选择不回（no_send），跳过发送与抢救。")
                                     await _notify_no_reply(bot, chat_id)
-                                    return
+                                    return "no_send"
 
 
                                 if msg.get('bot_answer'):
@@ -835,6 +862,10 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                                     )
 
 
+                                    if msg.get("delivery_status") == "delivery_unknown":
+                                        return "delivery_unknown"
+                                    if msg.get("delivery_status") == "no_send":
+                                        return "no_send"
                                     if msg.get('replied_flag') is True:
                                         if reply_incomplete:
                                             ba = msg.get("bot_answer") or ""
@@ -847,7 +878,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                                                 partial_chars=len(ba.strip()),
                                             )
                                         logger.info(f"消息 {msg_id} 已由回复脚本标记为已回复，跳过重复发送。")
-                                        return
+                                        return "sent"
 
                                     reply_text = msg['bot_answer']
                                     bot_message_id = msg.get('bot_message_id')
@@ -942,7 +973,9 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                 bubbles = split_reply_into_bubbles(reply_text)
                 if not bubbles:
                     logger.error("回复文本存在，但拆分后没有有效气泡。")
-                    return
+                    return "delivery_unknown"
+
+                delivery_confirmed = True
 
                 if bot_message_id and not stickers.sticker_name_of_segment(bubbles[0]):
 
@@ -954,6 +987,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                             text=bubbles[0],
                             parse_mode=constants.ParseMode.MARKDOWN
                         )
+                        delivery_confirmed = True
                         logger.info(f"Final reply first bubble edited for {user_id} (msg_id: {bot_message_id})")
                     except Exception as e:
                         logger.error(f"编辑最终消息失败：{format_exception_inline(e)}")
@@ -968,21 +1002,28 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                                     text=bubbles[0],
                                     parse_mode=None
                                 )
+                                delivery_confirmed = True
                                 logger.info(f"已以纯文本方式编辑最终回复的第一段（用户 {user_id}）")
                                 edited_ok = True
                             except Exception as e2:
                                 logger.error(f"编辑最终消息失败（纯文本）：{e2}")
                         if not edited_ok:
-                            await _send_markdown_with_fallback(bot, chat_id, bubbles[0])
+                            delivery_confirmed = await _send_markdown_with_fallback(
+                                bot, chat_id, bubbles[0]
+                            ) and delivery_confirmed
 
 
                     for bubble in bubbles[1:]:
-                        await _send_markdown_with_fallback(bot, chat_id, bubble)
+                        delivery_confirmed = await _send_markdown_with_fallback(
+                            bot, chat_id, bubble
+                        ) and delivery_confirmed
                 else:
                     for idx, bubble in enumerate(bubbles):
                         sent_ok = await _send_markdown_with_fallback(bot, chat_id, bubble)
+                        delivery_confirmed = sent_ok and delivery_confirmed
                         if sent_ok and idx == 0:
                             logger.info(f"已发送回复给 {user_id}")
+                return "sent" if delivery_confirmed else "delivery_unknown"
             else:
                 if bot_message_id:
                      logger.error("回复脚本已结束但未找到回复文本，将保留已有内容（不覆盖）。")
@@ -1029,6 +1070,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                              reason="missing_answer",
                              msg_id=msg_id,
                          )
+                return "delivery_unknown"
         else:
 
             err_msg = "回复脚本崩溃（详见上方实时 stderr 输出）"
@@ -1038,7 +1080,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
             if _log_message_is_intentional_no_send(msg_id, user_id):
                 logger.error(f"消息 {msg_id} 崩溃前已落盘主动不回（no_send），按正常不回处理。")
                 await _notify_no_reply(bot, chat_id)
-                return
+                return "no_send"
             recovered = _recover_and_persist_partial_reply(
                 msg_id=msg_id,
                 user_id=user_id,
@@ -1055,9 +1097,11 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                 partial_chars=len(recovered_text),
                 detail=err_msg,
             )
+            return "delivery_unknown"
 
     except Exception as e:
         logger.error(f"process_single_message 发生错误：{format_exception_inline(e)}", exc_info=True)
+        return "delivery_unknown" if delivery_started else "retryable_failure"
 
 async def debug_run(args):
     """
@@ -1166,7 +1210,11 @@ def main():
     reply_to = parse_reply_to(args.reply_to or tenshi_config.MSG_REPLY_TO)
 
     if (text or file_id or location_data or is_random) and chat_id and user_id:
-        asyncio.run(process_single_message(text, chat_id, user_id, msg_id, file_id, file_type, file_name, location_data, is_random, timestamp, reply_to))
+        _write_runtime_result("retryable_failure")
+        result = asyncio.run(process_single_message(text, chat_id, user_id, msg_id, file_id, file_type, file_name, location_data, is_random, timestamp, reply_to))
+        _write_runtime_result(result or "delivery_unknown")
+        if result in ("retryable_failure", "delivery_unknown"):
+            raise SystemExit(1)
     else:
 
         if not tenshi_config.GITHUB_ACTIONS:

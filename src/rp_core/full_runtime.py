@@ -19,8 +19,8 @@ from pathlib import Path
 from rp_core.data_init import initialize_data
 from rp_core.legacy import write_json
 from rp_core.persona_export import export_persona
-from rp_core.protocol import RPCError
-from rp_core.settings import DEFAULT_FILES, load_io, read_json
+from rp_core.protocol import RPCError, validate
+from rp_core.settings import DEFAULT_FILES, IDENTITY_SCHEMA, load_io, read_json
 
 CODE = Path(__file__).parent / "compat_runtime"
 DEPENDENCIES = (
@@ -35,6 +35,7 @@ DEPENDENCIES = (
     "PIL",
     "pillow_heif",
 )
+_SANITIZED_LOGS = {}
 
 
 def dependency_status():
@@ -147,7 +148,28 @@ def validate_layout(root: Path):
                     raise RPCError(
                         "invalid_data_io", "Symlinks inside runtime data are not supported."
                     )
+    if (root / "identity.json").is_file():
+        validate_full_identity(read_json(root / "identity.json"))
     return io
+
+
+def validate_full_identity(identity: dict):
+    """The compatibility engine has shared memory/location and one Telegram owner."""
+    validate(identity, IDENTITY_SCHEMA)
+    users = [str(value) for value in identity["allowed_user_ids"]]
+    telegram = identity.get("telegram", {})
+    chats = [str(value) for value in telegram.get("allowed_chat_ids", [])]
+    target = telegram.get("chat_id")
+    if (
+        len(users) > 1
+        or len(chats) > 1
+        or (users and chats and chats != users)
+        or (users and target is not None and str(target) != users[0])
+    ):
+        raise RPCError(
+            "unsupported_full_identity",
+            "The full engine supports one owner in their private Telegram chat per data repository.",
+        )
 
 
 @contextmanager
@@ -213,8 +235,23 @@ def environment(root: Path, workspace: Path, *, shadow: bool, payload: dict | No
     )
     if admin is not None:
         env["ADMIN_ID"] = str(admin)
-    env["REPO_NAME"] = env.get("GH_REPO", env.get("REPO_NAME", ""))
-    env["GITHUB_TOKEN"] = env.get("TENSHI_BOT_ACTION_TOKEN", env.get("GITHUB_TOKEN", ""))
+    data_repository = env.get("RP_DATA_REPOSITORY", "").strip()
+    env["REPO_NAME"] = (
+        data_repository or env.get("GH_REPO", "").strip() or env.get("REPO_NAME", "").strip()
+    )
+    env["GITHUB_TOKEN"] = next(
+        (
+            value.strip()
+            for value in (
+                env.get("RP_INSTANCE_TOKEN", ""),
+                env.get("TENSHI_BOT_ACTION_TOKEN", ""),
+                env.get("GH_TOKEN", ""),
+                env.get("GITHUB_TOKEN", ""),
+            )
+            if value and value.strip()
+        ),
+        "",
+    )
     env["OPENROUTER_API_KEY"] = env.get("OPENROUTER_API_KEY") or env.get("RP_MODEL_API_KEY", "")
     kb = root / "data/knowledge_base.json"
     env["RP_KB_BASE_SHA"] = hashlib.sha256(kb.read_bytes()).hexdigest() if kb.exists() else ""
@@ -272,17 +309,61 @@ def sanitize_logs(root: Path, env: dict):
         if len(value) >= 8
         and any(part in key.upper() for part in ("KEY", "TOKEN", "SECRET", "PASSWORD"))
     }
+    pattern = (
+        re.compile("|".join(re.escape(value) for value in sorted(values, key=len, reverse=True)))
+        if values
+        else None
+    )
+    overlap = max((len(value) for value in values), default=1) - 1
+    fingerprint = hash(tuple(sorted(values)))
+    if len(_SANITIZED_LOGS) > 2048:
+        _SANITIZED_LOGS.clear()
     for path in (root / "logs").rglob("*"):
-        if path.is_file() and path.stat().st_size < 64 * 1024 * 1024:
-            try:
-                content = path.read_text(encoding="utf-8")
-            except (UnicodeError, OSError):
-                continue
-            scrubbed = content
-            for value in values:
-                scrubbed = scrubbed.replace(value, "[REDACTED]")
-            if scrubbed != content:
-                path.write_text(scrubbed, encoding="utf-8")
+        # Archives were scrubbed before compression. Avoid re-reading unchanged
+        # logs for every guard/receipt/ledger persistence operation.
+        if not path.is_file() or path.suffix == ".gz":
+            continue
+        stat = path.stat()
+        signature = (stat.st_mtime_ns, stat.st_size, stat.st_ino, fingerprint)
+        if _SANITIZED_LOGS.get(str(path)) == signature:
+            continue
+        temporary = path.with_name(path.name + ".redacting")
+        changed = False
+        try:
+            if pattern:
+                with (
+                    path.open(encoding="utf-8", newline="") as source,
+                    temporary.open("w", encoding="utf-8", newline="") as target,
+                ):
+                    pending = ""
+                    while chunk := source.read(65536):
+                        pending += chunk
+                        cutoff = max(0, len(pending) - overlap)
+                        cursor = 0
+                        for match in pattern.finditer(pending):
+                            if match.start() >= cutoff:
+                                break
+                            target.write(pending[cursor : match.start()])
+                            target.write("[REDACTED]")
+                            cursor = match.end()
+                            changed = True
+                        consumed = max(cutoff, cursor)
+                        target.write(pending[cursor:consumed])
+                        pending = pending[consumed:]
+                    final = pattern.sub("[REDACTED]", pending)
+                    changed = changed or final != pending
+                    target.write(final)
+                if changed:
+                    temporary.replace(path)
+            stat = path.stat()
+            _SANITIZED_LOGS[str(path)] = (stat.st_mtime_ns, stat.st_size, stat.st_ino, fingerprint)
+        except (UnicodeError, OSError):
+            continue
+        finally:
+            temporary.unlink(missing_ok=True)
+    from rp_core.maintenance import rotate_logs
+
+    rotate_logs(root, min_bytes=10 * 1024 * 1024)
 
 
 def run_full(
@@ -298,6 +379,12 @@ def run_full(
         raise RPCError(
             "character_required", "Prepare character data before running the full engine."
         )
+    if task in ("daily-backup", "weekly-backup"):
+        if shadow:
+            raise RPCError("invalid_params", "Private backups require the live private repository.")
+        from rp_core.maintenance import backup
+
+        return backup(root, environment(root, root, shadow=False), weekly=task == "weekly-backup")
     if not all(dependency_status().values()):
         raise RPCError("full_dependencies_required", "Install the public full dependency extra.")
     scripts = {
@@ -315,6 +402,10 @@ def run_full(
     with view(root) as workspace:
         env = environment(root, workspace, shadow=shadow, payload=payload)
         env["RP_ACTIVE_TASK"] = task
+        result_path = root / "logs/full-result.json"
+        if task == "reply":
+            result_path.unlink(missing_ok=True)
+            env["RP_RESULT_PATH"] = str(result_path)
         output = root / "logs/full-process.log"
         with output.open("ab") as log:
             process = subprocess.Popen(
@@ -332,6 +423,38 @@ def run_full(
                 process.wait()
                 code = 124
         sanitize_logs(root, env)
+        if task == "reply":
+            try:
+                result = json.loads(result_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                result = {"status": "delivery_unknown"}
+            if result.get("status") == "retryable_failure":
+                raise RPCError(
+                    "reply_retryable_failure",
+                    "The reply failed before confirmed delivery; it may be retried.",
+                    retryable=True,
+                )
+            if result.get("status") == "delivery_unknown":
+                return {
+                    "engine": "full",
+                    "task": task,
+                    "status": "delivery_unknown",
+                    "shadow": shadow,
+                    "public_code_only": True,
+                }
+            if result.get("status") not in ("sent", "no_send", "already_completed"):
+                raise RPCError(
+                    "full_runtime_failed",
+                    "The reply process returned an invalid outcome.",
+                    retryable=True,
+                )
+            return {
+                "engine": "full",
+                "task": task,
+                "status": result["status"],
+                "shadow": shadow,
+                "public_code_only": True,
+            }
         skipped = task in ("perception", "force-perception") and code == 2
         if code != 0 and not skipped:
             raise RPCError(
@@ -339,6 +462,10 @@ def run_full(
                 "The compatibility task failed; details remain in private logs.",
                 retryable=True,
             )
+        if task == "cleanup":
+            from rp_core.maintenance import cleanup
+
+            cleanup(root)
         return {
             "engine": "full",
             "task": task,

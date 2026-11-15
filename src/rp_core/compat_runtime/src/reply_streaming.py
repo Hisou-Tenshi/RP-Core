@@ -11,6 +11,8 @@ import logging
 import os
 import re
 import threading
+from contextvars import copy_context
+from _rp_cancellation import CallCancelled, ensure_active
 import time
 
 import requests
@@ -239,6 +241,7 @@ class TelegramStreamer:
         self.token = token
         self.chat_id = chat_id
         self.message_id = None
+        self.delivery_status = "delivery_unknown"
         self.full_text = ""
         self.last_sent_text = ""
         self.last_update_time = 0
@@ -262,6 +265,7 @@ class TelegramStreamer:
             return
         try:
             url = f"https://api.telegram.org/bot{self.token}/sendChatAction"
+            ensure_active()
             requests.post(
                 url,
                 json={"chat_id": self.chat_id, "action": "typing"},
@@ -334,6 +338,7 @@ class TelegramStreamer:
 
     def update(self, chunk):
         """Accumulates text and updates Telegram if interval passed."""
+        ensure_active()
         if not self.is_active:
             return
 
@@ -360,7 +365,15 @@ class TelegramStreamer:
 
             if self._sending_thread is None or not self._sending_thread.is_alive():
 
-                self._sending_thread = threading.Thread(target=self._send_edit)
+                context = copy_context()
+
+                def send_scoped():
+                    try:
+                        context.run(self._send_edit)
+                    except CallCancelled:
+                        pass
+
+                self._sending_thread = threading.Thread(target=send_scoped)
                 self._sending_thread.start()
                 self.last_update_time = current_time
 
@@ -402,6 +415,7 @@ class TelegramStreamer:
         attempts = max(1, int(max_retries or 1))
         for attempt in range(attempts):
             try:
+                ensure_active()
                 resp = requests.post(url, json=data, timeout=10)
                 if resp.status_code == 200:
                     try:
@@ -422,6 +436,7 @@ class TelegramStreamer:
                 ):
                     logger.debug(f"Markdown parse failed, retrying as plain text. Error: {resp.text}")
                     data.pop("parse_mode", None)
+                    ensure_active()
                     resp_retry = requests.post(url, json=data, timeout=10)
                     if resp_retry.status_code == 200:
                         try:
@@ -460,6 +475,7 @@ class TelegramStreamer:
         try:
             url = f"https://api.telegram.org/bot{self.token}/deleteMessage"
             data = {"chat_id": self.chat_id, "message_id": self.message_id}
+            ensure_active()
             resp = requests.post(url, json=data, timeout=8)
             if resp.status_code == 200:
                 try:
@@ -485,6 +501,7 @@ class TelegramStreamer:
 
         for attempt in range(max_retries):
             try:
+                ensure_active()
                 resp = requests.post(url, json=data, timeout=8)
 
                 if resp.status_code == 200:
@@ -501,6 +518,7 @@ class TelegramStreamer:
                     logger.debug(f"Markdown parse failed, retrying as plain text. Error: {resp.text}")
                     data.pop("parse_mode", None)
 
+                    ensure_active()
                     resp_retry = requests.post(url, json=data, timeout=8)
                     if resp_retry.status_code == 200:
                         self.last_sent_text = text_to_send
@@ -532,6 +550,7 @@ class TelegramStreamer:
         rate_limit_waits = 0
         while attempt < max_retries:
             try:
+                ensure_active()
                 resp = requests.post(url, json=data, timeout=10)
                 if resp.status_code == 200:
                     out = resp.json()
@@ -557,6 +576,7 @@ class TelegramStreamer:
                     "can't parse entities" in resp.text or "Bad Request" in resp.text
                 ):
                     data.pop("parse_mode", None)
+                    ensure_active()
                     resp_retry = requests.post(url, json=data, timeout=10)
                     if resp_retry.status_code == 200:
                         out = resp_retry.json()
@@ -591,6 +611,7 @@ class TelegramStreamer:
         渲染层看到的就是她连着发了几条，标记本身不外泄。
         没有标记时与旧行为完全一致(只覆盖一条,不新增消息)。
         """
+        self.delivery_status = "delivery_unknown"
         try:
             if not self.is_active:
                 return
@@ -632,6 +653,7 @@ class TelegramStreamer:
                     self.full_text = buffered
                 if not buffered.strip():
                     logger.info("[reaction] 这一轮只有表情回应，不发送任何文字消息。")
+                    self.delivery_status = "no_send"
                     return
 
 
@@ -658,13 +680,15 @@ class TelegramStreamer:
 
 
                 self._ensure_first_segment_sent(segments[0])
-
+                confirmed = bool(self.message_id) and self.last_sent_text == strip_br_markup(segments[0])
 
                 for seg in segments[1:]:
                     delay = _followup_delay_sec(seg)
                     if delay > 0:
                         time.sleep(delay)
-                    self._send_followup(seg)
+                    confirmed = bool(self._send_followup(seg)) and confirmed
+                if confirmed:
+                    self.delivery_status = "sent"
                 return
 
 
@@ -674,6 +698,8 @@ class TelegramStreamer:
             self._send_edit(max_retries=3)
             if segments:
                 self._ensure_first_segment_sent(segments[0])
+                if self.message_id and self.last_sent_text == strip_br_markup(segments[0]):
+                    self.delivery_status = "sent"
         finally:
             self.stop_typing()
 
@@ -687,6 +713,7 @@ class TelegramStreamer:
             logger.warning(f"[sticker] 贴纸不可用，跳过：{name!r}")
             return None
         try:
+            ensure_active()
             requests.post(
                 f"https://api.telegram.org/bot{self.token}/sendChatAction",
                 json={"chat_id": self.chat_id, "action": "choose_sticker"},
@@ -704,6 +731,7 @@ class TelegramStreamer:
         rate_limit_waits = 0
         while attempt < max_retries:
             try:
+                ensure_active()
                 resp = requests.post(url, json=data, timeout=10)
                 if resp.status_code == 200:
                     out = resp.json()
@@ -750,6 +778,7 @@ class TelegramStreamer:
             self.last_sent_text = ""
         first_sent_id = None
         sent_any = False
+        all_sent = True
         for i, seg in enumerate(segments):
             name = stickers.sticker_name_of_segment(seg)
             if name:
@@ -760,19 +789,22 @@ class TelegramStreamer:
                     self.full_text = seg
                 self._send_edit(max_retries=3)
                 self._ensure_first_segment_sent(seg)
-                mid = self.message_id
+                mid = self.message_id if self.last_sent_text == strip_br_markup(seg) else None
             else:
                 if sent_any:
                     delay = _followup_delay_sec(seg)
                     if delay > 0:
                         time.sleep(delay)
                 mid = self._send_followup(seg)
+            all_sent = bool(mid) and all_sent
             if mid:
                 sent_any = True
                 if first_sent_id is None:
                     first_sent_id = mid
         if self.message_id is None and first_sent_id is not None:
             self.message_id = first_sent_id
+        if all_sent and sent_any:
+            self.delivery_status = "sent"
         if not sent_any:
             logger.error("含贴纸的回复一条都没发出去，本条只落库。")
 

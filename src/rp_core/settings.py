@@ -117,7 +117,17 @@ FULL_RUNTIME_SCHEMA = obj(
         "max_events": {"type": "integer", "minimum": 1, "maximum": 100},
         "maintenance_seconds": {
             "type": "object",
-            "propertyNames": {"enum": ["perception", "summary", "archive", "cleanup", "probe"]},
+            "propertyNames": {
+                "enum": [
+                    "perception",
+                    "summary",
+                    "archive",
+                    "cleanup",
+                    "probe",
+                    "daily-backup",
+                    "weekly-backup",
+                ]
+            },
             "additionalProperties": {"type": "integer", "minimum": 60},
         },
     },

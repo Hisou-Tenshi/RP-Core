@@ -93,7 +93,7 @@ def ensure_rag():
     global _rag
     if _rag is None:
         try:
-            _rag = TenshiRAG()
+            _rag = TenshiRAG(memory_manager=ensure_mem_mgr())
         except Exception as e:
             logger.error(f"初始化 TenshiRAG 失败：{format_exception_inline(e)}")
             _rag = None
@@ -1617,28 +1617,22 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
                     if _mm and _rg:
                         try:
 
-                            for m in chunk:
-                                content = format_chat_memory_content(
-                                    ts=m.get("time"),
-                                    user_query=m.get("user_query"),
+                            chat_items = [
+                                (m, format_chat_memory_content(
+                                    ts=m.get("time"), user_query=m.get("user_query"),
                                     bot_answer=m.get("bot_answer"),
-                                )
-                                if not content:
-                                    continue
-                                emb = ensure_rag().get_embedding(content)
-
-                                chat_importance = m.get("importance_score", 0.1)
+                                )) for m in chunk
+                            ]
+                            chat_items = [(m, content) for m, content in chat_items if content]
+                            embeddings = _rg.get_embeddings([content for _, content in chat_items])
+                            for (m, content), emb in zip(chat_items, embeddings):
                                 try:
-                                    chat_importance = float(chat_importance)
-                                except Exception:
+                                    chat_importance = float(m.get("importance_score", 0.1))
+                                except (TypeError, ValueError):
                                     chat_importance = 0.1
-                                ensure_mem_mgr().add_memory(
-                                    content,
-                                    emb,
-                                    memory_type='chat',
-                                    importance=chat_importance,
-                                    created_at=m['time'],
-                                    metadata={'source': 'log_update'},
+                                _mm.add_memory(
+                                    content, emb, memory_type="chat", importance=chat_importance,
+                                    created_at=m["time"], metadata={"source": "log_update"},
                                 )
 
 

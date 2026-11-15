@@ -7,7 +7,7 @@
 - 角色卡、身份、聊天、记忆、笔记、附件、日志与运行状态留在私密仓。
 - 模型名、厂商端点、路由、预算和平台设置在公开配置；敏感端点可引用环境变量的驱动扩展，不能把实际密钥提交进去。
 - 每个角色使用独立 GitHub Environment，凭证用单独 Secrets 注入；0.2 不再要求大 JSON secret。
-- 运行器只输出计数或安全错误。没有运行数据 artifact、Release、Step Summary 或实例 cache。
+- 运行器只输出计数或安全错误。没有公开运行数据 artifact、Release、Step Summary 或实例 cache。完整引擎的独立备份仅写入经过 private=true 校验的所选私密仓 Release。
 - webhook 消息先持久化到私密 inbox，公开 dispatch 只带不透明事件 ID。
 - PR CI 仅运行合成数据；带凭证的角色任务只接受默认分支的受信配置。
 

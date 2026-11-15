@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import logging
+from _rp_cancellation import ensure_active
 from typing import Any, Callable, TypeVar
 
 from google import genai
@@ -73,6 +74,7 @@ class DualGeminiClient:
         last_err: BaseException | None = None
         for name, client in self._clients:
             try:
+                ensure_active()
                 return invoke(client)
             except Exception as e:
                 last_err = e

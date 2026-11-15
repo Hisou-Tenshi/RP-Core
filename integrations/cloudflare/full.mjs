@@ -336,60 +336,40 @@ async function handleScheduleSync(request, env) {
   return new Response("OK", { status: 200 });
 }
 
+async function scheduleAckKey(entry) {
+  const value = JSON.stringify([entry.id || '', entry.trigger_at_ms, entry.note]);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return 'perception_schedule_ack_' + [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function pendingSchedules(env) {
+  const entries = normalizeScheduleEntries(await env.KV.get(SCHEDULE_KV_KEY));
+  const checked = await Promise.all(entries.map(async entry => ({
+    entry, key: await scheduleAckKey(entry),
+  })));
+  const pending = await Promise.all(checked.map(async item =>
+    await env.KV.get(item.key) ? null : item
+  ));
+  return pending.filter(Boolean);
+}
+
+async function consumeSchedule(env, item) {
+  const head = item.entry;
+  await dispatchPerceptionGitHub(env, 'perception_trigger', {
+    scheduled_force: true, trigger_at_ms: head.trigger_at_ms,
+    schedule_id: head.id || '', note: head.note,
+  });
+  // Separate acknowledgement keys avoid a consumer overwriting a simultaneous
+  // schedule sync. Repeated consumers enqueue the same stable private event ID.
+  // Keep acknowledgements longer than the schedule snapshot's seven-day TTL.
+  await env.KV.put(item.key, '1', {expirationTtl: 8 * 86400});
+}
+
 async function maybeDispatchScheduledPerception(env, ctx, eventType) {
   if (!env.KV) return false;
-  const raw = await env.KV.get(SCHEDULE_KV_KEY);
-  if (!raw) return false;
-
-  let entries = normalizeScheduleEntries(raw);
-  if (entries.length === 0) {
-    await env.KV.delete(SCHEDULE_KV_KEY);
-    return false;
-  }
-
-  const now = Date.now();
-  let pruned = false;
-
-  while (entries.length > 0) {
-    const delta = entries[0].trigger_at_ms - now;
-    if (delta >= -SCHEDULE_LATE_WINDOW_MS) break;
-    console.log(
-      `定时感知队首已过期超过 ${SCHEDULE_LATE_WINDOW_MS / 60000} 分钟，移除: ${entries[0].id}`
-    );
-    entries = entries.slice(1);
-    pruned = true;
-  }
-
-  if (entries.length === 0) {
-    await env.KV.delete(SCHEDULE_KV_KEY);
-    return false;
-  }
-
-  const head = entries[0];
-  const delta = head.trigger_at_ms - now;
-
-  if (!isScheduleDue(delta)) {
-    if (delta > SCHEDULE_EARLY_WINDOW_MS) {
-      console.log(`定时感知未到窗口，剩余约 ${Math.round(delta / 60000)} 分钟`);
-    }
-    await writeScheduleKvIfChanged(env, entries, raw);
-    return false;
-  }
-
-  console.log(
-    `定时感知进入触发窗（-1~+15 分钟），推送 scheduled_force，队首 id=${head.id}`
-  );
-  const client_payload = {
-    scheduled_force: true,
-    trigger_at_ms: head.trigger_at_ms,
-    schedule_id: head.id || "",
-    note: head.note,
-  };
-
-  const remaining = entries.slice(1);
-  await writeScheduleKv(env, remaining);
-
-  ctx.waitUntil(dispatchPerceptionGitHub(env, eventType, client_payload));
+  const [head] = await pendingSchedules(env);
+  if (!head || !isScheduleDue(head.entry.trigger_at_ms - Date.now())) return false;
+  await consumeSchedule(env, head);
   return true;
 }
 
@@ -720,13 +700,11 @@ async function controlRequest(request, env, path) {
     id = await enqueueLegacy(env, 'reply', merged);
     await env.KV.put(MSG_FLUSH_CURSOR_KEY, String(items[items.length - 1].ts), {expirationTtl: MSG_CURSOR_TTL_SEC});
   }
-  let schedules = normalizeScheduleEntries(await env.KV.get(SCHEDULE_KV_KEY));
+  const schedules = await pendingSchedules(env);
   let scheduledQueued = 0;
-  while (schedules.length && schedules[0].trigger_at_ms <= Date.now() + SCHEDULE_EARLY_WINDOW_MS) {
-    const head = schedules[0];
-    await enqueueLegacy(env, 'perception', {scheduled_force: true, trigger_at_ms: head.trigger_at_ms, schedule_id: head.id || '', note: head.note});
-    schedules = schedules.slice(1);
-    await writeScheduleKv(env, schedules);
+  for (const item of schedules) {
+    if (item.entry.trigger_at_ms > Date.now() + SCHEDULE_EARLY_WINDOW_MS) break;
+    await consumeSchedule(env, item);
     scheduledQueued++;
   }
   return Response.json({queued: merged ? payloads.length : 0, event_id: id, scheduled_queued: scheduledQueued});

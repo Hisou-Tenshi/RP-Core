@@ -9,6 +9,14 @@ export async function bindings(env) {
   const io = await readData(env, 'io.json');
   if (io.schema_version !== 1 || io.driver !== 'tenshi-v1') throw new Error('full io required');
   const identity = await readData(env, io.files?.identity || 'identity.json');
+  const users = identity.allowed_user_ids;
+  const chats = identity.telegram?.allowed_chat_ids || [];
+  const target = identity.telegram?.chat_id;
+  if (!Array.isArray(users) || users.length > 1 || !Array.isArray(chats) || chats.length > 1
+      || (users.length && chats.length && String(chats[0]) !== String(users[0]))
+      || (users.length && target != null && String(target) !== String(users[0]))) {
+    throw new Error('full engine requires one owner in a private chat');
+  }
   return { io, identity };
 }
 

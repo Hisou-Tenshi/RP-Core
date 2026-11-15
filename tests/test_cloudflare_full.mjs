@@ -9,16 +9,16 @@ const identity = { allowed_user_ids: [1], telegram: { allowed_chat_ids: [1] } };
 const file = value => new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(value)).toString('base64') }));
 const privatePayload = calls => JSON.parse(Buffer.from(JSON.parse(calls.find(call => call.options.method === 'PUT').options.body).content, 'base64').toString());
 
-function stub(t, { failSave = false } = {}) {
+function stub(t, { failSave = false, failDispatch = false, configuredIdentity = identity } = {}) {
   const original = globalThis.fetch;
   t.after(() => { globalThis.fetch = original; });
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({url, options});
     if (url.includes('/contents/io.json')) return file({schema_version: 1, driver: 'tenshi-v1'});
-    if (url.includes('/contents/identity.json')) return file(identity);
+    if (url.includes('/contents/identity.json')) return file(configuredIdentity);
     if (options.method === 'PUT') return new Response('{}', {status: failSave ? 500 : 201});
-    if (url.endsWith('/dispatches')) return new Response(null, {status: 204});
+    if (url.endsWith('/dispatches')) return new Response(null, {status: failDispatch ? 503 : 204});
     return new Response('{}', {status: 404});
   };
   return calls;
@@ -181,5 +181,45 @@ test('handoff preserves due schedules without touching future entries', async t 
   assert.equal(result.scheduled_queued,1);
   assert.equal(privatePayload(calls).full_task,'perception');
   assert.equal(privatePayload(calls).legacy_payload.schedule_id,'due');
-  assert.equal(JSON.parse(await kv.get('perception_schedule')).entries[0].id,'future');
+  assert.deepEqual(JSON.parse(await kv.get('perception_schedule')).entries.map(entry=>entry.id),['due','future']);
+  const retry=await worker.fetch(new Request('https://example.invalid/internal/drain-inbox',{method:'POST',headers:{Authorization:'Bearer synthetic-schedule'},body:'{}'}),{...env,KV:kv,RP_LIVE_ENABLED:'false'},{});
+  assert.equal((await retry.json()).scheduled_queued,0);
+});
+
+for (const failure of ['failSave', 'failDispatch']) {
+  test('scheduled failure keeps its retry source: ' + failure, async t => {
+    stub(t, {[failure]:true});
+    const kv=new KV();
+    const raw=JSON.stringify({entries:[{id:'due',trigger_at_ms:Date.now(),note:'synthetic'}]});
+    await kv.put('perception_schedule',raw);
+    await assert.rejects(worker.scheduled({}, {...env,KV:kv}, {waitUntil(){}}));
+    assert.equal(await kv.get('perception_schedule'),raw);
+    assert.equal([...kv.map.keys()].filter(key=>key.startsWith('perception_schedule_ack_')).length,0);
+  });
+}
+
+test('schedule consumption cannot overwrite concurrent schedule sync', async t => {
+  const original=globalThis.fetch; t.after(()=>{globalThis.fetch=original;});
+  const kv=new KV();
+  await kv.put('perception_schedule',JSON.stringify({entries:[{id:'due',trigger_at_ms:Date.now(),note:'synthetic'}]}));
+  const replacement=JSON.stringify({entries:[{id:'new',trigger_at_ms:Date.now()+3600000,note:'new schedule'}]});
+  globalThis.fetch=async(url,options)=>{
+    if(url.includes('/contents/io.json'))return file({schema_version:1,driver:'tenshi-v1'});
+    if(url.includes('/contents/identity.json'))return file(identity);
+    if(options.method==='PUT'){
+      await kv.put('perception_schedule',replacement);
+      return new Response('{}',{status:201});
+    }
+    if(url.endsWith('/dispatches'))return new Response(null,{status:204});
+    return new Response('{}',{status:404});
+  };
+  await worker.scheduled({}, {...env,KV:kv}, {waitUntil(){}});
+  assert.equal(await kv.get('perception_schedule'),replacement);
+});
+
+test('full ingress rejects unsupported multi-owner identity before enqueue', async t => {
+  const calls=stub(t,{configuredIdentity:{allowed_user_ids:[1,2]}});
+  const response=await worker.fetch(request(message(1,{text:'synthetic'})),env,{});
+  assert.equal(response.status,503);
+  assert.ok(!calls.some(call=>call.options.method==='PUT'||call.url.endsWith('/dispatches')));
 });

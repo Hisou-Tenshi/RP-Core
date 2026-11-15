@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
+
+from _rp_cancellation import CallCancelled, ensure_active, remaining_timeout, tools_disabled
 import json
 import os
 import sys
@@ -77,6 +79,8 @@ from llm_routing import (
     build_gemini_paths,
     build_glm_paths,
     build_gpt_paths,
+    build_grok_paths,
+    build_magmarouter_paths,
     build_grok_slot_tiers,
     build_openrouter_paths,
     claude_model_chain,
@@ -384,6 +388,12 @@ def _stream_iter_bounded(iterable, *, label: str):
             yield item
     finally:
         stop.set()
+        close = getattr(iterable, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:
+                pass
 
 
 def _bounded_call(label: str, fn, *, reserve_sec: float | None = None):
@@ -2712,7 +2722,14 @@ def _parallel_search_evidence(
         return ""
 
     with ThreadPoolExecutor(max_workers=min(workers, len(jobs))) as ex:
-        for block in ex.map(_run_one, jobs):
+        futures = [
+            _submit_bounded(
+                ex, _run_one, job,
+                timeout_sec=float(getattr(tenshi_config, "REPLY_AUX_LLM_TIMEOUT_SEC", 45.0) or 45.0),
+            ) for job in jobs
+        ]
+        for future in futures:
+            block = future.result()
             if block:
                 blocks.append(block)
 
@@ -2747,8 +2764,25 @@ def _degrade_future(name, future, default, timeout_sec, *, retry=None):
     return outcome.value
 
 
+def _submit_bounded(executor, fn, *args, timeout_sec, **kwargs):
+    """A pool worker only waits for a bounded cancellable call, never raw SDK I/O."""
+    from contextvars import copy_context
+    context = copy_context()
+    deadline = time.monotonic() + timeout_sec
+
+    def run():
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise LlmDeadlineExceeded("Parallel stage budget exhausted before start")
+        return call_with_deadline(
+            lambda: fn(*args, **kwargs), timeout_sec=remaining, label="parallel-stage"
+        )
+
+    return executor.submit(context.run, run)
+
+
 def _pre_reply_wave1(current_files, full_query: str, history_context: str) -> dict:
-    """Wave1 投机并行：图片描述 + 合并路由 + 投机意图 + 投机 embedding。
+    """Wave1 并行：图片描述 + 合并路由 + 意图。最终检索 query 确定后再计算 embedding。
 
     容灾约定（见 api_resilience）：
       * 每个环节各自有硬上限（图片识别 / 辅助 LLM）；
@@ -2761,6 +2795,7 @@ def _pre_reply_wave1(current_files, full_query: str, history_context: str) -> di
     image_context = ""
     routing: dict | None = None
     speculative_intent = None
+    intent_attempted = False
     speculative_embedding = None
     speculative_embed_query = full_query
 
@@ -2774,11 +2809,21 @@ def _pre_reply_wave1(current_files, full_query: str, history_context: str) -> di
     ex = ThreadPoolExecutor(max_workers=4, thread_name_prefix="wave1")
     futs: dict = {}
     try:
-        futs["image"] = ex.submit(describe_images, current_files)
-        futs["routing"] = ex.submit(run_pre_dialog_routing, full_query, history_context)
+        stage_budget = budget_s or 90.0
+        futs["image"] = _submit_bounded(
+            ex, describe_images, current_files,
+            timeout_sec=min(image_budget or stage_budget, stage_budget),
+        )
+        futs["routing"] = _submit_bounded(
+            ex, run_pre_dialog_routing, full_query, history_context,
+            timeout_sec=min(aux_budget or stage_budget, stage_budget),
+        )
         if enable_speculative:
-            futs["intent"] = ex.submit(analyze_intent, full_query, history_context)
-            futs["embedding"] = ex.submit(rag_engine.get_embedding, full_query, "query")
+            intent_attempted = True
+            futs["intent"] = _submit_bounded(
+                ex, analyze_intent, full_query, history_context,
+                timeout_sec=min(aux_budget or stage_budget, stage_budget),
+            )
 
 
         per_future = {
@@ -2800,7 +2845,7 @@ def _pre_reply_wave1(current_files, full_query: str, history_context: str) -> di
             if wave_deadline is not None:
                 remaining = wave_deadline - time.monotonic()
 
-            if remaining is not None and remaining <= 0:
+            if remaining is not None and remaining <= 0 and not fut.done():
                 logger.warning(
                     f"[wave1-degrade] {name} 超出 Wave1 总预算 {budget_s:.1f}s，"
                     "按空值降级（其余环节结果保留）。"
@@ -2816,7 +2861,7 @@ def _pre_reply_wave1(current_files, full_query: str, history_context: str) -> di
 
 
                 timeout_sec += 0.05
-            value = _degrade_future(name, fut, defaults.get(name), timeout_sec)
+            value = _degrade_future(name, fut, defaults.get(name), 0 if fut.done() else timeout_sec)
             if name == "image":
                 image_context = value or ""
             elif name == "routing":
@@ -2850,6 +2895,7 @@ def _pre_reply_wave1(current_files, full_query: str, history_context: str) -> di
         "image_context": image_context,
         "routing": routing,
         "speculative_intent": speculative_intent,
+        "intent_attempted": intent_attempted,
         "speculative_embedding": speculative_embedding,
         "speculative_embed_query": speculative_embed_query,
     }
@@ -2890,11 +2936,12 @@ def _pre_reply_wave2_parallel(
     futs: dict = {}
     try:
         if "memory" in intent_sources:
-            futs["memory"] = ex.submit(
-                _fetch_memory_bundle,
+            futs["memory"] = _submit_bounded(
+                ex, _fetch_memory_bundle,
                 memory_query,
                 reuse_emb,
                 memory_date_ranges,
+                timeout_sec=memory_budget or 30.0,
             )
         if "web_search" in intent_sources or "history" in intent_sources:
             if "history" in intent_sources and "web_search" in intent_sources:
@@ -2903,18 +2950,20 @@ def _pre_reply_wave2_parallel(
                 search_intent_type = "history"
             else:
                 search_intent_type = "web_search"
-            futs["web"] = ex.submit(
-                run_search_agent,
+            futs["web"] = _submit_bounded(
+                ex, run_search_agent,
                 web_search_query,
                 history_context,
                 intent_type=search_intent_type,
                 search_keywords=web_search_keywords,
                 intent_data=intent_data,
+                timeout_sec=aux_budget or 45.0,
             )
-        futs["location"] = ex.submit(_resolve_location_for_dialogue_task)
-        futs["private_notes"] = ex.submit(
-            format_private_notes_for_system_prompt,
+        futs["location"] = _submit_bounded(ex, _resolve_location_for_dialogue_task, timeout_sec=aux_budget or 45.0)
+        futs["private_notes"] = _submit_bounded(
+            ex, format_private_notes_for_system_prompt,
             int(getattr(tenshi_config, "PRIVATE_NOTES_INJECT_COUNT", 0) or 0),
+            timeout_sec=aux_budget or 45.0,
         )
 
 
@@ -3103,6 +3152,7 @@ def _describe_single_image(file_path: str) -> str | None:
 
     reason = ""
     try:
+        ensure_active()
         response = call_with_deadline(
             lambda: client.models.generate_content(
                 model=tenshi_config.gemini_image_primary(),
@@ -3173,7 +3223,14 @@ def describe_images(files):
 
 
         with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="img-desc") as ex:
-            for line in ex.map(_describe_single_image, to_fetch):
+            futures = [
+                _submit_bounded(
+                    ex, _describe_single_image, path,
+                    timeout_sec=float(getattr(tenshi_config, "REPLY_IMAGE_ANALYSIS_TIMEOUT_SEC", 60.0) or 60.0),
+                ) for path in to_fetch
+            ]
+            for future in futures:
+                line = future.result()
                 if line:
                     descriptions.append(line)
 
@@ -4003,6 +4060,8 @@ def _call_claude_impl(client, model_name, system_prompt, claude_messages, tools,
     _req_timeout = _llm_deadline(f"claude:{model_name}")
 
     def _call(_kwargs):
+        ensure_active()
+        _kwargs = {**_kwargs, "timeout": build_sdk_timeout(anthropic)}
         return _bounded_call(
             f"claude:{model_name}",
             (lambda: client.messages.create(**_kwargs)) if not (stream_callback or force_stream)
@@ -4010,15 +4069,17 @@ def _call_claude_impl(client, model_name, system_prompt, claude_messages, tools,
         )
 
     def _stream_claude(_kwargs):
+        ensure_active()
         with client.messages.stream(**_kwargs) as stream:
             if stream_callback:
                 for text in stream.text_stream:
                     streamed_tokens.append(text)
+                    ensure_active()
                     stream_callback(text)
             else:
 
                 for _ in stream.text_stream:
-                    pass
+                    ensure_active()
             return stream.get_final_message()
 
     try:
@@ -4371,7 +4432,7 @@ def call_gemini(
 
     _http_options_kwargs = {
 
-        "timeout": int(tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC * 1000),
+        "timeout": max(1, int(remaining_timeout(tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC) * 1000)),
 
         "retryOptions": types.HttpRetryOptions(attempts=tenshi_config.LLM_CLIENT_MAX_RETRIES),
     }
@@ -4456,6 +4517,7 @@ def call_gemini(
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
     )
 
+    ensure_active()
     chat = gemini_client.chats.create(
         model=model_name,
         config=config,
@@ -4499,6 +4561,7 @@ def call_gemini(
 
 
 
+            ensure_active()
             for chunk in _stream_iter_bounded(
                 chat.send_message_stream(current_parts),
                 label=f"gemini:{model_name}",
@@ -4509,6 +4572,7 @@ def call_gemini(
                 for part in chunk.candidates[0].content.parts:
                     if part.text:
                         text_buffer += part.text
+                        ensure_active()
                         stream_callback(part.text)
 
                         try:
@@ -4538,6 +4602,7 @@ def call_gemini(
                         except Exception:
                             pass
         else:
+            ensure_active()
             response = _bounded_call(
                 f"gemini:{model_name}",
                 lambda: chat.send_message(current_parts),
@@ -4645,6 +4710,7 @@ def call_gemini(
                         )
                     )
                 followup_parts.extend(tool_outputs)
+                ensure_active()
                 response = _bounded_call(
                     f"gemini:{model_name}",
                     lambda: chat.send_message(followup_parts),
@@ -4682,6 +4748,7 @@ def call_gemini(
                             )
                         )
                     followup_parts.extend(tool_outputs)
+                    ensure_active()
                     response = _bounded_call(
                         f"gemini:{model_name}",
                         lambda: chat.send_message(followup_parts),
@@ -4698,6 +4765,7 @@ def call_gemini(
                 chunk_text = response.text
                 full_text += chunk_text
                 if is_streaming_response:
+                    ensure_active()
                     stream_callback(chunk_text)
                 try:
                     append_llm_trace(
@@ -4777,6 +4845,7 @@ def call_gemini(
             except Exception:
                 pass
             try:
+                ensure_active()
                 response = _bounded_call(
                     f"gemini:{model_name}",
                     lambda: chat.send_message(
@@ -4878,6 +4947,7 @@ def _run_openai_compat_tools_loop(
         streamed_during_call = True
         if callable(stream_callback):
             try:
+                ensure_active()
                 stream_callback(token)
             except Exception:
                 pass
@@ -5066,6 +5136,7 @@ def _run_openai_compat_tools_loop(
     if full_text and callable(stream_callback):
         if provider != "deepseek" or not streamed_during_call:
             try:
+                ensure_active()
                 stream_callback(full_text)
             except Exception:
                 pass
@@ -5381,6 +5452,7 @@ def invoke_dialog_model_chain(
     filtered_claude_tools=None,
     streamer=None,
     note_write_ids_collector=None,
+    tools_enabled: bool = True,
 ) -> tuple[str, str, bool] | None:
     """
     Try models in the graded dialog chain until one succeeds.
@@ -5399,7 +5471,11 @@ def invoke_dialog_model_chain(
         provider = _provider_from_model_id(model_id)
         result = None
         try:
-            if provider == "claude":
+            if not tools_enabled:
+                with tools_disabled():
+                    text = _plain_text_call(provider, model_id, system_prompt, messages_payload)
+                result = (text, "", False)
+            elif provider == "claude":
                 result = _run_claude_model_chain(
                     model_ids=[model_id],
                     system_prompt=system_prompt,
@@ -5497,6 +5573,19 @@ def _build_claude_model_name_matchers() -> list[tuple[str, re.Pattern]]:
     return matchers
 
 
+class _ModelCallResult(tuple):
+    """Preserve the legacy tuple interface while recording the actual fallback winner."""
+    def __new__(cls, result, provider, model_id):
+        value = super().__new__(cls, result)
+        value.provider = provider
+        value.model_id = model_id
+        return value
+
+
+def _with_model_identity(result, provider, model_id):
+    return _ModelCallResult(result, provider, model_id) if isinstance(result, tuple) else result
+
+
 def _run_claude_model_chain(
     model_ids: list,
     system_prompt: str,
@@ -5514,7 +5603,7 @@ def _run_claude_model_chain(
     def _invoke_claude(model_id):
 
 
-        return _bounded_call(
+        result = _bounded_call(
             f"claude:{model_id}",
             lambda: call_claude(
                 model_id,
@@ -5525,6 +5614,7 @@ def _run_claude_model_chain(
                 note_write_ids_collector=tenshi_note_write_ids,
             ),
         )
+        return _with_model_identity(result, "claude", model_id)
 
     return run_claude_model_fallback(
         chain,
@@ -5558,9 +5648,6 @@ def _run_path_first_provider(
 
         paths = build_glm_paths(GLM_API_KEY, tenshi_config.GLM_BASE_URL)
     elif provider_name == "grok":
-        if not MAGMAROUTER_API_KEY and not OPENROUTER_API_KEY and not GROK_API_KEY:
-            raise RuntimeError("No API paths configured for grok slot (MagmaRouter/OpenRouter/Grok)")
-
         magma_models = [m for m in model_ids if m in tenshi_config.magmarouter_models()]
         openrouter_models = [m for m in model_ids if "/" in (m or "") or m in tenshi_config.openrouter_models()]
         grok_only_models = [m for m in model_ids if (m or "").startswith("grok-")]
@@ -5595,7 +5682,7 @@ def _run_path_first_provider(
             else:
                 loop_fn = call_grok_with_tools_loop
                 send_model = model_id
-            return loop_fn(
+            result = loop_fn(
                 send_model,
                 system_prompt,
                 messages_payload,
@@ -5604,16 +5691,13 @@ def _run_path_first_provider(
                 stream_callback=stream_cb,
                 llm_path=path,
             )
-
-
-
-
+            return _with_model_identity(result, _slot_provider, model_id)
 
         tiers = build_grok_slot_tiers(
             magma_models,
             provider_health.key_or_blank("magmarouter", "MagmaRouter", MAGMAROUTER_API_KEY),
             tenshi_config.MAGMAROUTER_BASE_URL,
-            openrouter_models[0],
+            openrouter_models[0] if openrouter_models else "",
             provider_health.key_or_blank("openrouter", "OpenRouter", OPENROUTER_API_KEY),
             tenshi_config.OPENROUTER_BASE_URL,
             grok_only_models,
@@ -5748,7 +5832,7 @@ def _run_path_first_provider(
             raise EmptyModelResponseError(
                 f"{label} returned an error placeholder: {text[:120]!r}"
             )
-        return result
+        return _with_model_identity(result, provider_name, model_id)
 
     return run_path_first(model_ids, paths, _invoke, max_attempts_per_model=1, log=logger)
 
@@ -5797,8 +5881,20 @@ def _plain_text_call(provider: str, model_id: str, system, messages: list, max_s
         paths = provider_health.filter_paths(
             "glm", build_glm_paths(GLM_API_KEY, tenshi_config.GLM_BASE_URL), model=model_id
         )
+    elif provider in ("grok", "magmarouter", "openrouter"):
+        builders = {
+            "grok": lambda: build_grok_paths(
+                GROK_API_KEY, tenshi_config.GROK_BASE_URL, tenshi_config.GROK_PROXIES
+            ),
+            "magmarouter": lambda: build_magmarouter_paths(
+                MAGMAROUTER_API_KEY, tenshi_config.MAGMAROUTER_BASE_URL
+            ),
+            "openrouter": lambda: build_openrouter_paths(
+                OPENROUTER_API_KEY, tenshi_config.OPENROUTER_BASE_URL
+            ),
+        }
+        paths = provider_health.filter_paths(provider, builders[provider](), model=model_id)
     else:
-
         raise RuntimeError(f"typing 不支持 provider={provider}")
     if not paths:
         raise RuntimeError(f"typing: {provider} 没有可用通路")
@@ -5815,6 +5911,12 @@ def _plain_text_call(provider: str, model_id: str, system, messages: list, max_s
                 text = _run(lambda: call_deepseek(model_id, flat, messages, llm_path=path))
             elif provider == "gpt":
                 text = _run(lambda: call_gpt(model_id, flat, messages, llm_path=path))
+            elif provider == "grok":
+                text = _run(lambda: call_grok(model_id, flat, messages, llm_path=path))
+            elif provider == "magmarouter":
+                text = _run(lambda: call_magmarouter(model_id, flat, messages, llm_path=path))
+            elif provider == "openrouter":
+                text = _run(lambda: call_openrouter(model_id, flat, messages, llm_path=path))
             else:
                 text = _run(lambda: call_glm(model_id, flat, messages, llm_path=path))
             if text:
@@ -6595,44 +6697,25 @@ def call_dialog_model_once(
     messages_payload: list,
     filtered_claude_tools=None,
 ) -> str:
-    """用主对话链刚成功的同一模型做一次非流式调用（评估器/重写共用）。
+    """Generate evaluation/rewrite text without entering a tool loop.
 
-    与 `_continue_incomplete_reply` 同一调用方式；没有记录到成功模型时
-    退到无工具 DeepSeek 兜底。失败返回空串，绝不抛异常。
+    The legacy tools argument is accepted for callers but intentionally unused.
+    Both the selected model and the fallback use the same no-tool boundary.
     """
     try:
-        scratch_note_ids: set = set()
-        if provider and model_id:
-            if provider == "claude":
-                result = _run_claude_model_chain(
-                    model_ids=[model_id],
-                    system_prompt=system_prompt,
-                    messages_payload=messages_payload,
-                    streamer=None,
-                    filtered_claude_tools=filtered_claude_tools,
-                    tenshi_note_write_ids=scratch_note_ids,
-                    stream_callback=None,
-                )
-            else:
-                result = _run_path_first_provider(
-                    provider_name=provider,
-                    model_ids=[model_id],
-                    system_prompt=flat_system_prompt,
-                    messages_payload=messages_payload,
-                    streamer=None,
-                    filtered_claude_tools=filtered_claude_tools,
-                    tenshi_note_write_ids=scratch_note_ids,
-                )
-            text, _thinking, _tools = _unpack_model_call_result(result)
-        else:
-            out = _try_last_resort_deepseek(
-                system_prompt=flat_system_prompt, messages_payload=messages_payload, streamer=None
+        with tools_disabled():
+            text = _plain_text_call(
+                provider or "deepseek",
+                model_id or tenshi_config.deepseek_dialog_models()[0],
+                system_prompt if provider == "claude" else flat_system_prompt,
+                messages_payload,
             )
-            text = out[0] if out else ""
         text = (text or "").strip()
         if is_error_placeholder_response(text):
             return ""
         return text
+    except CallCancelled:
+        return ""
     except Exception as e:
         logger.warning(f"[choice] 单次模型调用失败（{provider}/{model_id}）：{format_exception_inline(e)}")
         return ""
@@ -6961,7 +7044,11 @@ def _main_impl():
     else:
         intent_data = speculative_intent if isinstance(speculative_intent, dict) and speculative_intent else None
         if not intent_data:
-            intent_data = analyze_intent(full_query, history_context)
+            intent_data = (
+                {"intent": "none", "intent_sources": [], "normalized_query": full_query}
+                if _wave1.get("intent_attempted")
+                else analyze_intent(full_query, history_context)
+            )
     intent = intent_data.get("intent", "none")
     intent_sources = intent_data.get("intent_sources")
     if not isinstance(intent_sources, list):
@@ -7320,8 +7407,8 @@ def _main_impl():
                     )
                     final_response, final_thinking, had_tool_calls = None, "", False
                 elif final_response:
-                    last_success_provider = provider_name
-                    last_success_model_id = model_ids[0] if model_ids else None
+                    last_success_provider = getattr(result, "provider", provider_name)
+                    last_success_model_id = getattr(result, "model_id", model_ids[0] if model_ids else None)
                     return True
                 else:
 
@@ -8103,6 +8190,10 @@ def _main_impl():
                     msg['replied_flag'] = True
                     if msg['msg_id'] == last_msg_id:
                         msg['bot_answer'] = final_response
+                        msg['delivery_status'] = (
+                            "no_send" if reply_no_send
+                            else getattr(streamer, "delivery_status", "delivery_unknown")
+                        )
                         msg.pop('bot_decision', None)
                         if reply_no_send:
 

@@ -4,13 +4,22 @@ import json
 import os
 from pathlib import Path
 import re
+from functools import lru_cache
+from copy import deepcopy
 
-def profile():
-    path = Path(os.environ["RP_CHARACTER_PATH"])
-    value = json.loads(path.read_text(encoding="utf-8"))
+@lru_cache(maxsize=8)
+def _profile_snapshot(path, modified_ns, size, inode):
+    value = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(value, dict) or not isinstance(value.get("instructions"), str):
         raise ValueError("A character-data profile with instructions is required.")
     return value
+
+
+def profile():
+    path = Path(os.environ["RP_CHARACTER_PATH"]).resolve()
+    stat = path.stat()
+    # Atomic replacement and same-size edits both invalidate the snapshot.
+    return deepcopy(_profile_snapshot(str(path), stat.st_mtime_ns, stat.st_size, stat.st_ino))
 
 def role_values():
     card = profile()

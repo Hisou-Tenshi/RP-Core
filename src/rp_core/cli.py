@@ -124,6 +124,8 @@ def main(argv: list[str] | None = None) -> int:
             "summary",
             "archive",
             "cleanup",
+            "daily-backup",
+            "weekly-backup",
             "merge-staging",
         ],
         default="preflight",
@@ -191,6 +193,8 @@ def main(argv: list[str] | None = None) -> int:
                     args.data_root, args.task, payload, remote=args.persist, branch=args.branch
                 )
             print(dumps(result))
+            if result.get("status") in ("retryable_failure", "delivery_unknown"):
+                return 1
         elif args.command == "capabilities":
             print(dumps(Engine.capabilities()))
         elif args.command == "schema":
@@ -210,17 +214,16 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run":
             from rp_core.runtime import run_data
 
-            print(
-                dumps(
-                    run_data(
-                        args.data_root,
-                        args.config,
-                        io_path=args.io,
-                        event_id=args.event_id,
-                        require_remote=args.require_remote_persistence,
-                    )
-                )
+            result = run_data(
+                args.data_root,
+                args.config,
+                io_path=args.io,
+                event_id=args.event_id,
+                require_remote=args.require_remote_persistence,
             )
+            print(dumps(result))
+            if result.get("failed") or result.get("quarantined"):
+                return 1
         elif args.command == "inspect-data":
             io = load_io(args.data_root, args.io)
             print(dumps({"driver": io["driver"], "bindings_valid": True, "modified": False}))
