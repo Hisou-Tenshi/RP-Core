@@ -19,7 +19,8 @@ export async function enqueueLegacy(env, task, payload) {
     const chats = (identity.telegram?.allowed_chat_ids || allowed).map(String);
     if (!allowed.includes(String(payload.user_id)) || !chats.includes(String(payload.chat_id))) throw new Error('unauthorized');
   }
-  const stable = task === 'reply' ? payload : { ...payload, bucket: Math.floor(Date.now() / 60000) };
+  const scheduled = task === 'perception' && payload.scheduled_force && payload.trigger_at_ms;
+  const stable = task === 'reply' || scheduled ? payload : { ...payload, bucket: Math.floor(Date.now() / 60000) };
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ task, payload: stable })));
   const id = 'full-' + [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
   const path = safePath(io.files?.inbox || 'inbox') + '/' + id + '.json';
@@ -30,7 +31,12 @@ export async function enqueueLegacy(env, task, payload) {
     const saved = await github(location, env.DATA_TOKEN, { method: 'PUT', body: JSON.stringify({ message: 'Queue private RP event [skip ci]', branch: env.DATA_BRANCH || 'main', content: encode(JSON.stringify({ full_task: task, legacy_payload: payload })) }) });
     if (!saved.ok && !(saved.status === 422 && (await github(location + ref, env.DATA_TOKEN)).ok)) throw new Error('private queue');
   } else if (!existing.ok) throw new Error('private queue');
-  const dispatched = await github('repos/' + env.PUBLIC_REPOSITORY + '/dispatches', env.DISPATCH_TOKEN, { method: 'POST', body: JSON.stringify({ event_type: 'rp_event', client_payload: { instance_id: env.INSTANCE_ID, event_id: id } }) });
-  if (!dispatched.ok) throw new Error('dispatch');
+  const credentials = [...new Set([env.DISPATCH_TOKEN, env.CALLING_GH_TOKEN, env['CALLING_GH_TOKEN '], env.GH_TOKEN].filter(Boolean))];
+  let dispatched = false;
+  for (const credential of credentials) {
+    const response = await github('repos/' + env.PUBLIC_REPOSITORY + '/dispatches', credential, { method: 'POST', body: JSON.stringify({ event_type: 'rp_event', client_payload: { instance_id: env.INSTANCE_ID, event_id: id } }) });
+    if (response.ok) { dispatched = true; break; }
+  }
+  if (!dispatched) throw new Error('dispatch');
   return id;
 }

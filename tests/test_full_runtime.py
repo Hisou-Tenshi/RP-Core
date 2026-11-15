@@ -30,7 +30,6 @@ def test_full_config_is_public_and_has_maintenance():
     config = load_runtime(Path(__file__).parents[1] / "config/runtime/full.json")
     assert config["engine"] == "full"
     assert set(config["maintenance_seconds"]) == {
-        "perception",
         "summary",
         "archive",
         "cleanup",

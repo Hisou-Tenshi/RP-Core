@@ -684,10 +684,64 @@ export function extractReplyTo(message) {
     return null;
   }
 }
+export function deploymentBindings(env) {
+  return {
+    ...env,
+    DATA_REPOSITORY: env.DATA_REPOSITORY || env.GH_REPO,
+    DATA_BRANCH: env.DATA_BRANCH || 'main',
+    DATA_TOKEN: env.DATA_TOKEN || env.GH_TOKEN,
+    DISPATCH_TOKEN: env.DISPATCH_TOKEN || env.CALLING_GH_TOKEN || env['CALLING_GH_TOKEN '] || env.GH_TOKEN,
+    SCHEDULE_SYNC_SECRET: env.SCHEDULE_SYNC_SECRET || env.PERCEPTION_SCHEDULE_SYNC_SECRET,
+  };
+}
+
+async function controlRequest(request, env, path) {
+  if (!extractScheduleSyncToken(request, env).ok) return new Response('Forbidden', {status: 403});
+  if (request.method !== 'POST') return new Response('POST required', {status: 405});
+  if (path === '/internal/probe') {
+    const raw = await request.text();
+    if (raw.length > 2048) return new Response('Too large', {status: 413});
+    const nonce = JSON.parse(raw || '{}').nonce;
+    if (typeof nonce !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(nonce)) return new Response('Invalid nonce', {status: 400});
+    const id = await enqueueLegacy(env, 'probe', {probe_nonce: nonce});
+    return Response.json({event_id: id, task: 'probe'}, {status: 202});
+  }
+  if (!env.KV) return Response.json({queued: 0, event_id: null, scheduled_queued: 0});
+  const cursor = await readFlushCursor(env);
+  const items = await listBufferedMessages(env, cursor);
+  const payloads = [];
+  for (const item of items) {
+    const raw = await env.KV.get(item.key);
+    if (raw) payloads.push(JSON.parse(raw));
+  }
+  const merged = buildBatchPayload(payloads);
+  let id = null;
+  if (merged) {
+    id = await enqueueLegacy(env, 'reply', merged);
+    await env.KV.put(MSG_FLUSH_CURSOR_KEY, String(items[items.length - 1].ts), {expirationTtl: MSG_CURSOR_TTL_SEC});
+  }
+  let schedules = normalizeScheduleEntries(await env.KV.get(SCHEDULE_KV_KEY));
+  let scheduledQueued = 0;
+  while (schedules.length && schedules[0].trigger_at_ms <= Date.now() + SCHEDULE_EARLY_WINDOW_MS) {
+    const head = schedules[0];
+    await enqueueLegacy(env, 'perception', {scheduled_force: true, trigger_at_ms: head.trigger_at_ms, schedule_id: head.id || '', note: head.note});
+    schedules = schedules.slice(1);
+    await writeScheduleKv(env, schedules);
+    scheduledQueued++;
+  }
+  return Response.json({queued: merged ? payloads.length : 0, event_id: id, scheduled_queued: scheduledQueued});
+}
+
 export default {
   async fetch(request, env, ctx) {
-    if (env.RP_LIVE_ENABLED !== 'true') return new Response('Disabled', {status: 503});
+    env = deploymentBindings(env);
     const url = new URL(request.url);
+    if (url.pathname === '/health' && request.method === 'GET') return Response.json({service: 'rp-core', protocol: 'rp/1', enabled: env.RP_LIVE_ENABLED === 'true'});
+    if (['/internal/probe', '/internal/drain-inbox'].includes(url.pathname)) {
+      try { return await controlRequest(request, env, url.pathname); }
+      catch { return new Response('Control operation unavailable', {status: 503}); }
+    }
+    if (env.RP_LIVE_ENABLED !== 'true') return new Response('Disabled', {status: 503});
     const internal = url.pathname === '/internal/perception-schedule';
     if (!internal && !timingSafeEqual(request.headers.get(TELEGRAM_WEBHOOK_SECRET_HEADER) || '', env.TELEGRAM_WEBHOOK_SECRET || '')) return new Response('Forbidden', {status: 403});
     try {
@@ -700,6 +754,7 @@ export default {
     }
   },
   async scheduled(event, env, ctx) {
+    env = deploymentBindings(env);
     if (env.RP_LIVE_ENABLED !== 'true') return;
     return runtime.scheduled(event, env, ctx);
   }

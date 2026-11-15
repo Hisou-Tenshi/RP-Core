@@ -94,7 +94,7 @@ Worker 先把消息全文、引用、附件和定时 note 写入私密 inbox，�
 仅 instance_id、event_id；不再向旧 Calling 或旧私密引擎 fallback。
 公开仓定时任务默认每 15 分钟处理 inbox 和公开配置中的维护间隔；Worker 的
 分钟级随机/定时调度可独立启用。所有同角色任务共用 concurrency group。
-需要分钟级 Worker 轮询时，将 full.json 中 perception 维护项移除，避免双重轮询。
+full.json 默认交由 Worker 做分钟级感知轮询，不再额外执行 15 分钟感知，避免双重轮询。
 
 ## 失败与恢复
 
@@ -140,3 +140,16 @@ scripts/import_compat_runtime.py 仅用于最初的代码导入审查，不是�
 原始 source_sha256 / published_sha256 与函数 AST 数量保留为初次导入的来源记录；
 后续公开修改由 reviewed_sha256 和正常 Git 提交记录。所有角色在后续执行时使用
 同一公开提交，不需要在各私密仓更新代码、复制脚本或重建数据库。
+
+## 原 Calling 部署平滑切换
+
+Worker 支持沿用 GH_REPO/GH_TOKEN/CALLING_GH_TOKEN/SCHEDULE_SYNC_SECRET 绑定，
+无需读取或重设旧密钥。只需配置 PUBLIC_REPOSITORY、INSTANCE_ID 和
+RP_LIVE_ENABLED 三个非敏感变量，保留原 KV 命名空间和 webhook 地址。
+使用 node scripts/build_cloudflare.mjs 构建单文件 dashboard-worker.mjs，
+可直接粘贴到 Cloudflare Dashboard 的原入口文件；CI 检查产物与源模块一致。
+
+/health 只公开服务标识、协议与启用状态。/internal/probe 和
+/internal/drain-inbox 必须使用既有 schedule-sync Bearer 密钥；前者只排队健康探测，
+不发送聊天消息，后者将旧 KV 中已确认但未派发的消息转存私密 inbox，再推进游标。
+暂停 Worker 时允许授权控制操作，以便先保全旧消息，再切换公开执行开关。

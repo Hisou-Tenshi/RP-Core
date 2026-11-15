@@ -6,7 +6,7 @@ on:
         description: Isolated validation or private interface preparation; never changes the live bot
         type: choice
         default: preflight
-        options: [preflight, selfcheck, probe, reply, prepare-io]
+        options: [preflight, selfcheck, probe, reply, prepare-io, verify-live, drain-ingress]
 permissions:
   contents: read
 jobs:
@@ -106,4 +106,15 @@ jobs:
           git -C ../character-data checkout -B rp-core-full-io
           git -C ../character-data push origin HEAD:refs/heads/rp-core-full-io
           uv run --no-sync rp-core full --task prepare --data-root ../character-data --persist --branch rp-core-full-io
-      # Deliberately no artifacts, private output, model caches or production dispatch.
+      # Isolated modes never dispatch production; live controls use authenticated probes.
+
+      - name: Verify live webhook and queue a non-chat probe
+        if: ${{ inputs.mode == 'verify-live' }}
+        working-directory: framework
+        env:
+          RP_EXPECT_RECEIPT: ${{ vars.RP_LIVE_ENABLED }}
+        run: uv run --no-sync python scripts/verify_live.py --control probe
+      - name: Preserve acknowledged messages during cutover
+        if: ${{ inputs.mode == 'drain-ingress' }}
+        working-directory: framework
+        run: uv run --no-sync python scripts/verify_live.py --control drain
