@@ -455,6 +455,14 @@ class RunPerceptionPureSilenceTest(unittest.TestCase):
 
     def test_same_silence_time_produces_identical_state(self):
         """同一时刻重复判沉默不制造无意义改动（工作流不会为它空跑一次提交）。"""
+        import perception_state as state_module
+        real_datetime = state_module.datetime
+        class FrozenDatetime(real_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls.fromtimestamp(1_789_500_000, tz)
+        # _run freezes the event clock; freeze the persisted audit clock too.
+        self._patch(state_module, "datetime", FrozenDatetime)
         self._run("SILENCE", now_ts=1_789_500_000)
         first = self._read_state_bytes()
         self._run("SILENCE", now_ts=1_789_500_000)
