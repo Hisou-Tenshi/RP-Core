@@ -27,7 +27,7 @@ test('rejects secret injection, bad URLs, duplicate IDs, dangling routes, and em
     c=>{c.dialog_tiers.max=['missing-model'];},
     c=>{c.models=c.models.filter(m=>m.provider!=='gemini'||m.tier!=='lite');},
     c=>{c.models.forEach(m=>{m.vision=false;});},
-    c=>{c.summary_models=['gpt-6-luna'];},
+    c=>{c.summary_models=[c.models.find(m=>m.provider==='gpt').id];},
   ]) {const c=structuredClone(config);mutate(c);assert.ok(validateConfig(c).length);}
 });
 test('rejects config writes and dispatches without a signed session',async()=>{

@@ -32,6 +32,10 @@ The web schema copy is checked in CI. Run `cd web && npm run build` after changi
 the canonical schema, then commit both copies. New protocol/client families still
 require a reviewed public-code change; adding a model ID cannot invent a client.
 
+Routing add controls start with an empty “请选择…” choice and an “添加模型” label.
+Selecting a candidate does not modify the configured chain; click “添加” to insert
+it. After insertion, the control returns to its empty state.
+
 ## Deploy your fork
 
 1. Create a Vercel project connected to your public fork, root directory **`web`**,
@@ -138,3 +142,10 @@ Public model configuration changes apply to newly started jobs; an in-flight job
 continues with the commit it checked out. Review the generated Git commit and Actions
 run when saving. Roll back configuration through a normal Git revert, preserving
 private character histories and databases.
+
+CI first validates and loads the current editable model catalog through the actual
+runtime. Imported historical regression cases then run against the fixed catalog in
+`validation/fixtures/compat-model-config.json`, so their literal historical model IDs
+and mocked service catalogs do not reject valid web configuration edits. This fixture
+is used only inside the isolated regression sandbox; production and live probes keep
+using the editable catalog. See `validation/fixtures/README.md` for the test boundary.

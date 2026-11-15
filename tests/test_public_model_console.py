@@ -51,9 +51,25 @@ def test_shared_json_edits_reach_real_full_engine_without_private_code(tmp_path)
     shutil.copytree(CODE / "src", sandbox / "src")
     shutil.copy2(CODE / "model-config.schema.json", sandbox / "model-config.schema.json")
     config = json.loads((CODE / "model-config.json").read_text())
-    config["dialog_tiers"]["medium"] = ["claude-sonnet-5"]
-    config["low_tier_pool"] = ["gemini-3.7-flash"]
-    config["summary_models"] = ["claude-opus-5"]
+    for provider, tier, new_id in (
+        ("claude", "flash", "claude-fixture-flash"),
+        ("gemini", "flash", "gemini-fixture-flash"),
+        ("claude", "pro", "claude-fixture-pro"),
+    ):
+        target = next(
+            m for m in config["models"] if m["provider"] == provider and m["tier"] == tier
+        )
+        previous = target["id"]
+        target["id"] = new_id
+        for chain in [
+            *config["dialog_tiers"].values(),
+            config["low_tier_pool"],
+            config["summary_models"],
+        ]:
+            chain[:] = [new_id if model == previous else model for model in chain]
+    config["dialog_tiers"]["medium"] = ["claude-fixture-flash"]
+    config["low_tier_pool"] = ["gemini-fixture-flash"]
+    config["summary_models"] = ["claude-fixture-pro"]
     config["environment"]["GPT_REASONING_EFFORT"] = "high"
     (sandbox / "model-config.json").write_text(json.dumps(config))
     card = sandbox / "character.json"
@@ -77,9 +93,9 @@ print(json.dumps({"medium":models.dialog_chain_from_tier("medium")[0],
         [sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True
     )
     assert json.loads(result.stdout) == {
-        "medium": "claude-sonnet-5",
-        "low": ["gemini-3.7-flash"],
-        "summary": ["claude-opus-5"],
+        "medium": "claude-fixture-flash",
+        "low": ["gemini-fixture-flash"],
+        "summary": ["claude-fixture-pro"],
         "reasoning": "high",
     }
 
