@@ -7,7 +7,7 @@ import {encode} from '@auth/core/jwt';
 import {handle, checkMutation} from '../lib/app.mjs';
 import {validateConfig} from '../lib/validation.mjs';
 import {authConfig, sessionToken} from '../lib/auth.mjs';
-import {requireWriter, HttpError} from '../lib/github.mjs';
+import {requireWriter, readPublic} from '../lib/github.mjs';
 
 const env = {RP_PUBLIC_REPOSITORY:'example/framework', RP_PUBLIC_BRANCH:'main', RP_APP_ORIGIN:'https://console.example',
   RP_ADMIN_IDS:'1', AUTH_SECRET:randomBytes(32).toString('hex'), GITHUB_CLIENT_ID:'test', GITHUB_CLIENT_SECRET:'test'};
@@ -77,4 +77,17 @@ test('invalid config never reaches GitHub and unauthenticated reads do not requi
   assert.equal(bad.status,400);assert.equal(calls,0);
   const read=await handle(request('/api/config'),{env,fetcher});const doc=await read.json();
   assert.equal(read.status,200);assert.match(doc.sha,/^[a-f0-9]{40}$/);assert.equal(calls,1);
+});
+
+test('a refresh after a repository write does not reuse a stale raw-content cache entry',async()=>{
+  const cache=new Map();let originRevision=0;
+  const fetcher=async url=>{
+    if(!cache.has(url))cache.set(url,{revision:++originRevision});
+    return Response.json(cache.get(url));
+  };
+  const first=await readPublic('config/instances.json',{env,fetcher});
+  const afterWrite=await readPublic('config/instances.json',{env,fetcher});
+  assert.equal(first.data.revision,1);
+  assert.equal(afterWrite.data.revision,2);
+  assert.notEqual(first.sha,afterWrite.sha);
 });

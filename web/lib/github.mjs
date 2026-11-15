@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import {createHash} from 'node:crypto';
+import {createHash, randomUUID} from 'node:crypto';
 import {CONFIG_PATH} from './validation.mjs';
 
 export class HttpError extends Error {
@@ -36,7 +36,10 @@ export async function github(path, {token, method = 'GET', body, fetcher = fetch
 
 export async function readPublic(path, {env = process.env, fetcher = fetch} = {}) {
   const {repository, branch} = settings(env);
-  const url = `https://raw.githubusercontent.com/${repository}/${encodeURIComponent(branch)}/${path}`;
+  // Raw GitHub responses can remain cached after a successful Contents API write,
+  // even with no-cache headers. A unique read URL prevents stale blob SHAs from
+  // trapping the editor in repeated optimistic-concurrency conflicts.
+  const url = `https://raw.githubusercontent.com/${repository}/${encodeURIComponent(branch)}/${path}?rp_read=${randomUUID()}`;
   const response = await fetcher(url, {cache: 'no-store', headers: {'User-Agent': 'RP-Core-console/1', 'Cache-Control': 'no-cache'},
     signal: AbortSignal.timeout(15000)});
   if (response.status === 404) return null;
