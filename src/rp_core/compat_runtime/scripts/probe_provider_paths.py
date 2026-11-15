@@ -565,6 +565,18 @@ def collect_targets(providers: list[str]) -> list[dict]:
             tenshi_config.QWEN_API_KEY, "openai", tenshi_config.EMBEDDING_MODEL,
         )))
 
+    # Include missing-key placeholders for the additive first-priority routes.
+    for provider, name, url_name, protocol in (
+        ("claude", "Proxy 3", "CLAUDE_PROXY_BASE_URL_3", "anthropic"),
+        ("gemini", "Gemini Proxy 3", "GEMINI_PROXY3_BASE_URL", "gemini"),
+        ("gpt", "GPT Proxy 3", "GPT_PROXY3_BASE_URL", "openai"),
+        ("grok", "Grok Proxy 2", "GROK_PROXY2_BASE_URL", "openai"),
+    ):
+        base = getattr(tenshi_config, url_name, None)
+        if provider in providers and base and not any(t["provider"] == provider and t["name"] == name for t in targets):
+            model = _provider_model_ids(provider)[0]
+            targets.append(_with_all_models(_target(provider, name, base, None, protocol, model)))
+
     seen: set[tuple[str, str, str]] = set()
     unique: list[dict] = []
     for item in targets:

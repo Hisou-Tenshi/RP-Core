@@ -407,6 +407,38 @@
           "minLength": 1,
           "maxLength": 180,
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "CLAUDE_PROXY_BASE_URL_3": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GEMINI_PROXY3_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GPT_PROXY3_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GROK_PROXY2_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GPT_PROXY3_PROTOCOL": {
+          "enum": [
+            "responses",
+            "chat_completions"
+          ]
+        },
+        "GROK_PROXY2_PROTOCOL": {
+          "enum": [
+            "responses",
+            "chat_completions"
+          ]
         }
       }
     }

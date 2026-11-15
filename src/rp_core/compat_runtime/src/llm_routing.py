@@ -74,7 +74,7 @@ def should_skip_claude_client(model_id: str, client_name: str) -> bool:
 
 def build_claude_proxy_configs_for_model(model_id: str) -> list[dict[str, Any]]:
     """
-    按模型选择代理1档位顺序，再接代理2：
+    代理3固定优先，再按模型选择代理1档位顺序，最后接代理2：
     - Fable（5.1）：Prime → Max → Proxy2
     - Opus / Sonnet 及其他：Base → Prime → Max → Proxy2
     """
@@ -85,6 +85,9 @@ def build_claude_proxy_configs_for_model(model_id: str) -> list[dict[str, Any]]:
     order = ("prime", "max") if is_claude_fable_model(model_id) else ("base", "prime", "max")
 
     out: list[dict[str, Any]] = []
+    proxy3 = getattr(tenshi_config, "CLAUDE_PROXY3", None)
+    if proxy3 and proxy3.get("api_key") and proxy3.get("base_url"):
+        out.append(proxy3)
     for tier in order:
         conf = tiers.get(tier)
         if conf and conf.get("api_key") and conf.get("base_url"):

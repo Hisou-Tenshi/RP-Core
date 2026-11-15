@@ -66,6 +66,10 @@ jobs:
       GPT_PROXY_KEY: ${{ secrets.GPT_PROXY_KEY }}
       GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
       GROK_PROXY_KEY: ${{ secrets.GROK_PROXY_KEY }}
+      CLAUDE_PROXY_KEY_3: ${{ secrets.CLAUDE_PROXY_KEY_3 }}
+      GEMINI_PROXY3_KEY: ${{ secrets.GEMINI_PROXY3_KEY }}
+      GPT_PROXY3_KEY: ${{ secrets.GPT_PROXY3_KEY }}
+      GROK_PROXY2_KEY: ${{ secrets.GROK_PROXY2_KEY }}
       MAGMAROUTER_API_KEY: ${{ secrets.MAGMAROUTER_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}

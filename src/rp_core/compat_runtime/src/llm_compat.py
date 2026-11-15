@@ -114,12 +114,19 @@ def build_sdk_timeout(sdk_module: Any, *, connect: float | None = None, read: fl
 
 def build_openai_compat_client(api_key: str, base_url: str) -> OpenAI:
     """构建 OpenAI 兼容客户端,统一关闭内置重试(链路层已自实现降级)并设超时。"""
-    return OpenAI(
+    client = OpenAI(
         api_key=api_key,
         base_url=base_url,
         max_retries=int(getattr(tenshi_config, "LLM_CLIENT_MAX_RETRIES", 0) or 0),
         timeout=build_sdk_timeout(OpenAI),
     )
+    paths = getattr(tenshi_config, "PROVIDER_PROXIES", {}) or {}
+    if any(path.get("protocol") == "responses" and path.get("api_key") == api_key
+           and str(path.get("base_url", "")).rstrip("/") == str(base_url).rstrip("/")
+           for group in paths.values() for path in group):
+        from _rp_responses import ResponsesChatClient
+        return ResponsesChatClient(client)
+    return client
 
 
 def normalize_tool_calls(raw_tool_calls):

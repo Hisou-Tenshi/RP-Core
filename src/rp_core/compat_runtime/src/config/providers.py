@@ -207,6 +207,13 @@ CLAUDE_PROXY_BASE_URL_2 = _env(
 )
 CLAUDE_PROXY_KEY_2 = _env("CLAUDE_PROXY_KEY_2")
 
+# Numbering follows creation order; this newer route is tried before older proxies.
+CLAUDE_PROXY_BASE_URL_3 = _env("CLAUDE_PROXY_BASE_URL_3", default="https://drc.totokens.cc")
+CLAUDE_PROXY_KEY_3 = _env("CLAUDE_PROXY_KEY_3")
+CLAUDE_PROXY3 = ({"name": "Proxy 3", "api_key": CLAUDE_PROXY_KEY_3,
+                  "base_url": CLAUDE_PROXY_BASE_URL_3}
+                 if CLAUDE_PROXY_KEY_3 and CLAUDE_PROXY_BASE_URL_3 else None)
+
 CLAUDE_PROXY1_TIERS: dict[str, dict] = {}
 if CLAUDE_PROXY_BASE_URL:
     if CLAUDE_PROXY_KEY_BASE:
@@ -247,6 +254,8 @@ if CLAUDE_PROXY_BASE_URL and not any(
 
 
 CLAUDE_PROXIES: list[dict] = []
+if CLAUDE_PROXY3 is not None:
+    CLAUDE_PROXIES.append(dict(CLAUDE_PROXY3))
 for _tier in ("base", "prime", "max"):
     if _tier in CLAUDE_PROXY1_TIERS:
         CLAUDE_PROXIES.append(
@@ -283,6 +292,11 @@ GEMINI_PROXY2_BASE_URL = _env(
     "GEMINI_PROXY2_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL
 )
 GEMINI_PROXY2_KEY = _env("GEMINI_PROXY2_KEY")
+GEMINI_PROXY3_BASE_URL = _env("GEMINI_PROXY3_BASE_URL", default="https://drc.totokens.cc")
+GEMINI_PROXY3_KEY = _env("GEMINI_PROXY3_KEY")
+GEMINI_PROXY3 = ({"name": "Gemini Proxy 3", "api_key": GEMINI_PROXY3_KEY,
+                  "base_url": GEMINI_PROXY3_BASE_URL}
+                 if GEMINI_PROXY3_KEY and GEMINI_PROXY3_BASE_URL else None)
 GEMINI_PROXY2: dict | None = None
 if GEMINI_PROXY2_KEY and GEMINI_PROXY2_BASE_URL:
     GEMINI_PROXY2 = {
@@ -305,6 +319,8 @@ if OPENROUTER_API_KEY and OPENROUTER_BASE_URL:
 
 
 GEMINI_PROXIES: list[dict] = []
+if GEMINI_PROXY3 is not None:
+    GEMINI_PROXIES.append(dict(GEMINI_PROXY3))
 if GEMINI_PROXY is not None:
     GEMINI_PROXIES.append(dict(GEMINI_PROXY))
 if GEMINI_PROXY2 is not None:
@@ -345,6 +361,12 @@ GPT_PROXY2_BASE_URL = _ensure_openai_v1(
     _env("GPT_PROXY2_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL)
 )
 GPT_PROXY2_KEY = _env("GPT_PROXY2_KEY")
+GPT_PROXY3_BASE_URL = _ensure_openai_v1(_env("GPT_PROXY3_BASE_URL", default="https://drc.totokens.cc/v1"))
+GPT_PROXY3_KEY = _env("GPT_PROXY3_KEY")
+GPT_PROXY3_PROTOCOL = _env("GPT_PROXY3_PROTOCOL", default="responses")
+GPT_PROXY3 = ({"name": "GPT Proxy 3", "api_key": GPT_PROXY3_KEY,
+               "base_url": GPT_PROXY3_BASE_URL, "protocol": GPT_PROXY3_PROTOCOL}
+              if GPT_PROXY3_KEY and GPT_PROXY3_BASE_URL else None)
 GPT_PROXY2: dict | None = None
 if GPT_PROXY2_KEY and GPT_PROXY2_BASE_URL:
     GPT_PROXY2 = {
@@ -355,6 +377,8 @@ if GPT_PROXY2_KEY and GPT_PROXY2_BASE_URL:
 
 
 GPT_PROXIES: list[dict] = []
+if GPT_PROXY3 is not None:
+    GPT_PROXIES.append(dict(GPT_PROXY3))
 if GPT_PROXY is not None:
     GPT_PROXIES.append(dict(GPT_PROXY))
 if GPT_PROXY2 is not None:
@@ -380,6 +404,14 @@ if GROK_PROXY_KEY and GROK_PROXY_BASE_URL:
         "base_url": GROK_PROXY_BASE_URL,
     }
 GROK_PROXIES: list[dict] = [dict(GROK_PROXY)] if GROK_PROXY is not None else []
+GROK_PROXY2_BASE_URL = _ensure_openai_v1(_env("GROK_PROXY2_BASE_URL", default="https://drc.totokens.cc/v1"))
+GROK_PROXY2_KEY = _env("GROK_PROXY2_KEY")
+GROK_PROXY2_PROTOCOL = _env("GROK_PROXY2_PROTOCOL", default="responses")
+GROK_PROXY2 = ({"name": "Grok Proxy 2", "api_key": GROK_PROXY2_KEY,
+                "base_url": GROK_PROXY2_BASE_URL, "protocol": GROK_PROXY2_PROTOCOL}
+               if GROK_PROXY2_KEY and GROK_PROXY2_BASE_URL else None)
+if GROK_PROXY2 is not None:
+    GROK_PROXIES.insert(0, dict(GROK_PROXY2))
 
 
 
@@ -447,7 +479,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "anthropic/",
         True,
-        "代理1 三档 → 代理2 → OpenRouter → 官方(官方仅 sonnet 系列,见 tenshi_reply.call_claude)",
+        "代理3 → 代理1 三档 → 代理2 → OpenRouter → 官方(官方仅 sonnet 系列)",
     ),
     "gemini": ProviderPathPolicy(
         "gemini",
@@ -455,7 +487,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "google/",
         True,
-        "Gemini 代理1 → Gemini 代理2 → OpenRouter → 官方",
+        "Gemini 代理3 → Gemini 代理1 → Gemini 代理2 → OpenRouter → 官方",
     ),
     "grok": ProviderPathPolicy(
         "grok",
@@ -463,7 +495,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "x-ai/",
         True,
-        "Grok 代理 → OpenRouter → 官方",
+        "Grok 代理2 → Grok 代理1 → OpenRouter → 官方",
     ),
     "gpt": ProviderPathPolicy(
         "gpt",
@@ -471,7 +503,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "OpenAI",
         "openai/",
         True,
-        "GPT 代理1(codeyu.shop/v1)→ 代理2(coderplan/v1)→ OpenRouter → 官方",
+        "GPT 代理3 → 代理1(codeyu.shop/v1)→ 代理2(coderplan/v1)→ OpenRouter → 官方",
     ),
     "deepseek": ProviderPathPolicy(
         "deepseek",
@@ -599,3 +631,19 @@ PROXY_ENV_SPECS: list[dict] = [
 ]
 
 __all__ += ["_PROXY_CONFIG_WARNINGS"]
+__all__ += [
+    "CLAUDE_PROXY_BASE_URL_3", "CLAUDE_PROXY_KEY_3", "CLAUDE_PROXY3",
+    "GEMINI_PROXY3_BASE_URL", "GEMINI_PROXY3_KEY", "GEMINI_PROXY3",
+    "GPT_PROXY3_BASE_URL", "GPT_PROXY3_KEY", "GPT_PROXY3_PROTOCOL", "GPT_PROXY3",
+    "GROK_PROXY2_BASE_URL", "GROK_PROXY2_KEY", "GROK_PROXY2_PROTOCOL", "GROK_PROXY2",
+]
+PROXY_ENV_SPECS += [
+    {"provider": "claude", "proxy": "Proxy 3", "role": "url", "env": "CLAUDE_PROXY_BASE_URL_3", "default": "https://drc.totokens.cc"},
+    {"provider": "claude", "proxy": "Proxy 3", "role": "key", "env": "CLAUDE_PROXY_KEY_3", "default": ""},
+    {"provider": "gemini", "proxy": "Gemini Proxy 3", "role": "url", "env": "GEMINI_PROXY3_BASE_URL", "default": "https://drc.totokens.cc"},
+    {"provider": "gemini", "proxy": "Gemini Proxy 3", "role": "key", "env": "GEMINI_PROXY3_KEY", "default": ""},
+    {"provider": "gpt", "proxy": "GPT Proxy 3", "role": "url", "env": "GPT_PROXY3_BASE_URL", "default": "https://drc.totokens.cc/v1"},
+    {"provider": "gpt", "proxy": "GPT Proxy 3", "role": "key", "env": "GPT_PROXY3_KEY", "default": ""},
+    {"provider": "grok", "proxy": "Grok Proxy 2", "role": "url", "env": "GROK_PROXY2_BASE_URL", "default": "https://drc.totokens.cc/v1"},
+    {"provider": "grok", "proxy": "Grok Proxy 2", "role": "key", "env": "GROK_PROXY2_KEY", "default": ""},
+]

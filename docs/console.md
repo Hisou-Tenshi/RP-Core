@@ -68,6 +68,29 @@ disabled until all credentials and the administrator list are present.
 
 ## Probe architecture
 
+### First-priority To-Tokens routes
+
+Creation numbers and attempt priority are independent. The new routes are tried
+first without renaming any existing route:
+
+| Provider | First route | Public URL setting | Actions secret |
+|---|---|---|---|
+| Claude | Proxy 3 | `CLAUDE_PROXY_BASE_URL_3` | `CLAUDE_PROXY_KEY_3` |
+| GPT | GPT Proxy 3 | `GPT_PROXY3_BASE_URL` | `GPT_PROXY3_KEY` |
+| Gemini | Gemini Proxy 3 | `GEMINI_PROXY3_BASE_URL` | `GEMINI_PROXY3_KEY` |
+| Grok | Grok Proxy 2 | `GROK_PROXY2_BASE_URL` | `GROK_PROXY2_KEY` |
+
+The vendor's key-use panels specify `https://drc.totokens.cc`; OpenAI-compatible
+clients use its `/v1` base. GPT Proxy 3 and Grok Proxy 2 use the Responses protocol,
+configured by `GPT_PROXY3_PROTOCOL` / `GROK_PROXY2_PROTOCOL`. The public compatibility
+adapter preserves existing Chat callers, tool IDs/history, response text, streaming
+deltas, finish reasons and token accounting. Existing proxies retain their transport.
+Claude's model-specific proxy builder and Gemini's auxiliary dual client honor the
+same new-first order. Missing new keys omit those routes and retain old fallbacks.
+
+These are ordinary public nonsecret model settings, editable through the console;
+the four independent credentials belong only in RP-Core Actions secrets.
+
 `.github/workflows/provider-health.yml` runs every six hours, on model configuration
 changes and on manual dispatch. It resolves registered instances, enters each same
 GitHub Environment used by `instance.yml`, and probes using that environment's

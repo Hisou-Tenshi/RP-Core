@@ -399,6 +399,13 @@
     "dimensions": 1024,
     "max_input_chars": 9000
   },
-  "environment": {},
+  "environment": {
+    "CLAUDE_PROXY_BASE_URL_3": "https://drc.totokens.cc",
+    "GEMINI_PROXY3_BASE_URL": "https://drc.totokens.cc",
+    "GPT_PROXY3_BASE_URL": "https://drc.totokens.cc/v1",
+    "GROK_PROXY2_BASE_URL": "https://drc.totokens.cc/v1",
+    "GPT_PROXY3_PROTOCOL": "responses",
+    "GROK_PROXY2_PROTOCOL": "responses"
+  },
   "summary_models": []
 }

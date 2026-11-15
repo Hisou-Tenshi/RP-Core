@@ -107,6 +107,10 @@ def build_gemini_dual_client() -> DualGeminiClient:
 
 
     proxies: list[dict] = []
+    _p3_key = getattr(tenshi_config, "GEMINI_PROXY3_KEY", None)
+    _p3_url = getattr(tenshi_config, "GEMINI_PROXY3_BASE_URL", None)
+    if _p3_key and _p3_url:
+        proxies.append({"name": "Gemini Proxy 3", "api_key": _p3_key, "base_url": _p3_url})
     _p1_key = getattr(tenshi_config, "GEMINI_PROXY_KEY", None)
     _p1_url = getattr(tenshi_config, "GEMINI_PROXY_BASE_URL", None)
     if _p1_key and _p1_url:
