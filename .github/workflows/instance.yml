@@ -78,6 +78,7 @@ jobs:
       TG_TOKEN: ${{ secrets.TG_TOKEN }}
       TIMEZONE_OFFSET: ${{ secrets.TIMEZONE_OFFSET }}
       RP_ALLOW_LIVE: '1'
+      RP_INSTANCE_ID: ${{ matrix.id }}
     needs: plan
     if: ${{ needs.plan.outputs.has_instances == 'true' }}
     runs-on: ubuntu-latest

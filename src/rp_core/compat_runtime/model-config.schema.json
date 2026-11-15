@@ -1,0 +1,414 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "providers",
+    "models",
+    "dialog_tiers",
+    "low_tier_pool",
+    "summary_models",
+    "embedding",
+    "environment"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "providers": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "label",
+          "in_fallback_chain",
+          "route",
+          "model_prefixes"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "claude",
+              "gemini",
+              "grok",
+              "deepseek",
+              "magmarouter",
+              "gpt",
+              "glm",
+              "qwen",
+              "openrouter"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "in_fallback_chain": {
+            "type": "boolean"
+          },
+          "route": {
+            "enum": [
+              null,
+              "grok"
+            ]
+          },
+          "model_prefixes": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 180,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+            }
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 300,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "provider",
+          "tier",
+          "generation",
+          "slug",
+          "note",
+          "in_chain",
+          "vision",
+          "order"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "provider": {
+            "enum": [
+              "claude",
+              "gemini",
+              "grok",
+              "deepseek",
+              "magmarouter",
+              "gpt",
+              "glm",
+              "qwen",
+              "openrouter"
+            ]
+          },
+          "tier": {
+            "enum": [
+              "pro",
+              "flash",
+              "lite"
+            ]
+          },
+          "generation": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9._:/-]*$"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "in_chain": {
+            "type": "boolean"
+          },
+          "vision": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 10000
+          }
+        }
+      }
+    },
+    "dialog_tiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max",
+        "high",
+        "medium",
+        "low"
+      ],
+      "properties": {
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "uniqueItems": true,
+          "maxItems": 100,
+          "minItems": 1
+        },
+        "high": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "uniqueItems": true,
+          "maxItems": 100,
+          "minItems": 1
+        },
+        "medium": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "uniqueItems": true,
+          "maxItems": 100,
+          "minItems": 1
+        },
+        "low": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "uniqueItems": true,
+          "maxItems": 100
+        }
+      }
+    },
+    "low_tier_pool": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 180,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      },
+      "uniqueItems": true,
+      "maxItems": 100,
+      "minItems": 1
+    },
+    "summary_models": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 180,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      },
+      "uniqueItems": true,
+      "maxItems": 100
+    },
+    "embedding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "dimensions",
+        "max_input_chars"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "dimensions": {
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 8192
+        },
+        "max_input_chars": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 100000
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "CLAUDE_OFFICIAL_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GEMINI_OFFICIAL_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "CODERPLAN_PROXY_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GROK_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "DEEPSEEK_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "FIREWORKS_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GPT_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GLM_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "QWEN_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "MAGMAROUTER_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "OPENROUTER_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "CLAUDE_PROXY_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "CLAUDE_PROXY_BASE_URL_2": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GEMINI_PROXY_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GEMINI_PROXY2_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GPT_PROXY_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GPT_PROXY2_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GROK_PROXY_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
+        },
+        "GPT_REASONING_EFFORT": {
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        "GPT_TOOL_REASONING_EFFORT": {
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        "GLM_REASONING_EFFORT": {
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        "GLM_REASONING_EFFORT_AGENT": {
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        "FIREWORKS_DEEPSEEK_V4_PRO_MODEL": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "FIREWORKS_DEEPSEEK_V4_FLASH_MODEL": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        }
+      }
+    }
+  }
+}

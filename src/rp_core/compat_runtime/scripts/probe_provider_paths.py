@@ -244,6 +244,8 @@ def _provider_model_ids(provider: str) -> list[str]:
         "grok": ("GROK_MODELS",),
     }
     models: list[str] = []
+    if provider == "qwen":
+        return [tenshi_config.EMBEDDING_MODEL]
     for name in groups.get(provider, ()):
         models.extend(str(m) for m in (getattr(tenshi_config, name, []) or []) if m)
     return _dedupe_models(models)
@@ -556,6 +558,12 @@ def collect_targets(providers: list[str]) -> list[dict]:
             )
             targets.append(_with_all_models(target, openrouter=is_openrouter))
 
+
+    if "qwen" in providers:
+        targets.append(_with_all_models(_target(
+            "qwen", "Official", tenshi_config.QWEN_BASE_URL,
+            tenshi_config.QWEN_API_KEY, "openai", tenshi_config.EMBEDDING_MODEL,
+        )))
 
     seen: set[tuple[str, str, str]] = set()
     unique: list[dict] = []

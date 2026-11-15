@@ -1,0 +1,404 @@
+{
+  "schema_version": 1,
+  "providers": [
+    {
+      "key": "claude",
+      "label": "Claude",
+      "in_fallback_chain": true,
+      "route": null,
+      "model_prefixes": [
+        "claude-"
+      ]
+    },
+    {
+      "key": "gemini",
+      "label": "Gemini",
+      "in_fallback_chain": true,
+      "route": null,
+      "model_prefixes": [
+        "gemini-"
+      ]
+    },
+    {
+      "key": "grok",
+      "label": "Grok",
+      "in_fallback_chain": true,
+      "route": null,
+      "model_prefixes": [
+        "grok-"
+      ]
+    },
+    {
+      "key": "deepseek",
+      "label": "DeepSeek",
+      "in_fallback_chain": true,
+      "route": null,
+      "model_prefixes": [
+        "deepseek-"
+      ]
+    },
+    {
+      "key": "magmarouter",
+      "label": "MagmaRouter",
+      "in_fallback_chain": true,
+      "route": "grok",
+      "model_prefixes": []
+    },
+    {
+      "key": "gpt",
+      "label": "GPT",
+      "in_fallback_chain": true,
+      "route": null,
+      "model_prefixes": [
+        "gpt-",
+        "o1",
+        "o3"
+      ]
+    },
+    {
+      "key": "glm",
+      "label": "GLM",
+      "in_fallback_chain": true,
+      "route": null,
+      "model_prefixes": [
+        "glm-"
+      ]
+    },
+    {
+      "key": "qwen",
+      "label": "Qwen",
+      "in_fallback_chain": false,
+      "route": null,
+      "model_prefixes": []
+    },
+    {
+      "key": "openrouter",
+      "label": "OpenRouter",
+      "in_fallback_chain": false,
+      "route": "grok",
+      "model_prefixes": []
+    }
+  ],
+  "models": [
+    {
+      "id": "claude-opus-5-5",
+      "provider": "claude",
+      "tier": "pro",
+      "generation": 5.5,
+      "slug": "anthropic/claude-opus-5.5",
+      "note": "Opus 5.5,当前旗舰",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "claude-opus-5",
+      "provider": "claude",
+      "tier": "pro",
+      "generation": 5.0,
+      "slug": "anthropic/claude-opus-5",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "provider": "claude",
+      "tier": "flash",
+      "generation": 5.5,
+      "slug": "anthropic/claude-sonnet-5.5",
+      "note": "Sonnet 5.5",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "claude-sonnet-5",
+      "provider": "claude",
+      "tier": "flash",
+      "generation": 5.0,
+      "slug": "anthropic/claude-sonnet-5",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "provider": "claude",
+      "tier": "lite",
+      "generation": 5.5,
+      "slug": "anthropic/claude-haiku-5.5",
+      "note": "Haiku 5.5",
+      "in_chain": true,
+      "vision": false,
+      "order": 2
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "provider": "claude",
+      "tier": "lite",
+      "generation": 4.5,
+      "slug": "anthropic/claude-haiku-4.5",
+      "note": "Haiku 4.5(代理普遍支持)",
+      "in_chain": true,
+      "vision": false,
+      "order": 0
+    },
+    {
+      "id": "claude-haiku-4-5-20251001",
+      "provider": "claude",
+      "tier": "lite",
+      "generation": 4.5,
+      "slug": "",
+      "note": "Haiku 4.5 日期快照(代理探活用)",
+      "in_chain": false,
+      "vision": false,
+      "order": 1
+    },
+    {
+      "id": "gemini-4-argon",
+      "provider": "gemini",
+      "tier": "pro",
+      "generation": 4.0,
+      "slug": "google/gemini-4-argon",
+      "note": "Gemini 4 Argon",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "gemini-3.1-pro-preview",
+      "provider": "gemini",
+      "tier": "pro",
+      "generation": 3.1,
+      "slug": "google/gemini-3.1-pro-preview",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "provider": "gemini",
+      "tier": "flash",
+      "generation": 3.8,
+      "slug": "google/gemini-3.8-flash",
+      "note": "",
+      "in_chain": true,
+      "vision": true,
+      "order": null
+    },
+    {
+      "id": "gemini-3.7-flash",
+      "provider": "gemini",
+      "tier": "flash",
+      "generation": 3.7,
+      "slug": "google/gemini-3.7-flash",
+      "note": "",
+      "in_chain": true,
+      "vision": true,
+      "order": null
+    },
+    {
+      "id": "gemini-3.5-flash-lite",
+      "provider": "gemini",
+      "tier": "lite",
+      "generation": 3.5,
+      "slug": "google/gemini-3.5-flash-lite",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "gemini-3.1-flash-lite",
+      "provider": "gemini",
+      "tier": "lite",
+      "generation": 3.1,
+      "slug": "google/gemini-3.1-flash-lite",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "grok-4.7",
+      "provider": "grok",
+      "tier": "pro",
+      "generation": 4.7,
+      "slug": "x-ai/grok-4.7",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "grok-4.6",
+      "provider": "grok",
+      "tier": "pro",
+      "generation": 4.6,
+      "slug": "x-ai/grok-4.6",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "provider": "deepseek",
+      "tier": "pro",
+      "generation": 4.0,
+      "slug": "deepseek/deepseek-v4-pro",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "deepseek-flash",
+      "provider": "deepseek",
+      "tier": "flash",
+      "generation": 4.1,
+      "slug": "deepseek/deepseek-v4.1-flash-1017",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "mimo-v2.6-flash-xploded",
+      "provider": "magmarouter",
+      "tier": "flash",
+      "generation": 2.6,
+      "slug": "",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": 0
+    },
+    {
+      "id": "deepseek-v4.1-flash-1017-xploded",
+      "provider": "magmarouter",
+      "tier": "flash",
+      "generation": 4.1,
+      "slug": "",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": 1
+    },
+    {
+      "id": "glm-5.3-flash-xploded",
+      "provider": "magmarouter",
+      "tier": "flash",
+      "generation": 5.3,
+      "slug": "",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": 2
+    },
+    {
+      "id": "glm-5.3-xploded",
+      "provider": "magmarouter",
+      "tier": "pro",
+      "generation": 5.3,
+      "slug": "",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": 3
+    },
+    {
+      "id": "qwen3.8-27b-xploded",
+      "provider": "magmarouter",
+      "tier": "lite",
+      "generation": 3.8,
+      "slug": "",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": 4
+    },
+    {
+      "id": "magma-1-xploded",
+      "provider": "magmarouter",
+      "tier": "pro",
+      "generation": 1.0,
+      "slug": "",
+      "note": "MagmaRouter 自调旗舰",
+      "in_chain": true,
+      "vision": false,
+      "order": 5
+    },
+    {
+      "id": "gpt-6-luna",
+      "provider": "gpt",
+      "tier": "lite",
+      "generation": 6.0,
+      "slug": "openai/gpt-6-luna",
+      "note": "GPT-6 Luna(取代 gpt-5.4)",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "glm-5.3",
+      "provider": "glm",
+      "tier": "pro",
+      "generation": 5.3,
+      "slug": "z-ai/glm-5.3",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "glm-5.3-flash",
+      "provider": "glm",
+      "tier": "flash",
+      "generation": 5.3,
+      "slug": "z-ai/glm-5.3-flash",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+      "provider": "openrouter",
+      "tier": "pro",
+      "generation": 0.0,
+      "slug": "",
+      "note": "dolphin(NSFW 专用,不进主链)",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    }
+  ],
+  "dialog_tiers": {
+    "max": [
+      "claude-opus-5-5"
+    ],
+    "high": [
+      "gemini-4-argon"
+    ],
+    "medium": [
+      "claude-sonnet-5-5"
+    ],
+    "low": []
+  },
+  "low_tier_pool": [
+    "claude-sonnet-5-5",
+    "gemini-3.8-flash"
+  ],
+  "embedding": {
+    "model": "qwen3.7-text-embedding-flash",
+    "dimensions": 1024,
+    "max_input_chars": 9000
+  },
+  "environment": {},
+  "summary_models": []
+}

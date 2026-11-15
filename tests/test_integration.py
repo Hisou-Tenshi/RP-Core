@@ -212,11 +212,18 @@ def test_workflow_contracts_and_pinned_actions():
         assert workflow["permissions"] == {"contents": "read"}
         for job in workflow["jobs"].values():
             if job.get("permissions"):
-                assert path.name == "keepalive.yml"
                 assert job["permissions"] == {"contents": "write"}
-                assert "vars.RP_LIVE_ENABLED == 'true'" in job["if"]
-                assert ".github/activity.json" in path.read_text()
-                assert "DATA_REPOSITORY" not in path.read_text()
+                if path.name == "keepalive.yml":
+                    assert "vars.RP_LIVE_ENABLED == 'true'" in job["if"]
+                    assert ".github/activity.json" in path.read_text()
+                    assert "DATA_REPOSITORY" not in path.read_text()
+                else:
+                    assert path.name == "provider-health.yml"
+                    assert job["needs"] == "plan"
+                    assert "has_instances" in job["if"]
+                    assert "default_branch" in workflow["jobs"]["plan"]["if"]
+                    assert 'git add -- "health/' in path.read_text()
+                    assert "repository:" not in path.read_text()
             for step in job.get("steps", []):
                 if "uses" in step:
                     revision = step["uses"].split("@")[1]

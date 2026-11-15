@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1019">
+  <meta name="description" content="RP-Core 共用模型配置与通路探活管理台">
+  <title>RP-Core · 运行控制台</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/" aria-label="RP-Core 首页"><span class="brandmark">rp<span>·</span></span><span>RP-Core<small>SHARED RUNTIME</small></span></a>
+  <div class="nav-label">工作空间</div>
+  <nav aria-label="控制台导航">
+    <button data-tab="health" class="nav-item active"><span>◉</span>通路探活<small>01</small></button>
+    <button data-tab="models" class="nav-item"><span>▦</span>模型注册表<small>02</small></button>
+    <button data-tab="routing" class="nav-item"><span>⇄</span>路由配置<small>03</small></button>
+    <button data-tab="settings" class="nav-item"><span>⚙</span>请求与向量<small>04</small></button>
+  </nav>
+  <div class="sidebar-note"><span class="status-dot"></span> 一个框架，所有角色共用<small>公共逻辑与配置统一维护。<br>角色卡、历史和记忆留在私密仓。</small></div>
+  <a id="source-link" class="source-link" href="https://github.com/Hisou-Tenshi/RP-Core" target="_blank" rel="noreferrer">查看框架源码 <span>↗</span></a>
+  <div class="license">AGPL-3.0-only · RP-Core Console</div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><div class="breadcrumb">运行控制台 <span>/</span> <strong id="breadcrumb">通路探活</strong></div><div class="account"><span id="identity" class="muted">只读访问</span><button id="login" class="button compact">GitHub 登录 ↗</button><button id="logout" class="button compact secondary" hidden>退出</button></div></header>
+  <main>
+    <div class="page-heading"><div><div class="eyebrow">RUNTIME OPERATIONS</div><h1 id="page-title">通路探活</h1><p id="page-description">从真实运行环境检查连接、鉴权和模型可用性。</p></div><div class="heading-actions"><label class="instance-picker">运行实例<select id="instance" aria-label="运行实例"><option>载入中</option></select></label><button id="probe" class="button" disabled>运行探活 ↗</button></div></div>
+    <div id="notification" role="status" aria-live="polite" hidden></div>
+    <section id="health" class="tab-content"><div class="empty-state">正在读取 RP-Core 探活结果…</div></section>
+    <section id="models" class="tab-content" hidden></section>
+    <section id="routing" class="tab-content" hidden></section>
+    <section id="settings" class="tab-content" hidden></section>
+    <footer class="page-footer"><span id="repository">公开配置 · 私密数据</span><span>密钥仅在 Actions 环境中使用 <span class="tiny-lock">▣</span></span></footer>
+  </main>
+  <div id="savebar" class="savebar" hidden><div><strong id="dirty-label">没有未保存的修改</strong><small id="save-help">登录后可将公共模型配置提交回框架仓库。</small></div><div class="save-actions"><button id="reload" class="button secondary">重新载入</button><button id="review" class="button secondary" disabled>查看变更</button><button id="save" class="button primary" disabled>保存到公开仓 ↗</button></div></div>
+</div>
+<dialog id="review-dialog"><div class="dialog-heading"><h2>本次公共配置变更</h2><button id="close-review" class="button secondary">关闭</button></div><p class="muted">保存后所有实例的后续运行共用新配置。提交历史可在 GitHub 查看和回退。</p><pre id="review-content"></pre></dialog>
+<noscript>控制台需要启用 JavaScript。</noscript>
+</body>
+</html>

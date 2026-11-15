@@ -40,7 +40,8 @@
       "published_sha256": "b1937d3df90a561ea0397d77ffb1de489600fa6e2761d5424fad7d039b9a2e8e",
       "functions": 1,
       "unchanged_functions": 1,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "4ab6d6da1ad9f9ca0e468aab86bbe8359fd3ebb83688ef760ca99dc2aab53167"
     },
     {
       "path": "src/config/fixed.py",
@@ -56,7 +57,8 @@
       "published_sha256": "d740a817eb1e67c79f015f850cf80e66020691a74ff0779fb12ef54a469e6ad4",
       "functions": 61,
       "unchanged_functions": 61,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "f0c57303478f00a3c0c6cb2c4e23f92e015844c658e1683c13a943687bf526a5"
     },
     {
       "path": "src/config/prompts.py",
@@ -278,7 +280,8 @@
       "published_sha256": "27b5cd1a690280d5b1e3580760b89ae8b422f0f6a2690ffeccbbd63e7827f0ee",
       "functions": 14,
       "unchanged_functions": 14,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "7993633845c4bb83b19919537e05726fb7b0918ae106a7ddd5ee2e634345bbcf"
     },
     {
       "path": "src/rag_modules.py",
@@ -440,7 +443,8 @@
       "published_sha256": "33b066699074d86564d0b9f9158217bfda3046453e9f400ef60accc59785ffca",
       "functions": 52,
       "unchanged_functions": 52,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "d3ae96fd7a361beb4c0e1a67f2f773bbb192cf1b2e9e196b847d98f8d04aa0dc"
     },
     {
       "path": "scripts/build_provider_health_dashboard.py",
@@ -484,5 +488,6 @@
         "_project_root"
       ]
     }
-  ]
+  ],
+  "function_metrics_scope": "Original code-only import snapshot; later public edits use reviewed_sha256."
 }

@@ -21,6 +21,8 @@ def main():
         sandbox = Path(temporary)
         for name in ("src", "scripts", "skills"):
             shutil.copytree(CODE / name, sandbox / name)
+        for name in ("model-config.json", "model-config.schema.json"):
+            shutil.copy2(CODE / name, sandbox / name)
         shutil.copytree(ROOT / "validation/compat_tests", sandbox / "tests")
         (sandbox / "tests/__init__.py").write_text("")
         (sandbox / "data").mkdir()

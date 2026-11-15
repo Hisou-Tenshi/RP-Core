@@ -103,6 +103,13 @@ def load(force: bool = False) -> dict | None:
         return _cached_payload
     try:
         payload = json.loads(HEALTH_PATH.read_text(encoding="utf-8"))
+        expected = os.getenv("RP_HEALTH_CONFIG_SHA256")
+        if expected and (
+            payload.get("config_sha256") != expected
+            or payload.get("credential_source") != "rp-core-actions:" + os.getenv("RP_HEALTH_INSTANCE_ID", "")
+        ):
+            _cached_payload = None
+            return None  # A different configuration/environment must never ban this run's routes.
     except Exception as exc:
         _warn_once("broken", f"[provider-health] 探活结果无法解析（{type(exc).__name__}: {exc}），本次全部通路照常调用。")
         _cached_payload = None

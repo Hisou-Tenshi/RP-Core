@@ -40,4 +40,4 @@ select = ["E", "F", "I", "UP", "B", "S"]
 ignore = ["E501", "S101", "S603", "S607"]
 
 [tool.setuptools.package-data]
-rp_core = ["compat_runtime/skills/*.md", "compat_runtime/source-manifest.json"]
+rp_core = ["compat_runtime/skills/*.md", "compat_runtime/source-manifest.json", "compat_runtime/model-config*.json"]

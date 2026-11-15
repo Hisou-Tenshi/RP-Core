@@ -1,5 +1,9 @@
 # RP-Core
 
+The [Vercel control console](https://rp-core-console.vercel.app) displays RP-Core
+provider health and provides GitHub OAuth model configuration editing.
+See [console deployment and architecture](docs/console.md) to deploy your own fork.
+
 完整运行时（0.3）：见 [功能对应、Secrets 验证和接入说明](docs/full-runtime.md)。
 
 **一个公开运行框架，多个私密角色数据仓。所有角色共用同一份逻辑。**

@@ -14,6 +14,10 @@
 
 import os
 
+from _rp_model_config import apply_environment
+
+apply_environment()
+
 PROJECT_ROOT = os.environ["RP_RUNTIME_ROOT"]
 
 _claude_key = os.getenv("CLAUDE_API_KEY", "") or ""

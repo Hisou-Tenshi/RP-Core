@@ -1,0 +1,104 @@
+name: RP provider health
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/rp_core/compat_runtime/model-config.json
+      - scripts/probe_public_health.py
+      - .github/workflows/provider-health.yml
+  schedule:
+    - cron: '17 0,6,12,18 * * *'
+  workflow_dispatch:
+    inputs:
+      instance_id:
+        description: Public registered instance ID, or all
+        default: all
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  plan:
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.registry.outputs.matrix }}
+      has_instances: ${{ steps.registry.outputs.has_instances }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - id: registry
+        env:
+          RP_DEFAULT_REPO_AVAILABLE: ${{ secrets.GH_REPO != '' }}
+          RP_REPOSITORY_VARIABLES: ${{ toJSON(vars) }}
+          RP_SELECTED_INSTANCE: ${{ inputs.instance_id || 'all' }}
+        run: python3 scripts/resolve_instances.py --instance "$RP_SELECTED_INSTANCE" --github-output "$GITHUB_OUTPUT"
+  probe:
+    needs: plan
+    if: ${{ needs.plan.outputs.has_instances == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    environment: ${{ matrix.environment }}
+    concurrency:
+      group: rp-provider-health-${{ matrix.id }}
+      cancel-in-progress: false
+    env:
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      CLAUDE_PROXY_BASE_URL: ${{ secrets.CLAUDE_PROXY_BASE_URL }}
+      CLAUDE_PROXY_KEY: ${{ secrets.CLAUDE_PROXY_KEY }}
+      CLAUDE_PROXY_KEY_2: ${{ secrets.CLAUDE_PROXY_KEY_2 }}
+      CLAUDE_PROXY_KEY_BASE: ${{ secrets.CLAUDE_PROXY_KEY_BASE }}
+      CLAUDE_PROXY_KEY_MAX: ${{ secrets.CLAUDE_PROXY_KEY_MAX }}
+      CLAUDE_PROXY_KEY_PRIME: ${{ secrets.CLAUDE_PROXY_KEY_PRIME }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_PROXY2_KEY: ${{ secrets.GEMINI_PROXY2_KEY }}
+      GEMINI_PROXY_KEY: ${{ secrets.GEMINI_PROXY_KEY }}
+      GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+      GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
+      GPT_PROXY2_KEY: ${{ secrets.GPT_PROXY2_KEY }}
+      GPT_PROXY_KEY: ${{ secrets.GPT_PROXY_KEY }}
+      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+      GROK_PROXY_KEY: ${{ secrets.GROK_PROXY_KEY }}
+      MAGMAROUTER_API_KEY: ${{ secrets.MAGMAROUTER_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+    steps:
+      - name: Checkout only public RP-Core code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9
+        with:
+          version: '0.13.6'
+          python-version: '3.12'
+          enable-cache: false
+      - run: uv sync --locked --extra full
+      - name: Probe RP keys and publish allowlisted results
+        env:
+          RP_HEALTH_INSTANCE: ${{ matrix.id }}
+        run: uv run --no-sync python scripts/probe_public_health.py --instance "$RP_HEALTH_INSTANCE"
+      - name: Persist sanitized status only
+        env:
+          RP_HEALTH_INSTANCE: ${{ matrix.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'RP-Core health'
+          git config user.email 'rp-health@users.noreply.github.com'
+          git add -- "health/$RP_HEALTH_INSTANCE/latest.json" "health/$RP_HEALTH_INSTANCE/history.json"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Update RP provider health [skip ci]'
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+          done
+          echo '::error::Unable to persist provider health.'
+          exit 1

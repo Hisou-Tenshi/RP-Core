@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -219,6 +220,13 @@ def environment(root: Path, workspace: Path, *, shadow: bool, payload: dict | No
     env["RP_KB_BASE_SHA"] = hashlib.sha256(kb.read_bytes()).hexdigest() if kb.exists() else ""
     env["GITHUB_OUTPUT"] = str(root / "logs/runtime-outputs.txt")
     env["PROVIDER_HEALTH_PATH"] = str(root / "data/provider_health.json")
+    instance = env.get("RP_INSTANCE_ID", "")
+    if not shadow and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,39}", instance):
+        env["PROVIDER_HEALTH_PATH"] = str(public_repo / "health" / instance / "latest.json")
+        env["RP_HEALTH_CONFIG_SHA256"] = hashlib.sha256(
+            (CODE / "model-config.json").read_bytes()
+        ).hexdigest()
+        env["RP_HEALTH_INSTANCE_ID"] = instance
     if shadow:
         env["TELEGRAM_TOKEN"] = str(100000000) + ":" + "x" * 35
         env["ADMIN_ID"] = "1"

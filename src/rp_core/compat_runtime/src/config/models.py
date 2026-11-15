@@ -43,6 +43,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from config.providers import MAGMAROUTER_API_KEY, OPENROUTER_API_KEY
+from _rp_model_config import CONFIG as MODEL_CONFIG
 
 __all__ = [
 
@@ -223,88 +224,10 @@ class ProviderSpec:
 
 
 
-PROVIDERS: tuple[ProviderSpec, ...] = (
-    ProviderSpec("claude", "Claude", model_prefixes=("claude-",)),
-    ProviderSpec("gemini", "Gemini", model_prefixes=("gemini-",)),
-    ProviderSpec("grok", "Grok", model_prefixes=("grok-",)),
-    ProviderSpec("deepseek", "DeepSeek", model_prefixes=("deepseek-",)),
-    ProviderSpec("magmarouter", "MagmaRouter", route="grok"),
-    ProviderSpec("gpt", "GPT", model_prefixes=("gpt-", "o1", "o3")),
-    ProviderSpec("glm", "GLM", model_prefixes=("glm-",)),
-    ProviderSpec("qwen", "Qwen", in_fallback_chain=False),
-    ProviderSpec("openrouter", "OpenRouter", in_fallback_chain=False, route="grok"),
-)
+PROVIDERS: tuple[ProviderSpec, ...] = tuple(ProviderSpec(**{**item, "model_prefixes": tuple(item["model_prefixes"])}) for item in MODEL_CONFIG["providers"])
 
 
-MODELS: tuple[ModelSpec, ...] = (
-
-    ModelSpec(
-        "claude-opus-5-5", "claude", "pro", 5.5,
-        slug="anthropic/claude-opus-5.5", note="Opus 5.5,当前旗舰",
-    ),
-    ModelSpec("claude-opus-5", "claude", "pro", 5.0, slug="anthropic/claude-opus-5"),
-    ModelSpec(
-        "claude-sonnet-5-5", "claude", "flash", 5.5,
-        slug="anthropic/claude-sonnet-5.5", note="Sonnet 5.5",
-    ),
-    ModelSpec("claude-sonnet-5", "claude", "flash", 5.0, slug="anthropic/claude-sonnet-5"),
-    ModelSpec(
-        "claude-haiku-5-5", "claude", "lite", 5.5,
-        slug="anthropic/claude-haiku-5.5", note="Haiku 5.5", order=2,
-    ),
-
-
-
-    ModelSpec(
-        "claude-haiku-4-5", "claude", "lite", 4.5,
-        slug="anthropic/claude-haiku-4.5", note="Haiku 4.5(代理普遍支持)", order=0,
-    ),
-    ModelSpec(
-        "claude-haiku-4-5-20251001", "claude", "lite", 4.5,
-        note="Haiku 4.5 日期快照(代理探活用)", in_chain=False, order=1,
-    ),
-
-    ModelSpec("gemini-4-argon", "gemini", "pro", 4.0, slug="google/gemini-4-argon", note="Gemini 4 Argon"),
-    ModelSpec("gemini-3.1-pro-preview", "gemini", "pro", 3.1, slug="google/gemini-3.1-pro-preview"),
-    ModelSpec(
-        "gemini-3.8-flash", "gemini", "flash", 3.8,
-        slug="google/gemini-3.8-flash", vision=True,
-    ),
-    ModelSpec(
-        "gemini-3.7-flash", "gemini", "flash", 3.7,
-        slug="google/gemini-3.7-flash", vision=True,
-    ),
-    ModelSpec("gemini-3.5-flash-lite", "gemini", "lite", 3.5, slug="google/gemini-3.5-flash-lite"),
-    ModelSpec("gemini-3.1-flash-lite", "gemini", "lite", 3.1, slug="google/gemini-3.1-flash-lite"),
-
-    ModelSpec("grok-4.7", "grok", "pro", 4.7, slug="x-ai/grok-4.7"),
-    ModelSpec("grok-4.6", "grok", "pro", 4.6, slug="x-ai/grok-4.6"),
-
-    ModelSpec("deepseek-v4-pro", "deepseek", "pro", 4.0, slug="deepseek/deepseek-v4-pro"),
-
-    ModelSpec("deepseek-flash", "deepseek", "flash", 4.1, slug="deepseek/deepseek-v4.1-flash-1017"),
-
-
-    ModelSpec("mimo-v2.6-flash-xploded", "magmarouter", "flash", 2.6, order=0),
-    ModelSpec("deepseek-v4.1-flash-1017-xploded", "magmarouter", "flash", 4.1, order=1),
-    ModelSpec("glm-5.3-flash-xploded", "magmarouter", "flash", 5.3, order=2),
-    ModelSpec("glm-5.3-xploded", "magmarouter", "pro", 5.3, order=3),
-    ModelSpec("qwen3.8-27b-xploded", "magmarouter", "lite", 3.8, order=4),
-    ModelSpec("magma-1-xploded", "magmarouter", "pro", 1.0, note="MagmaRouter 自调旗舰", order=5),
-
-    ModelSpec("gpt-6-luna", "gpt", "lite", 6.0, slug="openai/gpt-6-luna", note="GPT-6 Luna(取代 gpt-5.4)"),
-
-    ModelSpec("glm-5.3", "glm", "pro", 5.3, slug="z-ai/glm-5.3"),
-    ModelSpec("glm-5.3-flash", "glm", "flash", 5.3, slug="z-ai/glm-5.3-flash"),
-
-    ModelSpec(
-        "cognitivecomputations/dolphin-mistral-24b-venice-edition",
-        "openrouter",
-        "pro",
-        0.0,
-        note="dolphin(NSFW 专用,不进主链)",
-    ),
-)
+MODELS: tuple[ModelSpec, ...] = tuple(ModelSpec(**item) for item in MODEL_CONFIG["models"])
 
 MODEL_REGISTRY: dict[str, ModelSpec] = {spec.id: spec for spec in MODELS}
 
@@ -409,9 +332,9 @@ GLM_PRO_MODELS = provider_models("glm", "pro")
 GLM_FLASH_MODELS = provider_models("glm", "flash")
 
 
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL") or "qwen3.7-text-embedding-flash"
-EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM") or 1024)
-EMBEDDING_MAX_INPUT_CHARS = int(os.getenv("EMBEDDING_MAX_INPUT_CHARS") or 9000)
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL") or MODEL_CONFIG["embedding"]["model"]
+EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM") or MODEL_CONFIG["embedding"]["dimensions"])
+EMBEDDING_MAX_INPUT_CHARS = int(os.getenv("EMBEDDING_MAX_INPUT_CHARS") or MODEL_CONFIG["embedding"]["max_input_chars"])
 
 
 def dedupe_models(*parts: Iterable[str] | None) -> list[str]:
@@ -607,10 +530,10 @@ def openrouter_fallback_slug(native_model_id: str) -> str | None:
 
 
 
-DIALOG_TIER_MAX_MODELS = dedupe_models(CLAUDE_PRO_MODELS[:1])
-DIALOG_TIER_HIGH_MODELS = dedupe_models(GEMINI_PRO_MODELS[:1])
-DIALOG_TIER_MEDIUM_MODELS = dedupe_models(CLAUDE_FLASH_MODELS[:1])
-DIALOG_TIER_LOW_MODELS: list[str] = []
+DIALOG_TIER_MAX_MODELS = list(MODEL_CONFIG["dialog_tiers"]["max"])
+DIALOG_TIER_HIGH_MODELS = list(MODEL_CONFIG["dialog_tiers"]["high"])
+DIALOG_TIER_MEDIUM_MODELS = list(MODEL_CONFIG["dialog_tiers"]["medium"])
+DIALOG_TIER_LOW_MODELS: list[str] = list(MODEL_CONFIG["dialog_tiers"]["low"])
 
 DIALOG_TIER_ORDER = ("max", "high", "medium", "low")
 DIALOG_TIER_MODELS: dict[str, list[str]] = {
@@ -628,10 +551,7 @@ DIALOG_FALLBACK_MODELS: list[str] = disaster_recovery_models(DIALOG_TIER_HEAD_MO
 
 
 
-LOW_TIER_FLASH_POOL = dedupe_models(
-    CLAUDE_FLASH_MODELS[:1],
-    GEMINI_FLASH_MODELS[:1],
-)
+LOW_TIER_FLASH_POOL = list(MODEL_CONFIG["low_tier_pool"])
 
 
 def low_tier_flash_models() -> list[str]:
@@ -697,8 +617,8 @@ def dialog_model_chain() -> list[str]:
 
 
 
-CLAUDE_SUMMARY_MODEL = CLAUDE_PRO_MODELS[0]
-CLAUDE_SUMMARY_MODELS: list[str] = []
+CLAUDE_SUMMARY_MODEL = MODEL_CONFIG["summary_models"][0] if MODEL_CONFIG["summary_models"] else CLAUDE_PRO_MODELS[0]
+CLAUDE_SUMMARY_MODELS: list[str] = list(MODEL_CONFIG["summary_models"])
 
 TASK_MODEL_PRIMARY: dict[str, str] = {
 
