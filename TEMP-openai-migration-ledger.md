@@ -66,3 +66,5 @@ for Claude 7/7, GPT 1/1, Gemini 6/6 and Grok 2/2 registered models. Workflow lin
 source provenance and the public-tree audit pass. Production Actions/dashboard
 verification follows the deployment; successful model listing is not a live text
 generation or tool-execution claim.
+
+Production verification completed: code commit `c13c117`, CI run `43682263283` and RP-Core health run `43682263255` all succeeded. The production report places Proxy 3 / GPT Proxy 3 / Gemini Proxy 3 / Grok Proxy 2 first in their respective path lists, with 7/7, 1/1, 6/6 and 2/2 registered models passing non-generating checks. Its configuration hash matches the deployed public catalog. Model IDs, dialog chains and embedding settings are unchanged. The adapter is included in the built wheel; temporary local provider credential files were removed. No paid generation or Telegram test message was used. All authorized implementation and verification stages are complete.
