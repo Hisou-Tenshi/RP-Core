@@ -63,9 +63,8 @@ def main():
     try:
         nonce = "cutover-" + os.environ.get("GITHUB_RUN_ID", "manual")
         api_headers = {"User-Agent": "RP-Core-live-check/1", "Cache-Control": "no-cache"}
-        with urlopen(
-            Request(origin + "/health?check=" + nonce, headers=api_headers), timeout=30
-        ) as response:  # noqa: S310
+        health_request = Request(origin + "/health?check=" + nonce, headers=api_headers)  # noqa: S310 -- HTTPS origin validated above.
+        with urlopen(health_request, timeout=30) as response:  # noqa: S310 -- HTTPS only.
             health = json.load(response)
         if health.get("service") != "rp-core":
             raise ValueError("Unexpected ingress")
