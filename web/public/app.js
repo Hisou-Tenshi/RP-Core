@@ -94,7 +94,7 @@ function renderModels() {
   $('model-search').oninput=e=>{state.search=e.target.value;const position=e.target.selectionStart;renderModels();$('model-search').focus();$('model-search').setSelectionRange(position,position);};
   $('provider-filter').onchange=e=>{state.filter=e.target.value;renderModels();};
   $('add-model').onclick=()=>{config.models.push({id:`new-model-${config.models.length+1}`,provider:state.filter==='all'?'claude':state.filter,tier:'flash',generation:0,slug:'',note:'',in_chain:true,vision:false,order:null});state.search='';renderModels();updateDirty();};
-  $('models').querySelectorAll('[data-field]').forEach(input=>input.onchange=()=>{
+  $('models').querySelectorAll('[data-field]').forEach(input=>input.oninput=input.onchange=()=>{
     const m=config.models[Number(input.closest('[data-model]').dataset.model)];const key=input.dataset.field;const previous=m[key];
     m[key]=input.type==='checkbox'?input.checked:input.type==='number'?(input.value===''&&key==='order'?null:Number(input.value)):input.value;
     if (key==='id') {
@@ -128,10 +128,10 @@ function renderSettings() {
   const disabled=editable()?'':' disabled',e=state.config.embedding;
   const properties=state.schema.properties.environment.properties;
   $('settings').innerHTML=`<div class="panel"><div class="panel-header"><div><h2>向量与嵌入</h2><p>读取现有记忆库与缓存；修改配置不会自动重建数据库。</p></div></div><div class="field-grid"><label class="field">嵌入模型<input id="embedding-model" value="${escape(e.model)}"${disabled}></label><label class="field">向量维度<input id="embedding-dimensions" type="number" min="64" max="8192" value="${e.dimensions}"${disabled}><small>已有索引依赖此维度，切换需另行迁移。</small></label><label class="field">单次最大输入字符<input id="embedding-max" type="number" min="128" value="${e.max_input_chars}"${disabled}></label></div><div class="hint">更换嵌入模型或维度会影响历史向量兼容性。请先规划现有缓存与索引的迁移，再保存这两项。</div></div><div class="panel"><h2>公共请求参数</h2><p>留空表示沿用运行环境或框架默认值。这里保存的是公开设置，请勿填入 API key、带令牌的 URL 或个人信息。</p><div class="env-grid">${Object.entries(properties).map(([name,spec])=>`<label class="field">${escape(name)}${spec.enum?`<select data-env="${name}"${disabled}><option value="">框架 / 环境默认</option>${options(spec.enum,state.config.environment[name])}</select>`:`<input data-env="${name}" type="${name.includes('URL')?'url':'text'}" value="${escape(state.config.environment[name] || '')}" placeholder="框架 / 环境默认"${disabled}>`}</label>`).join('')}</div></div>`;
-  $('embedding-model').onchange=x=>{e.model=x.target.value;updateDirty();};
-  $('embedding-dimensions').onchange=x=>{e.dimensions=Number(x.target.value);updateDirty();};
-  $('embedding-max').onchange=x=>{e.max_input_chars=Number(x.target.value);updateDirty();};
-  $('settings').querySelectorAll('[data-env]').forEach(x=>x.onchange=()=>{if(x.value.trim())state.config.environment[x.dataset.env]=x.value.trim();else delete state.config.environment[x.dataset.env];updateDirty();});
+  $('embedding-model').oninput=$('embedding-model').onchange=x=>{e.model=x.target.value;updateDirty();};
+  $('embedding-dimensions').oninput=$('embedding-dimensions').onchange=x=>{e.dimensions=Number(x.target.value);updateDirty();};
+  $('embedding-max').oninput=$('embedding-max').onchange=x=>{e.max_input_chars=Number(x.target.value);updateDirty();};
+  $('settings').querySelectorAll('[data-env]').forEach(x=>x.oninput=x.onchange=()=>{if(x.value.trim())state.config.environment[x.dataset.env]=x.value.trim();else delete state.config.environment[x.dataset.env];updateDirty();});
 }
 async function loadConfig({restore=false}={}) {
   const data=await api('/api/config');state.config=data.config;state.original=structuredClone(data.config);state.sha=data.sha;state.configHash=data.config_hash;state.schema=data.schema;
