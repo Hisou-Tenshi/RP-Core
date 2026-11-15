@@ -1,4 +1,4 @@
-include LICENSE NOTICE README.md uv.lock
+include LICENSE NOTICE README.md README.en.md README.ja.md uv.lock
 recursive-include docs *.md
 recursive-include schemas *.json
 recursive-include scripts *.py
