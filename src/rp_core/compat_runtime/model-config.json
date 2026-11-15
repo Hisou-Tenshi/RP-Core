@@ -169,12 +169,12 @@
       "order": null
     },
     {
-      "id": "gemini-3.1-pro-preview",
+      "id": "gemini-4-carbon",
       "provider": "gemini",
       "tier": "pro",
-      "generation": 3.1,
-      "slug": "google/gemini-3.1-pro-preview",
-      "note": "",
+      "generation": 4.1,
+      "slug": "google/gemini-4-carbon",
+      "note": "C > Ar",
       "in_chain": true,
       "vision": false,
       "order": null
@@ -383,7 +383,7 @@
       "claude-opus-5-5"
     ],
     "high": [
-      "gemini-4-argon"
+      "gemini-4-carbon"
     ],
     "medium": [
       "claude-sonnet-5-5"
