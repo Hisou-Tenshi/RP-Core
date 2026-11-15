@@ -86,7 +86,7 @@
       "tier": "pro",
       "generation": 5.5,
       "slug": "anthropic/claude-opus-5.5",
-      "note": "Opus 5.5,当前旗舰 · OAuth保存验证",
+      "note": "Opus 5.5,当前旗舰",
       "in_chain": true,
       "vision": false,
       "order": null
