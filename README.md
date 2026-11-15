@@ -400,4 +400,4 @@ docs/                        架构、接入、接口与恢复说明
 | [安全边界](docs/security-and-review.md) | 公开/私密边界和信任模型 |
 | [审查修复](docs/review-fixes.md) | R1–R10 修复、性能优化与验证边界 |
 
-完整框架及本项目修改采用 [AGPL-3.0-only](LICENSE)。改编自 Tenshi 的原始部分保留 MIT 声明，见 [第三方许可证](THIRD_PARTY_LICENSES.md) 和 [NOTICE](NOTICE)。公开示例不包含原项目的私密历史、数据库、密钥或贴纸素材。
+本仓库的全部项目代码、文档、原创示例及生成资源统一采用 [AGPL-3.0-only](LICENSE)，包括由同一版权持有人授权以此许可证发布的 Tenshi 衍生代码，不另设宽松许可证例外。来源与版权说明见 [NOTICE](NOTICE)；外部依赖保留各自许可证，见 [依赖许可证边界](THIRD_PARTY_LICENSES.md)。公开示例不包含原项目的私密历史、数据库、密钥或贴纸素材。

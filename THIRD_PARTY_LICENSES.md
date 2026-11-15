@@ -1,35 +1,26 @@
-# Third-party notices
+# Third-party dependency boundary
 
-## Tenshi runtime
+RP-Core project code, documentation, original examples and generated project
+assets are distributed under **AGPL-3.0-only**, including all materials adapted
+from Tenshi with the copyright holder's authorization. The Tenshi provenance
+record does not establish a separate license exception in RP-Core. See
+[LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-The code in src/rp_core/compat_runtime, the adapted full Cloudflare ingress,
-and the upstream regression fixtures under validation/compat_tests are
-adapted from the Tenshi project, whose README declares the MIT license.
-Original project copyright notice: Copyright © 2026 緋想天子 (Hisou-Tenshi).
+External packages installed for this project are separate third-party works.
+Their copyright notices and license terms remain with those packages; RP-Core's
+project license does not replace them.
 
-MIT License
+Dependency declarations and locked versions are recorded in:
 
-Copyright (c) 2026 緋想天子 (Hisou-Tenshi)
+- `pyproject.toml` and `uv.lock` for Python dependencies.
+- `web/package.json` and `web/package-lock.json` for the console.
+- `docs/diagrams/package.json` and `docs/diagrams/package-lock.json` for the
+  documentation renderer.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the Software), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+For each dependency, consult the license and notices shipped with its exact
+installed version. This file describes the boundary; it is not a complete
+license inventory for all dependencies or their transitive dependencies.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-RP-Core's changes and the combined framework are provided under AGPL-3.0-only.
-The upstream permission notice remains applicable to the upstream portions.
-No upstream conversation data, diary, character card, database, keys or sticker
-assets are distributed. The new short Tenshi example is synthetic.
+The public character example contains no private conversation history, diary,
+database, credentials or sticker assets. Character names and third-party
+intellectual property remain with their respective rights holders.

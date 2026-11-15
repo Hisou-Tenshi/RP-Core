@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Adapted from the Tenshi MIT runtime; see THIRD_PARTY_LICENSES.md.
+// Adapted from the same owner's Tenshi runtime; released under AGPL-3.0-only.
 import { bindings, enqueueLegacy } from './private-queue.mjs';
 const SCHEDULE_KV_KEY = "perception_schedule";
 const POLL_INTERVAL_MS = 1 * 60 * 1000;
