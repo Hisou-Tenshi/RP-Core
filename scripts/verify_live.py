@@ -61,7 +61,11 @@ def main():
     if not secret or not token:
         raise SystemExit("Live verification credentials are missing.")
     try:
-        with urlopen(Request(origin + "/health"), timeout=30) as response:  # noqa: S310
+        nonce = "cutover-" + os.environ.get("GITHUB_RUN_ID", "manual")
+        api_headers = {"User-Agent": "RP-Core-live-check/1", "Cache-Control": "no-cache"}
+        with urlopen(
+            Request(origin + "/health?check=" + nonce, headers=api_headers), timeout=30
+        ) as response:  # noqa: S310
             health = json.load(response)
         if health.get("service") != "rp-core":
             raise ValueError("Unexpected ingress")
@@ -71,9 +75,12 @@ def main():
         if bot.get("ok") is not True or info.get("ok") is not True or url.netloc != sync.netloc:
             raise ValueError("Bot or webhook mismatch")
         endpoint = "/internal/probe" if args.control == "probe" else "/internal/drain-inbox"
-        payload = {"nonce": "cutover-" + os.environ.get("GITHUB_RUN_ID", "manual")}
+        payload = {"nonce": nonce}
         result = post_json(
-            origin + endpoint, payload, headers={"Authorization": "Bearer " + secret}, timeout=60
+            origin + endpoint,
+            payload,
+            headers={**api_headers, "Authorization": "Bearer " + secret},
+            timeout=60,
         )
         should_wait = health.get("enabled") is True or os.environ.get("RP_EXPECT_RECEIPT") == "true"
         completed = (
