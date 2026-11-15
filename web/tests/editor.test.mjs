@@ -12,8 +12,11 @@ const schema = JSON.parse(readFileSync(new URL('../lib/model-config.schema.json'
 async function page() {
   const dom=new JSDOM(html,{url:'https://console.example/#models',runScripts:'outside-only'});
   dom.window.structuredClone=structuredClone;
-  const writes=[];
+  const writes=[],reads=[];
   dom.window.fetch=async(path,options)=>{
+    const originalPath=path;
+    path=new URL(path,'https://console.example').pathname;
+    if(!options.method || options.method==='GET')reads.push(originalPath);
     if(path==='/api/session')return Response.json({authenticated:true,login:'owner',repository:'example/framework',branch:'main',oauth_ready:true});
     if(path==='/api/instances')return Response.json({instances:[{id:'example'}]});
     if(path.startsWith('/api/health'))return Response.json({available:false,latest:null,history:[]});
@@ -26,7 +29,7 @@ async function page() {
   };
   // Run our own application, with no external scripts or network access.
   await dom.window.eval(`(async()=>{${source}\n})()`);
-  return {dom,writes};
+  return {dom,writes,reads};
 }
 
 test('editing a visible note enables save immediately and persists exactly the edited value',async()=>{
@@ -61,5 +64,17 @@ test('request settings and embedding edits are included without requiring a blur
     await document.querySelector('#save').onclick();
     assert.equal(writes[0].config.embedding.max_input_chars,8500);
     assert.equal(writes[0].config.environment.GPT_REASONING_EFFORT,'high');
+  } finally {dom.window.close();}
+});
+
+test('page refreshes use fresh data URLs while keeping authenticated writes unchanged',async()=>{
+  const {dom,reads,writes}=await page();
+  try {
+    await dom.window.document.querySelector('#reload').onclick();
+    const configReads=reads.filter(path=>new URL(path,'https://console.example').pathname==='/api/config');
+    assert.equal(configReads.length,2);
+    assert.notEqual(configReads[0],configReads[1]);
+    assert.ok(configReads.every(path=>new URL(path,'https://console.example').searchParams.has('_rp_read')));
+    assert.equal(writes.length,0);
   } finally {dom.window.close();}
 });

@@ -61,10 +61,12 @@ review and workflow lint. Live verification uses non-generating endpoints and
 the production health workflow; no test chat is sent.
 
 Local validation: 132 framework tests, 826 compatibility regressions plus 55 subtests,
-and all 11 website tests passed. Non-generating checks using the four new keys passed
+and all 12 website tests passed. Non-generating checks using the four new keys passed
 for Claude 7/7, GPT 1/1, Gemini 6/6 and Grok 2/2 registered models. Workflow lint,
 source provenance and the public-tree audit pass. Production Actions/dashboard
 verification follows the deployment; successful model listing is not a live text
 generation or tool-execution claim.
 
 Production verification completed: code commit `c13c117`, CI run `43682263283` and RP-Core health run `43682263255` all succeeded. The production report places Proxy 3 / GPT Proxy 3 / Gemini Proxy 3 / Grok Proxy 2 first in their respective path lists, with 7/7, 1/1, 6/6 and 2/2 registered models passing non-generating checks. Its configuration hash matches the deployed public catalog. Model IDs, dialog chains and embedding settings are unchanged. The adapter is included in the built wheel; temporary local provider credential files were removed. No paid generation or Telegram test message was used. All authorized implementation and verification stages are complete.
+
+Dashboard refresh verification: page-side data reads also use unique read URLs, preventing stale cached API snapshots from hiding newly added proxy rows. A DOM integration regression verifies repeated refreshes use distinct data URLs while writes keep their original protected endpoint.

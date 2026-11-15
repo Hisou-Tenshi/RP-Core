@@ -10,6 +10,7 @@ const descriptions = {
 };
 const state = {tab:'health',config:null,original:null,sha:null,session:{},registry:[],health:null,filter:'all',search:'',busy:false};
 let poll;
+let readSequence=0;
 const time = value => value ? new Date(value).toLocaleString('zh-CN',{hour12:false,timeZone:'Asia/Shanghai'}) : '尚无记录';
 const dirty = () => state.config && JSON.stringify(state.config) !== JSON.stringify(state.original);
 const editable = () => state.session.authenticated && !state.busy;
@@ -19,7 +20,10 @@ function message(text, type = '', link) {
   if (link) {const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noreferrer';a.textContent=' 查看 GitHub ↗';box.append(a);}
 }
 async function api(path, options = {}) {
-  const response = await fetch(path,{cache:'no-store',...options,headers:{'Content-Type':'application/json',...options.headers}});
+  const read = !options.method || options.method === 'GET';
+  const target = read && !path.startsWith('/api/auth/')
+    ? `${path}${path.includes('?')?'&':'?'}_rp_read=${Date.now()}-${++readSequence}` : path;
+  const response = await fetch(target,{cache:'no-store',...options,headers:{'Content-Type':'application/json',...options.headers}});
   const result = await response.json();
   if (!response.ok) throw new Error([result.error,...(result.details || [])].join(' · '));
   return result;
