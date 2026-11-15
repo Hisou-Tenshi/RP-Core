@@ -1,7 +1,11 @@
 include LICENSE NOTICE README.md README.en.md README.ja.md uv.lock
 recursive-include docs *.md
+recursive-include docs/diagrams *.png
+include docs/diagrams/manifest.json docs/diagrams/mermaid.config.json
+include docs/diagrams/package.json docs/diagrams/package-lock.json
 recursive-include schemas *.json
 recursive-include scripts *.py
+include scripts/build_readme_diagrams.mjs
 recursive-include tests *.py *.json *.mjs
 recursive-include .github *.yml
 recursive-include config *.json
@@ -10,3 +14,4 @@ recursive-include integrations *.mjs
 recursive-include src/rp_core/compat_runtime *.py *.json *.md
 recursive-include validation *.py
 include THIRD_PARTY_LICENSES.md
+prune docs/diagrams/node_modules

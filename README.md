@@ -38,10 +38,18 @@ RP-Core 将角色扮演机器人的模型接入、路由、工具、记忆、消
 
 ## 架构与运行流程
 
+图以本 README 中的 Mermaid 源码为准；修改后重新生成图片，勿单独编辑图片。
+
 ### 架构图
 
+![架构图](docs/diagrams/architecture.zh.png)
+
+<details>
+<summary>Mermaid 源码（修改依据）</summary>
+
+<!-- rp-diagram: architecture.zh -->
 ```mermaid
-flowchart LR
+flowchart TB
     User["用户 / Telegram"]
     Model["模型与工具服务"]
     Secrets["平台 Secrets<br/>按角色隔离凭据"]
@@ -81,10 +89,18 @@ flowchart LR
     Console -->|"授权保存公共配置"| Config
 ```
 
+</details>
+
 私密仓会临时检出到运行器；消息正文、数据库和运行日志不作为公开 Actions artifact 发布。完整模式的备份只上传到经过私密性校验的角色仓 Release。
 
 ### 一条消息如何运行
 
+![消息运行流程图](docs/diagrams/execution.zh.png)
+
+<details>
+<summary>Mermaid 源码（修改依据）</summary>
+
+<!-- rp-diagram: execution.zh -->
 ```mermaid
 flowchart TD
     A["1. Telegram 消息 / 定时感知"] --> B["2. Worker 校验入口与角色身份<br/>消息可先合批"]
@@ -108,6 +124,8 @@ flowchart TD
     M --> O["13. 补扫时执行到期维护<br/>摘要、归档、备份、清理、探活"]
     Q --> O
 ```
+
+</details>
 
 流程图描述完整引擎的主要边界，具体分支由公开配置决定。`replied_flag`、非空回复文本或成功生成，都不能单独证明 Telegram 已送达。发送不明确时会隔离，独立任务继续处理，工作流最终以非零状态报告问题。发送前的持久化失败则立即停止，不继续发送。
 
@@ -346,6 +364,14 @@ npm run build
 测试使用合成数据、mock、临时数据库和本地 Git remote。兼容套件先验证当前可编辑模型目录，再在隔离环境使用固定历史目录运行旧回归，避免网页改名被历史硬编码模型名错误拒绝。
 
 `rp-core full --task shadow` 的默认 `selfcheck` 为离线依赖检查。显式选择 `--shadow-task probe` 会访问真实服务；`--shadow-task reply` 会调用真实模型生成合成回复，可能产生费用，Telegram 发送仍被替换为影子传输。shadow 成功和测试通过都不表示已完成生产功能或压力验证。
+
+README 图片从各语言折叠区中的源码生成，生成步骤和浏览器配置见 [图表维护说明](docs/diagrams/README.md)：
+
+```bash
+npm ci --prefix docs/diagrams
+npm run build --prefix docs/diagrams
+npm run check --prefix docs/diagrams
+```
 
 ## 目录、文档与许可证
 

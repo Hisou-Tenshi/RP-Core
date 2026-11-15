@@ -38,10 +38,18 @@ RP-Core は、モデル連携、ルーティング、ツール、記憶、メッ
 
 ## アーキテクチャと実行フロー
 
+この README の Mermaid ソースを正とします。ソースの変更後に画像を再生成し、画像だけを直接編集しないでください。
+
 ### アーキテクチャ図
 
+![アーキテクチャ図](docs/diagrams/architecture.ja.png)
+
+<details>
+<summary>Mermaid ソース（編集の基準）</summary>
+
+<!-- rp-diagram: architecture.ja -->
 ```mermaid
-flowchart LR
+flowchart TB
     User["ユーザー / Telegram"]
     Model["モデル・ツールのサービス"]
     Secrets["プラットフォームの Secrets<br/>キャラクターごとに資格情報を分離"]
@@ -81,10 +89,18 @@ flowchart LR
     Console -->|"認可された公開設定の保存"| Config
 ```
 
+</details>
+
 非公開リポジトリは runner に一時的に checkout されます。メッセージ本文、データベース、実行ログを公開 Actions artifact として配布しません。完全版エンジンのバックアップは、対象が非公開であると確認したキャラクターリポジトリの Release にだけアップロードします。
 
 ### メッセージが処理される手順
 
+![メッセージ実行フロー図](docs/diagrams/execution.ja.png)
+
+<details>
+<summary>Mermaid ソース（編集の基準）</summary>
+
+<!-- rp-diagram: execution.ja -->
 ```mermaid
 flowchart TD
     A["1. Telegram メッセージ / 自発処理のトリガー"] --> B["2. Worker が入口とユーザーを検証<br/>必要に応じてメッセージを集約"]
@@ -108,6 +124,8 @@ flowchart TD
     M --> O["13. キュー走査時に期限を迎えた保守を実行<br/>要約・アーカイブ・バックアップ・整理・ヘルス確認"]
     Q --> O
 ```
+
+</details>
 
 この図は完全版エンジンの主な処理境界を示します。個別の分岐は公開設定で決まります。`replied_flag`、空でない返信文、生成の成功だけでは Telegram への送達を証明できません。送信結果が不明なイベントは隔離し、独立した処理を続けたうえで、ワークフローを非ゼロ終了にして問題を報告します。送信前の記録を永続化できなければ、その時点で停止します。
 
@@ -346,6 +364,14 @@ npm run build
 テストには合成データ、mock、一時データベース、ローカル Git remote を使用します。互換テストは現在の編集可能なモデルカタログを検証した後、隔離環境の固定された過去のカタログで旧回帰テストを実行します。過去のモデル名のハードコードによって、正当なコンソール上の改名が拒否されることを防ぎます。
 
 `rp-core full --task shadow` は、既定ではオフラインの `selfcheck` を行います。`--shadow-task probe` を明示すると実際のサービスにアクセスします。`--shadow-task reply` は実際のモデルで合成返信を生成し、料金が発生する可能性がありますが、Telegram 送信は影のトランスポートに置換されます。shadow の成功やテストの通過は、本番の全機能・負荷試験を完了したことを意味しません。
+
+README の画像は各言語の折りたたみ内のソースから生成します。生成手順とブラウザー設定は [図の保守手順](docs/diagrams/README.md) を参照してください。
+
+```bash
+npm ci --prefix docs/diagrams
+npm run build --prefix docs/diagrams
+npm run check --prefix docs/diagrams
+```
 
 ## 構成、ドキュメント、ライセンス
 

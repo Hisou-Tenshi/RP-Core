@@ -1,0 +1,14 @@
+{
+  "name": "rp-core-readme-diagrams",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "build": "node ../../scripts/build_readme_diagrams.mjs",
+    "check": "node ../../scripts/build_readme_diagrams.mjs --check"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.15.0"
+  }
+}

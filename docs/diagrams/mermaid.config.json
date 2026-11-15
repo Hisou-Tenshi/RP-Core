@@ -1,0 +1,28 @@
+{
+  "theme": "base",
+  "securityLevel": "strict",
+  "deterministicIds": true,
+  "deterministicIDSeed": "rp-core-readme",
+  "fontFamily": "Arial, 'Noto Sans CJK SC', 'Noto Sans CJK JP', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', sans-serif",
+  "themeVariables": {
+    "fontSize": "18px",
+    "primaryColor": "#eff6ff",
+    "primaryTextColor": "#172554",
+    "primaryBorderColor": "#2563eb",
+    "lineColor": "#475569",
+    "secondaryColor": "#f0fdf4",
+    "tertiaryColor": "#f8fafc",
+    "clusterBkg": "#f8fafc",
+    "clusterBorder": "#94a3b8",
+    "edgeLabelBackground": "#ffffff"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 36,
+    "rankSpacing": 56,
+    "padding": 18,
+    "useMaxWidth": false,
+    "wrappingWidth": 280
+  }
+}

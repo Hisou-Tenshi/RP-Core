@@ -20,6 +20,7 @@ jobs:
       - run: npm ci && npm test && npm run build
         working-directory: web
       - run: git diff --exit-code -- web/lib/model-config.schema.json
+      - run: node scripts/build_readme_diagrams.mjs --check
   test:
     runs-on: ubuntu-latest
     strategy:

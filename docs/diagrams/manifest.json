@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "generation_inputs": {
+    "scripts/build_readme_diagrams.mjs": "45764caf31e4ce80bf35a2144232ece93484f22797c66f423d4bc8445d4e7ebe",
+    "docs/diagrams/mermaid.config.json": "c2c1580e997e2c6c210131ad71a74cf2a963ff78d9bbd1549ba6f56ec3197b1b",
+    "docs/diagrams/package.json": "6df3241a45aa564c8ca0468b8268dcca07cd7f108f940aa158ae2f0919a478a0",
+    "docs/diagrams/package-lock.json": "329d1629af1154478005dbd0cbc0f920527c70c312ae9d3c14f9a12c190286d7"
+  },
+  "diagrams": [
+    {
+      "id": "architecture.zh",
+      "source": "README.md",
+      "source_sha256": "151931b220ca47b496d7cad01e14652db6c6932d970bae3c2f91fa3809b01bb6",
+      "image": "docs/diagrams/architecture.zh.png",
+      "image_sha256": "1a399931dffee0d16e682bda085971761eaf304fa295679b455ab24efa248e89",
+      "bytes": 249754,
+      "width": 3156,
+      "height": 1599
+    },
+    {
+      "id": "execution.zh",
+      "source": "README.md",
+      "source_sha256": "ff9bb6cdbe45074b16e1af8235be658b43f8d4f4444b9b1a8f475baa4d608b1a",
+      "image": "docs/diagrams/execution.zh.png",
+      "image_sha256": "d1522f75fb9f6b6a6251442dd118dfd1cbf684829bc8f77c4dd7cdfdc4405707",
+      "bytes": 280436,
+      "width": 1400,
+      "height": 3269
+    },
+    {
+      "id": "architecture.en",
+      "source": "README.en.md",
+      "source_sha256": "f332250c1ee057a787a23e87f4705cbf571cdd57eec0f1c69cc4be6b1b82d653",
+      "image": "docs/diagrams/architecture.en.png",
+      "image_sha256": "0c6043322d22f3b5d3278677eb48a19d23039eb30945e781a2b890802a60f9ce",
+      "bytes": 285761,
+      "width": 3962,
+      "height": 1883
+    },
+    {
+      "id": "execution.en",
+      "source": "README.en.md",
+      "source_sha256": "e833f6e824f2eeec2952f5f4a1eeaac253fb593910e8953b7d921ea663b4f15e",
+      "image": "docs/diagrams/execution.en.png",
+      "image_sha256": "ece53e0e1e62489cceea7d5d1071891673ceeeb23d37f1eebf0221ae6d30e1d9",
+      "bytes": 308630,
+      "width": 1649,
+      "height": 4161
+    },
+    {
+      "id": "architecture.ja",
+      "source": "README.ja.md",
+      "source_sha256": "d102c81b9049a29217b1a40c2b8e1788f7c4e575939676e578660d3ada3d3c84",
+      "image": "docs/diagrams/architecture.ja.png",
+      "image_sha256": "e5d21a9a20633a76d17123877ad4fab87b125f4f57149b13e4e8587f8f03e72a",
+      "bytes": 324856,
+      "width": 4052,
+      "height": 1923
+    },
+    {
+      "id": "execution.ja",
+      "source": "README.ja.md",
+      "source_sha256": "71c012698e30a21541faa0773ab9ff6115d38b7f93071186543d2de943bef519",
+      "image": "docs/diagrams/execution.ja.png",
+      "image_sha256": "3ee3f6b043beda9fe61ba2acc45bf2a83ba9cef0d2a91a6866829a88f55bd007",
+      "bytes": 370750,
+      "width": 1604,
+      "height": 3998
+    }
+  ]
+}

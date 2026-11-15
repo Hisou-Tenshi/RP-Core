@@ -38,10 +38,18 @@ Public code must read private data during execution. Owners therefore still need
 
 ## Architecture and execution flow
 
+The Mermaid source in this README is authoritative. Regenerate the images after editing it; do not edit images separately.
+
 ### Architecture
 
+![Architecture diagram](docs/diagrams/architecture.en.png)
+
+<details>
+<summary>Mermaid source (authoritative)</summary>
+
+<!-- rp-diagram: architecture.en -->
 ```mermaid
-flowchart LR
+flowchart TB
     User["User / Telegram"]
     Model["Model and tool services"]
     Secrets["Platform Secrets<br/>Credentials isolated by character"]
@@ -81,10 +89,18 @@ flowchart LR
     Console -->|"Authorized public config commits"| Config
 ```
 
+</details>
+
 The private repository is temporarily checked out on the runner. Message content, databases, and runtime logs are not published as public Actions artifacts. Full-engine backups are uploaded only to Releases in the character repository after verifying that repository is private.
 
 ### How a message is processed
 
+![Message execution flowchart](docs/diagrams/execution.en.png)
+
+<details>
+<summary>Mermaid source (authoritative)</summary>
+
+<!-- rp-diagram: execution.en -->
 ```mermaid
 flowchart TD
     A["1. Telegram message / perception trigger"] --> B["2. Worker validates ingress and identity<br/>Messages may be batched"]
@@ -108,6 +124,8 @@ flowchart TD
     M --> O["13. Run due maintenance during queue scans<br/>Summary, archive, backup, cleanup and probe"]
     Q --> O
 ```
+
+</details>
 
 The diagram shows the full engine's main boundaries; public configuration controls individual branches. `replied_flag`, nonempty reply text, and successful generation alone do not prove Telegram delivery. Ambiguous delivery is quarantined while independent tasks continue, and the workflow ultimately reports a nonzero exit status. Failure to persist the guard before delivery stops execution immediately.
 
@@ -346,6 +364,14 @@ npm run build
 Tests use synthetic data, mocks, temporary databases, and local Git remotes. The compatibility suite first validates the current editable catalog, then runs imported regressions against a fixed historical catalog in an isolated environment. Historical hardcoded model IDs therefore do not incorrectly reject valid console renames.
 
 `rp-core full --task shadow` defaults to the offline `selfcheck`. Explicit `--shadow-task probe` accesses real services. `--shadow-task reply` uses real models to generate a synthetic reply and may incur charges, while Telegram delivery is replaced with a shadow transport. Shadow success and passing tests do not establish complete production or load-test coverage.
+
+README images are generated from each language’s folded source blocks. See [diagram maintenance](docs/diagrams/README.md) for generation and browser settings:
+
+```bash
+npm ci --prefix docs/diagrams
+npm run build --prefix docs/diagrams
+npm run check --prefix docs/diagrams
+```
 
 ## Repository layout, documentation, and licensing
 
