@@ -19,8 +19,10 @@ export async function handle(request, {env = process.env, fetcher = fetch, getSe
     const path = url.pathname;
     if (url.origin !== origin) throw new HttpError(403, '请使用配置的管理站域名');
     if (path === '/api/auth/error' && request.method === 'GET') {
+      // A direct visit cannot be tied to the attempt that failed, so never attribute a
+      // recorded cause to it; the inline path below carries the real one.
       return new Response(renderAuthError({error: url.searchParams.get('error') || 'Configuration',
-        issue: lastAuthIssue(120_000), facts: authFacts(env)}),
+        facts: authFacts(env)}),
         {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Vary': 'Cookie'}});
     }
     if (path === '/api/auth/diagnostics' && request.method === 'GET') {
