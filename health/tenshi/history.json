@@ -1798,5 +1798,244 @@
         }
       }
     }
+  },
+  {
+    "generated_at_utc": "2026-11-16T06:39:54+00:00",
+    "config_sha256": "8ac9be1ad3a04ba11625fa36d55977743e945a3ee0b17561962d20cea6f53d83",
+    "run_id": "43818239980",
+    "providers": {
+      "claude": {
+        "paths": {
+          "Proxy 3": {
+            "ok": false,
+            "verdict": "upstream_error",
+            "latency_ms": 48.5,
+            "models_total": 7,
+            "models_ok": 0
+          },
+          "Proxy 1 Base": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 80.2,
+            "models_total": 7,
+            "models_ok": 6
+          },
+          "Proxy 1 Prime": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 77.7,
+            "models_total": 7,
+            "models_ok": 7
+          },
+          "Proxy 1 Max": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 144.6,
+            "models_total": 7,
+            "models_ok": 7
+          },
+          "Proxy 2": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 615.6,
+            "models_total": 7,
+            "models_ok": 6
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 1700.1,
+            "models_total": 7,
+            "models_ok": 6
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 250.2,
+            "models_total": 7,
+            "models_ok": 7
+          }
+        }
+      },
+      "gemini": {
+        "paths": {
+          "Gemini Proxy 3": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 56.5,
+            "models_total": 6,
+            "models_ok": 6
+          },
+          "Gemini Proxy": {
+            "ok": false,
+            "verdict": "auth_denied",
+            "latency_ms": 65.9,
+            "models_total": 6,
+            "models_ok": 0
+          },
+          "Gemini Proxy 2": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 610.2,
+            "models_total": 6,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 79.4,
+            "models_total": 6,
+            "models_ok": 6
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 87.4,
+            "models_total": 6,
+            "models_ok": 6
+          }
+        }
+      },
+      "grok": {
+        "paths": {
+          "Grok Proxy 2": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 56.8,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "Grok Proxy": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 614.4,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 84.4,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 118.1,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "deepseek": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 319.9,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 83.1,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "magmarouter": {
+        "paths": {
+          "MagmaRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 484.8,
+            "models_total": 6,
+            "models_ok": 5
+          }
+        }
+      },
+      "gpt": {
+        "paths": {
+          "GPT Proxy 3": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 126.9,
+            "models_total": 1,
+            "models_ok": 1
+          },
+          "GPT Proxy": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 153.8,
+            "models_total": 1,
+            "models_ok": 1
+          },
+          "GPT Proxy 2": {
+            "ok": false,
+            "verdict": "model_not_found",
+            "latency_ms": 633.5,
+            "models_total": 1,
+            "models_ok": 0
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 84.9,
+            "models_total": 1,
+            "models_ok": 1
+          },
+          "OpenAI": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 1039.6,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      },
+      "glm": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 241.3,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 91.9,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "qwen": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 894.6,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      },
+      "openrouter": {
+        "paths": {
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 91.7,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      }
+    }
   }
 ]
