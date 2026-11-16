@@ -11,14 +11,21 @@ const hints = {
   Verification: ['登录链接已过期或已被使用，请重新点击登录。'],
   MissingCSRF: ['页面停留过久导致 CSRF 令牌失效，请刷新后重试。'],
   OAuthAccountNotLinked: ['该邮箱已绑定其他登录方式。'],
+  InvalidCheck: ['浏览器没有把登录时写入的 state Cookie 带回回调地址，Auth.js 因此判定登录被篡改。',
+    '常见于 App 内置浏览器（微信、飞书等）、无痕模式、隐私插件或跨站 Cookie 被拦截；请换普通窗口重新登录。'],
+  OperationProcessingError: ['GitHub 返回的 token 响应不是预期格式，通常是 client secret 与这个 OAuth App 不匹配。'],
 };
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
 export function renderAuthError({error = '', issue = null, facts = {}} = {}) {
   const code = String(error || 'Configuration');
-  const [first, second] = hints[code] || ['登录没有完成。请重试；若持续失败，请检查下面的诊断信息。'];
+  // Configuration is Auth.js's catch-all; when we captured the real failure, explain that
+  // one instead of repeating "something unspecified went wrong".
+  const hintKey = code === 'Configuration' && issue?.causeName ? issue.causeName : code;
+  const [first, second] = hints[hintKey] || ['登录没有完成。请重试；若持续失败，请检查下面的诊断信息。'];
   const callbackUrl = facts.origin ? `${facts.origin}/api/auth/callback/github` : '（尚未配置 RP_APP_ORIGIN）';
+  const when = issue?.at ? new Date(issue.at).toLocaleTimeString('zh-CN', {timeZone: 'Asia/Shanghai', hour12: false}) : '';
   const cause = issue
     ? [issue.type, issue.causeName].filter(Boolean).join(' · ')
     : '';
@@ -56,6 +63,7 @@ code{background:var(--code);border:1px solid var(--line-soft);border-radius:5px;
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 a.button{display:inline-flex;align-items:center;gap:6px;text-decoration:none;border-radius:8px;padding:9px 16px;font-size:13px;border:1px solid var(--line);color:var(--text);background:var(--panel)}
 a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.note{font-size:12px;color:var(--muted);margin:-4px 0 0}
 @media (prefers-color-scheme:dark){a.primary{color:#0a1526}}
 </style>
 </head>
@@ -66,7 +74,8 @@ a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
     <span class="badge">${escape(code)}</span>
     <p>${escape(first)}</p>
     ${second ? `<p>${escape(second)}</p>` : ''}
-    ${cause ? `<div class="diag">诊断：${escape(cause)}${detail ? ` — ${escape(detail)}` : ''}</div>` : ''}
+    ${cause ? `<div class="diag">诊断${when ? `（记录于 ${escape(when)}）` : ''}：${escape(cause)}${detail ? ` — ${escape(detail)}` : ''}</div>` : ''}
+    ${issue ? `<p class="note">这是服务器最近一次记录的登录失败；如果几分钟前你没有重新登录，它可能来自别人的会话。</p>` : ''}
     <h2>GitHub OAuth App 回调地址</h2>
     <p><code>${escape(callbackUrl)}</code></p>
     <h2>当前环境</h2>

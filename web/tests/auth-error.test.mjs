@@ -61,7 +61,7 @@ test('a failing OAuth callback is answered with our page, not Auth.js redirect',
   assert.match(response.headers.get('content-type'), /text\/html/);
   const body = await response.text();
   assert.match(body, /登录未完成/);
-  assert.match(body, /诊断：/);
-  assert.match(body, /InvalidCheck/);
+  assert.match(body, /诊断（记录于 \d{1,2}:\d{2}:\d{2}）：InvalidCheck/);
+  assert.match(body, /登录时写入的 state Cookie/);
   assert.ok(!body.includes('abc'), 'the authorization code never reaches the page');
 });

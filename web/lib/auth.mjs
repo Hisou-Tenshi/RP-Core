@@ -17,8 +17,10 @@ export function scrubAuthText(text) {
     .slice(0, issueLimit);
 }
 
-export function lastAuthIssue() {
-  return lastIssue ? {...lastIssue} : null;
+export function lastAuthIssue(maxAgeMs = 0) {
+  if (!lastIssue) return null;
+  if (maxAgeMs > 0 && Date.now() - Date.parse(lastIssue.at) > maxAgeMs) return null;
+  return {...lastIssue};
 }
 
 export function authFacts(env = process.env) {

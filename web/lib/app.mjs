@@ -20,7 +20,7 @@ export async function handle(request, {env = process.env, fetcher = fetch, getSe
     if (url.origin !== origin) throw new HttpError(403, '请使用配置的管理站域名');
     if (path === '/api/auth/error' && request.method === 'GET') {
       return new Response(renderAuthError({error: url.searchParams.get('error') || 'Configuration',
-        issue: lastAuthIssue(), facts: authFacts(env)}),
+        issue: lastAuthIssue(120_000), facts: authFacts(env)}),
         {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Vary': 'Cookie'}});
     }
     if (path === '/api/auth/diagnostics' && request.method === 'GET') {
@@ -36,7 +36,7 @@ export async function handle(request, {env = process.env, fetcher = fetch, getSe
         const target = new URL(location, origin);
         if (target.origin === origin && target.pathname === '/api/auth/error') {
           return new Response(renderAuthError({error: target.searchParams.get('error') || 'Configuration',
-            issue: lastAuthIssue(), facts: authFacts(env)}),
+            issue: lastAuthIssue(120_000), facts: authFacts(env)}),
             {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Vary': 'Cookie'}});
         }
       }
