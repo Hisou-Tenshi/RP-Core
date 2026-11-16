@@ -145,13 +145,18 @@ test('renaming a model preserves route references through intermediate edits and
   } finally {dom.window.close();}
 });
 
-test('all current routes start checked, with named sites and an explicit enabled label',async()=>{
+test('current routes start checked unless saved as disabled, with named sites and an explicit enabled label',async()=>{
   const {dom}=await page();
   try{
     const {document}=dom.window;
     const routes=[...document.querySelectorAll('[data-route-enabled]')];
     assert.ok(routes.length>20);
-    assert.ok(routes.every(route=>route.checked));
+    // The shared config may legitimately keep a route disabled (saved via the console), so the
+    // rendered state must match path_policies[provider].disabled exactly: enabled by default,
+    // unchecked only when a saved policy disables that route.
+    const expected=route=>!(config.path_policies[route.dataset.provider].disabled||[]).includes(route.dataset.routeEnabled);
+    assert.ok(routes.every(route=>route.checked===expected(route)));
+    assert.ok(routes.every(route=>expected(route)===!route.closest('.chain-item').classList.contains('route-disabled')));
     assert.ok(routes.every(route=>route.closest('label').textContent==='启用'));
     const policies=document.querySelector('.path-policy-grid').textContent;
     assert.match(policies,/Codeyu/);
@@ -191,7 +196,11 @@ test('a saved disabled route starts unchecked and checking it enables it again',
     route.checked=true;route.dispatchEvent(new Event('change',{bubbles:true}));
     await document.querySelector('#save').onclick();
     assert.deepEqual(writes[0].config.path_policies.gemini.disabled,[]);
-    assert.ok([...document.querySelectorAll('[data-route-enabled]')].every(input=>input.checked));
+    // Checking the saved-disabled route re-enables every route of that provider; a route that
+    // another provider's saved policy keeps disabled (deepseek fireworks_pro in the live config)
+    // must stay unchecked rather than being forcibly re-enabled.
+    assert.ok([...document.querySelectorAll('[data-provider="gemini"][data-route-enabled]')].every(input=>input.checked));
+    assert.deepEqual(writes[0].config.path_policies.deepseek.disabled,config.path_policies.deepseek.disabled);
   }finally{dom.window.close();}
 });
 
