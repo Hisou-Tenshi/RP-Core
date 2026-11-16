@@ -430,7 +430,13 @@
       "disabled": []
     },
     "gemini": {
-      "order": [],
+      "order": [
+        "totokens",
+        "codeyu",
+        "coderplan",
+        "official",
+        "openrouter"
+      ],
       "disabled": []
     },
     "gpt": {
