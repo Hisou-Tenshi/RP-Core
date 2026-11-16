@@ -54,3 +54,14 @@ test('authFacts degrades to nulls when the project metadata is missing', () => {
   assert.equal(facts.admins, 0);
   assert.equal(facts.env.AUTH_SECRET, false);
 });
+
+test('a failing OAuth callback is answered with our page, not Auth.js redirect', async () => {
+  const response = await get('/api/auth/callback/github?code=abc&state=bogus');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/html/);
+  const body = await response.text();
+  assert.match(body, /登录未完成/);
+  assert.match(body, /诊断：/);
+  assert.match(body, /InvalidCheck/);
+  assert.ok(!body.includes('abc'), 'the authorization code never reaches the page');
+});
