@@ -418,7 +418,15 @@
   "summary_models": [],
   "path_policies": {
     "claude": {
-      "order": [],
+      "order": [
+        "codeyu_base",
+        "codeyu_prime",
+        "codeyu_max",
+        "totokens",
+        "coderplan",
+        "openrouter",
+        "official"
+      ],
       "disabled": []
     },
     "gemini": {
@@ -435,7 +443,9 @@
     },
     "deepseek": {
       "order": [],
-      "disabled": []
+      "disabled": [
+        "fireworks_pro"
+      ]
     },
     "glm": {
       "order": [],
