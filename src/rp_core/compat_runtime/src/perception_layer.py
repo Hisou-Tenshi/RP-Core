@@ -879,6 +879,35 @@ def _style_guard_perception_text(text: str, *, call_rewrite) -> str:
         return text
 
 
+def _suppress_unsafe_perception(
+    error: "reply_two_stage.UnsafeResponseError",
+    *,
+    scheduled_force: bool,
+    schedule_trigger_at_ms: int,
+    stage: str,
+) -> int:
+    """审查拒绝（或审查不可用）时终止本次外发，按「决定不说话」正常收尾。
+
+    安全语义：绝不发送被拒内容、绝不重试同一段内容。这里只做两件事：
+    记一行可诊断日志（含 reason，供私有日志 grep），定时触发则清掉队列条目，
+    然后返回 0 让进程正常退出 —— 审查说「不发」不是基础设施故障。
+    """
+    reason = str(getattr(error, "reason", "") or error or "review_rejected")
+    logger.warning(
+        "perception_suppressed_unsafe: %s (stage=%s) —— 本次不外发、不重试，按正常结束处理。",
+        reason,
+        stage,
+    )
+    if scheduled_force:
+        try:
+            complete_scheduled_trigger(schedule_trigger_at_ms or None)
+        except Exception as e:
+            logger.warning(
+                f"perception_suppressed_unsafe: 清理定时触发队列失败（不升级为失败）：{format_exception_inline(e)}"
+            )
+    return 0
+
+
 async def run_perception(
     force: bool = False,
     scheduled_force: bool = False,
@@ -900,15 +929,24 @@ async def run_perception(
                 "感知输出未通过安全检查；重新用首个 Gemini Flash 模型生成心里与打字内容（reason=%s）。",
                 error.reason,
             )
-            return await _run_perception_impl(
-                force=force,
-                scheduled_force=scheduled_force,
-                schedule_note=schedule_note,
-                schedule_trigger_at_ms=schedule_trigger_at_ms,
-                round_ctx=round_ctx,
-                force_gemini_flash_retry=True,
-                skip_probability=True,
-            )
+            try:
+                return await _run_perception_impl(
+                    force=force,
+                    scheduled_force=scheduled_force,
+                    schedule_note=schedule_note,
+                    schedule_trigger_at_ms=schedule_trigger_at_ms,
+                    round_ctx=round_ctx,
+                    force_gemini_flash_retry=True,
+                    skip_probability=True,
+                )
+            except reply_two_stage.UnsafeResponseError as retry_error:
+                # 重试仍被拒（或审查不可用）：到此为止，不发送、不再重试、退出码 0。
+                return _suppress_unsafe_perception(
+                    retry_error,
+                    scheduled_force=scheduled_force,
+                    schedule_trigger_at_ms=schedule_trigger_at_ms,
+                    stage="gemini_flash_retry",
+                )
     finally:
         round_ctx.finish()
 
@@ -1331,14 +1369,23 @@ async def _run_perception_impl(
         return 0
 
     body_for_review = reactions.strip_markers(response_body_cleaned)
-    unsafe_reason = reply_two_stage.unsafe_response_reason(body_for_review)
-    if unsafe_reason:
-        raise reply_two_stage.UnsafeResponseError(unsafe_reason)
-    review_outgoing_reply(
-        user_query=perception_prompt,
-        budget=None,
-        reply_text=body_for_review,
-    )
+    try:
+        unsafe_reason = reply_two_stage.unsafe_response_reason(body_for_review)
+        if unsafe_reason:
+            raise reply_two_stage.UnsafeResponseError(unsafe_reason)
+        review_outgoing_reply(
+            user_query=perception_prompt,
+            budget=None,
+            reply_text=body_for_review,
+        )
+    except reply_two_stage.UnsafeResponseError as error:
+        # 审查说「不发」（含审查 API 不可用）：绝不外发，也不重试同一段内容。
+        return _suppress_unsafe_perception(
+            error,
+            scheduled_force=scheduled_force,
+            schedule_trigger_at_ms=schedule_trigger_at_ms,
+            stage="outgoing_review",
+        )
 
     logger.info("Tenshi decided to speak! Sending message...")
     if pending_intent:

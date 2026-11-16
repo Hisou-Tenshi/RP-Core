@@ -6862,6 +6862,107 @@ def review_outgoing_reply(*, user_query: str, budget: dict | None, reply_text: s
     return verdict
 
 
+def _withdraw_streamed_turn() -> bool:
+    """撤回本轮已经流式发到 Telegram 的片段；没有 streamer 视为无需撤回。"""
+    streamer = (_partial_save_ctx or {}).get("streamer")
+    if streamer is None:
+        return True
+    withdraw = getattr(streamer, "withdraw", None)
+    if not callable(withdraw):
+        return True
+    try:
+        return bool(withdraw())
+    except Exception as e:
+        logger.warning(f"[unsafe] 撤回已流式内容时异常：{format_exception_inline(e)}")
+        return False
+
+
+def _persist_unsafe_turn_outcome(*, reason: str, withdraw_ok: bool) -> bool:
+    """把审查兜底的结局写进 tenshi_log.json，供 telegram_tenshi_logger 判定。
+
+    回复脚本以 0 退出后，入口会读这份记号：
+    - ``no_send``：跳过发送与 partial 抢救，按「主动不回」正常返回 ``no_send``；
+    - ``delivery_unknown``：已流出的片段没撤回干净，如实报未知（不谎称未发送）。
+    """
+    ctx = _partial_save_ctx or {}
+    unreplied = ctx.get("unreplied_msgs") or []
+    target_conv = ctx.get("target_conv") or {}
+    conv_id = target_conv.get("conversation_id")
+    if not unreplied or conv_id is None:
+        logger.warning("[unsafe] 缺少本轮上下文，无法把审查结局写入 tenshi_log.json。")
+        return False
+    delivery_status = "no_send" if withdraw_ok else "delivery_unknown"
+    unreplied_ids = {str(m.get("msg_id")) for m in unreplied}
+    last_msg_id = str(unreplied[-1].get("msg_id"))
+    try:
+        with FileLock(LOCK_FILE, timeout=30):
+            with open(LOG_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            data, _ = ensure_tenshi_log_newest_first(data)
+            patched = False
+            for conv in data:
+                if str(conv.get("conversation_id")) != str(conv_id):
+                    continue
+                for msg in conv.get("chat_history", []):
+                    if str(msg.get("msg_id")) not in unreplied_ids:
+                        continue
+                    msg["replied_flag"] = True
+                    msg.pop("bot_decision", None)
+                    if str(msg.get("msg_id")) == last_msg_id:
+                        msg["delivery_status"] = delivery_status
+                        if withdraw_ok:
+                            msg["no_send"] = True
+                        thinking = msg.get("bot_thinking")
+                        if not isinstance(thinking, dict):
+                            thinking = {}
+                        thinking["unsafe_suppressed_reason"] = reason
+                        thinking["unsafe_withdraw_failed"] = not withdraw_ok
+                        msg["bot_thinking"] = thinking
+                    patched = True
+                break
+            if not patched:
+                logger.warning("[unsafe] 未在 tenshi_log.json 找到本轮消息，结局未落盘。")
+                return False
+            with open(LOG_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"[unsafe] 写入本轮审查结局失败：{format_exception_inline(e)}")
+        return False
+    _persist_context_compression_future(ctx.get("compression_future"), target_conv)
+    return True
+
+
+def _suppress_unsafe_reply(
+    error: "reply_two_stage.UnsafeResponseError",
+    *,
+    stage: str,
+    withdraw_ok: bool | None = None,
+) -> None:
+    """审查最终拒绝（含审查 API 不可用）时的兜底：不发送、不重试、正常退出。
+
+    安全语义：被拒内容绝不外发、绝不重发。这里只撤回已流式片段、落盘明确结局，
+    然后让脚本以 0 退出 —— 审查说「不发」属于正常业务结果，不是基础设施故障，
+    不能以未捕获异常崩溃（否则 full_runtime 记 delivery_unknown 并反复 quarantine）。
+    """
+    reason = str(getattr(error, "reason", "") or error or "review_rejected")
+    if withdraw_ok is None:
+        withdraw_ok = _withdraw_streamed_turn()
+    if withdraw_ok:
+        logger.warning(
+            "reply_suppressed_unsafe: %s (stage=%s) —— 不发送、不重试，按主动不回正常收尾。",
+            reason,
+            stage,
+        )
+    else:
+        logger.critical(
+            "reply_suppressed_unsafe: %s (stage=%s) —— 已流出的片段撤回失败，不重试、不再发送；"
+            "按 delivery_unknown 落盘，需人工确认线上是否残留半截内容。",
+            reason,
+            stage,
+        )
+    _persist_unsafe_turn_outcome(reason=reason, withdraw_ok=withdraw_ok)
+
+
 def main():
     """回复引擎入口：套一层「整轮端到端预算」，再进真正的实现。
 
@@ -6877,19 +6978,20 @@ def main():
         try:
             return _main_impl()
         except reply_two_stage.UnsafeResponseError as error:
-            streamer = (_partial_save_ctx or {}).get("streamer")
-            if streamer is not None:
-                withdraw = getattr(streamer, "withdraw", None)
-                if callable(withdraw) and not withdraw():
-                    logger.critical("Unsafe turn withdrawal was incomplete; suppressing automatic retry.")
-                    raise
+            if not _withdraw_streamed_turn():
+                logger.critical("Unsafe turn withdrawal was incomplete; suppressing automatic retry.")
+                return _suppress_unsafe_reply(error, stage="first_attempt", withdraw_ok=False)
             logger.warning(
                 "Unsafe output suppressed (reason=%s); restarting both stages with the first Gemini Flash model.",
                 error.reason,
             )
             finalize_reply_deadline()
             start_reply_deadline()
-            return _main_impl(force_gemini_flash=True)
+            try:
+                return _main_impl(force_gemini_flash=True)
+            except reply_two_stage.UnsafeResponseError as retry_error:
+                # 重试仍被拒（或审查不可用）：不再重试，按明确结局正常退出。
+                return _suppress_unsafe_reply(retry_error, stage="gemini_flash_retry")
     finally:
         finalize_reply_deadline()
 
