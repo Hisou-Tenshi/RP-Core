@@ -1,190 +1,24 @@
 {
   "schema": 4,
-  "generated_at_utc": "2026-11-16T06:50:12+00:00",
+  "generated_at_utc": "2026-11-16T09:20:03+00:00",
   "deployment": "rp-core",
   "instance_id": "tenshi",
   "credential_source": "rp-core-actions:tenshi",
   "probe_method": "official_non_call",
-  "run_id": "43819431251",
-  "config_sha256": "d7df746bd43fecefc93914dd31abac0ab0d4dd4f93589e437ba2bacf15b7962d",
+  "run_id": "43838648974",
+  "config_sha256": "2cf014121d08c1a059a6d24c903d149cb43ec064f120ada29d49ac308455abf9",
   "providers": {
     "claude": {
       "enabled": true,
       "models_total": 7,
       "models_ok": 7,
       "paths": {
-        "Proxy 3": {
-          "ok": false,
-          "verdict": "upstream_error",
-          "severity": "red",
-          "status": 503,
-          "latency_ms": 137.5,
-          "models_total": 7,
-          "models_ok": 0,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 125.0
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 202.9
-            },
-            "model": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 137.5
-            }
-          },
-          "models": {
-            "claude-opus-5-5": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 161.2
-            },
-            "claude-opus-5": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 154.0
-            },
-            "claude-sonnet-5-5": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 161.7
-            },
-            "claude-sonnet-5": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 185.3
-            },
-            "claude-haiku-4-5": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 140.3
-            },
-            "claude-haiku-4-5-20251001": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 157.5
-            },
-            "claude-haiku-5-5": {
-              "ok": false,
-              "verdict": "upstream_error",
-              "severity": "red",
-              "status": 503,
-              "latency_ms": 137.5
-            }
-          }
-        },
-        "Proxy 1 Base": {
+        "To-Tokens": {
           "ok": true,
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 126.8,
-          "models_total": 7,
-          "models_ok": 6,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 107.3
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 152.0
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 126.8
-            }
-          },
-          "models": {
-            "claude-opus-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 152.0
-            },
-            "claude-opus-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 152.0
-            },
-            "claude-sonnet-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 152.0
-            },
-            "claude-sonnet-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 152.0
-            },
-            "claude-haiku-4-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 152.0
-            },
-            "claude-haiku-4-5-20251001": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 152.0
-            },
-            "claude-haiku-5-5": {
-              "ok": false,
-              "verdict": "model_not_found",
-              "severity": "red",
-              "status": 404,
-              "latency_ms": 126.8
-            }
-          }
-        },
-        "Proxy 1 Prime": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 159.3,
+          "latency_ms": 157.0,
           "models_total": 7,
           "models_ok": 7,
           "checks": {
@@ -193,21 +27,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 102.0
+              "latency_ms": 122.4
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             }
           },
           "models": {
@@ -216,81 +50,81 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             },
             "claude-opus-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             },
             "claude-sonnet-5-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             },
             "claude-sonnet-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             },
             "claude-haiku-4-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             },
             "claude-haiku-4-5-20251001": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             },
             "claude-haiku-5-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 159.3
+              "latency_ms": 157.0
             }
           }
         },
-        "Proxy 1 Max": {
+        "Codeyu Base": {
           "ok": true,
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 147.9,
+          "latency_ms": 179.2,
           "models_total": 7,
-          "models_ok": 7,
+          "models_ok": 5,
           "checks": {
             "network": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 79.7
+              "latency_ms": 118.2
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 147.9
+              "latency_ms": 179.2
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 147.9
+              "latency_ms": 179.2
             }
           },
           "models": {
@@ -299,58 +133,58 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 147.9
+              "latency_ms": 179.2
             },
             "claude-opus-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 147.9
+              "latency_ms": 179.2
             },
             "claude-sonnet-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.9
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 190.1
             },
             "claude-sonnet-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 147.9
+              "latency_ms": 179.2
             },
             "claude-haiku-4-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 147.9
+              "latency_ms": 179.2
             },
             "claude-haiku-4-5-20251001": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 147.9
+              "latency_ms": 179.2
             },
             "claude-haiku-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.9
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 189.7
             }
           }
         },
-        "Proxy 2": {
+        "Codeyu Prime": {
           "ok": true,
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 683.8,
+          "latency_ms": 176.3,
           "models_total": 7,
           "models_ok": 6,
           "checks": {
@@ -359,21 +193,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 408.5
+              "latency_ms": 123.6
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 725.9
+              "latency_ms": 185.8
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 683.8
+              "latency_ms": 176.3
             }
           },
           "models": {
@@ -382,49 +216,215 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 725.9
+              "latency_ms": 185.8
             },
             "claude-opus-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 725.9
+              "latency_ms": 185.8
             },
             "claude-sonnet-5-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 725.9
+              "latency_ms": 185.8
             },
             "claude-sonnet-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 725.9
+              "latency_ms": 185.8
             },
             "claude-haiku-4-5": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 725.9
+              "latency_ms": 185.8
             },
             "claude-haiku-4-5-20251001": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 725.9
+              "latency_ms": 185.8
             },
             "claude-haiku-5-5": {
               "ok": false,
               "verdict": "model_not_found",
               "severity": "red",
               "status": 404,
-              "latency_ms": 683.8
+              "latency_ms": 176.3
+            }
+          }
+        },
+        "Codeyu Max": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 178.0,
+          "models_total": 7,
+          "models_ok": 7,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 125.6
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            }
+          },
+          "models": {
+            "claude-opus-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            },
+            "claude-opus-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            },
+            "claude-sonnet-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            },
+            "claude-sonnet-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            },
+            "claude-haiku-4-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            },
+            "claude-haiku-4-5-20251001": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            },
+            "claude-haiku-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 178.0
+            }
+          }
+        },
+        "CoderPlan": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 631.7,
+          "models_total": 7,
+          "models_ok": 6,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 300.7
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            }
+          },
+          "models": {
+            "claude-opus-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            },
+            "claude-opus-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            },
+            "claude-sonnet-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            },
+            "claude-sonnet-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            },
+            "claude-haiku-4-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            },
+            "claude-haiku-4-5-20251001": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 631.7
+            },
+            "claude-haiku-5-5": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 651.3
             }
           }
         },
@@ -433,9 +433,713 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 295.8,
+          "latency_ms": 635.9,
           "models_total": 7,
           "models_ok": 6,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 15.8
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            }
+          },
+          "models": {
+            "claude-opus-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            },
+            "claude-opus-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            },
+            "claude-sonnet-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            },
+            "claude-sonnet-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            },
+            "claude-haiku-4-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            },
+            "claude-haiku-4-5-20251001": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 200,
+              "latency_ms": 635.9
+            },
+            "claude-haiku-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 635.9
+            }
+          }
+        },
+        "Official": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 190.0,
+          "models_total": 7,
+          "models_ok": 7,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 15.0
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            }
+          },
+          "models": {
+            "claude-opus-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            },
+            "claude-opus-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            },
+            "claude-sonnet-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            },
+            "claude-sonnet-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            },
+            "claude-haiku-4-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            },
+            "claude-haiku-4-5-20251001": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            },
+            "claude-haiku-5-5": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 190.0
+            }
+          }
+        }
+      }
+    },
+    "gemini": {
+      "enabled": true,
+      "models_total": 6,
+      "models_ok": 6,
+      "paths": {
+        "To-Tokens": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 147.2,
+          "models_total": 6,
+          "models_ok": 6,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 99.2
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            }
+          },
+          "models": {
+            "gemini-4-carbon": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            },
+            "gemini-4-argon": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            },
+            "gemini-3.8-flash": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            },
+            "gemini-3.7-flash": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            },
+            "gemini-3.5-flash-lite": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            },
+            "gemini-3.1-flash-lite": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.2
+            }
+          }
+        },
+        "Codeyu": {
+          "ok": false,
+          "verdict": "auth_denied",
+          "severity": "red",
+          "status": 404,
+          "latency_ms": 180.6,
+          "models_total": 6,
+          "models_ok": 0,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 110.7
+            },
+            "auth": {
+              "ok": false,
+              "verdict": "auth_denied",
+              "severity": "red",
+              "status": 401,
+              "latency_ms": 372.4
+            },
+            "model": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 180.6
+            }
+          },
+          "models": {
+            "gemini-4-carbon": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 180.6
+            },
+            "gemini-4-argon": {
+              "ok": false,
+              "verdict": "upstream_error",
+              "severity": "red",
+              "status": 502,
+              "latency_ms": 1939.5
+            },
+            "gemini-3.8-flash": {
+              "ok": false,
+              "verdict": "upstream_error",
+              "severity": "red",
+              "status": 502,
+              "latency_ms": 1934.7
+            },
+            "gemini-3.7-flash": {
+              "ok": false,
+              "verdict": "upstream_error",
+              "severity": "red",
+              "status": 502,
+              "latency_ms": 1932.9
+            },
+            "gemini-3.5-flash-lite": {
+              "ok": false,
+              "verdict": "upstream_error",
+              "severity": "red",
+              "status": 502,
+              "latency_ms": 1941.5
+            },
+            "gemini-3.1-flash-lite": {
+              "ok": false,
+              "verdict": "upstream_error",
+              "severity": "red",
+              "status": 502,
+              "latency_ms": 1930.5
+            }
+          }
+        },
+        "CoderPlan": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 404,
+          "latency_ms": 615.0,
+          "models_total": 6,
+          "models_ok": 2,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 285.3
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 715.0
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 404,
+              "latency_ms": 615.0
+            }
+          },
+          "models": {
+            "gemini-4-carbon": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 632.0
+            },
+            "gemini-4-argon": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 616.0
+            },
+            "gemini-3.8-flash": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 715.0
+            },
+            "gemini-3.7-flash": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 615.0
+            },
+            "gemini-3.5-flash-lite": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 404,
+              "latency_ms": 622.9
+            },
+            "gemini-3.1-flash-lite": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 715.0
+            }
+          }
+        },
+        "OpenRouter": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 404.2,
+          "models_total": 6,
+          "models_ok": 6,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 15.1
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            }
+          },
+          "models": {
+            "gemini-4-carbon": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            },
+            "gemini-4-argon": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            },
+            "gemini-3.8-flash": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            },
+            "gemini-3.7-flash": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            },
+            "gemini-3.5-flash-lite": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            },
+            "gemini-3.1-flash-lite": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 404.2
+            }
+          }
+        },
+        "Official": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 139.1,
+          "models_total": 6,
+          "models_ok": 6,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 19.8
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            }
+          },
+          "models": {
+            "gemini-4-carbon": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            },
+            "gemini-4-argon": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            },
+            "gemini-3.8-flash": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            },
+            "gemini-3.7-flash": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            },
+            "gemini-3.5-flash-lite": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            },
+            "gemini-3.1-flash-lite": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 139.1
+            }
+          }
+        }
+      }
+    },
+    "grok": {
+      "enabled": true,
+      "models_total": 2,
+      "models_ok": 2,
+      "paths": {
+        "Codeyu": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 176.2,
+          "models_total": 2,
+          "models_ok": 1,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 112.2
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 176.2
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 176.2
+            }
+          },
+          "models": {
+            "grok-4.7": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 200,
+              "latency_ms": 176.2
+            },
+            "grok-4.6": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 176.2
+            }
+          }
+        },
+        "To-Tokens": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 147.7,
+          "models_total": 2,
+          "models_ok": 2,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 69.7
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.7
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.7
+            }
+          },
+          "models": {
+            "grok-4.7": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.7
+            },
+            "grok-4.6": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 147.7
+            }
+          }
+        },
+        "CoderPlan": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 617.8,
+          "models_total": 2,
+          "models_ok": 2,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 299.3
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 617.8
+            },
+            "model": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 617.8
+            }
+          },
+          "models": {
+            "grok-4.7": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 617.8
+            },
+            "grok-4.6": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 617.8
+            }
+          }
+        },
+        "OpenRouter": {
+          "ok": true,
+          "verdict": "ok",
+          "severity": "green",
+          "status": 200,
+          "latency_ms": 54.6,
+          "models_total": 2,
+          "models_ok": 2,
           "checks": {
             "network": {
               "ok": true,
@@ -449,65 +1153,30 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 295.8
+              "latency_ms": 54.6
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 295.8
+              "latency_ms": 54.6
             }
           },
           "models": {
-            "claude-opus-5-5": {
+            "grok-4.7": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 295.8
+              "latency_ms": 54.6
             },
-            "claude-opus-5": {
+            "grok-4.6": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 295.8
-            },
-            "claude-sonnet-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 295.8
-            },
-            "claude-sonnet-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 295.8
-            },
-            "claude-haiku-4-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 295.8
-            },
-            "claude-haiku-4-5-20251001": {
-              "ok": false,
-              "verdict": "model_not_found",
-              "severity": "red",
-              "status": 200,
-              "latency_ms": 295.8
-            },
-            "claude-haiku-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 295.8
+              "latency_ms": 54.6
             }
           }
         },
@@ -516,484 +1185,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 167.6,
-          "models_total": 7,
-          "models_ok": 7,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 16.0
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            }
-          },
-          "models": {
-            "claude-opus-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            },
-            "claude-opus-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            },
-            "claude-sonnet-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            },
-            "claude-sonnet-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            },
-            "claude-haiku-4-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            },
-            "claude-haiku-4-5-20251001": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            },
-            "claude-haiku-5-5": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 167.6
-            }
-          }
-        }
-      }
-    },
-    "gemini": {
-      "enabled": true,
-      "models_total": 6,
-      "models_ok": 6,
-      "paths": {
-        "Gemini Proxy 3": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 147.4,
-          "models_total": 6,
-          "models_ok": 6,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 82.0
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            }
-          },
-          "models": {
-            "gemini-4-carbon": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            },
-            "gemini-4-argon": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            },
-            "gemini-3.8-flash": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            },
-            "gemini-3.7-flash": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            },
-            "gemini-3.5-flash-lite": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            },
-            "gemini-3.1-flash-lite": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 147.4
-            }
-          }
-        },
-        "Gemini Proxy": {
-          "ok": false,
-          "verdict": "auth_denied",
-          "severity": "red",
-          "status": 401,
-          "latency_ms": 119.9,
-          "models_total": 6,
-          "models_ok": 0,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 97.8
-            },
-            "auth": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 141.8
-            },
-            "model": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 119.9
-            }
-          },
-          "models": {
-            "gemini-4-carbon": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 150.7
-            },
-            "gemini-4-argon": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 126.4
-            },
-            "gemini-3.8-flash": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 121.0
-            },
-            "gemini-3.7-flash": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 125.7
-            },
-            "gemini-3.5-flash-lite": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 125.7
-            },
-            "gemini-3.1-flash-lite": {
-              "ok": false,
-              "verdict": "auth_denied",
-              "severity": "red",
-              "status": 401,
-              "latency_ms": 119.9
-            }
-          }
-        },
-        "Gemini Proxy 2": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 404,
-          "latency_ms": 681.0,
-          "models_total": 6,
-          "models_ok": 2,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 408.8
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 735.6
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 404,
-              "latency_ms": 681.0
-            }
-          },
-          "models": {
-            "gemini-4-carbon": {
-              "ok": false,
-              "verdict": "model_not_found",
-              "severity": "red",
-              "status": 404,
-              "latency_ms": 681.0
-            },
-            "gemini-4-argon": {
-              "ok": false,
-              "verdict": "model_not_found",
-              "severity": "red",
-              "status": 404,
-              "latency_ms": 733.5
-            },
-            "gemini-3.8-flash": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 735.6
-            },
-            "gemini-3.7-flash": {
-              "ok": false,
-              "verdict": "model_not_found",
-              "severity": "red",
-              "status": 404,
-              "latency_ms": 683.1
-            },
-            "gemini-3.5-flash-lite": {
-              "ok": false,
-              "verdict": "model_not_found",
-              "severity": "red",
-              "status": 404,
-              "latency_ms": 819.7
-            },
-            "gemini-3.1-flash-lite": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 735.6
-            }
-          }
-        },
-        "OpenRouter": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 64.8,
-          "models_total": 6,
-          "models_ok": 6,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 17.0
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            }
-          },
-          "models": {
-            "gemini-4-carbon": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            },
-            "gemini-4-argon": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            },
-            "gemini-3.8-flash": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            },
-            "gemini-3.7-flash": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            },
-            "gemini-3.5-flash-lite": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            },
-            "gemini-3.1-flash-lite": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 64.8
-            }
-          }
-        },
-        "Official": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 113.5,
-          "models_total": 6,
-          "models_ok": 6,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 33.4
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            }
-          },
-          "models": {
-            "gemini-4-carbon": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            },
-            "gemini-4-argon": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            },
-            "gemini-3.8-flash": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            },
-            "gemini-3.7-flash": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            },
-            "gemini-3.5-flash-lite": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            },
-            "gemini-3.1-flash-lite": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 113.5
-            }
-          }
-        }
-      }
-    },
-    "grok": {
-      "enabled": true,
-      "models_total": 2,
-      "models_ok": 2,
-      "paths": {
-        "Grok Proxy 2": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 161.9,
+          "latency_ms": 188.8,
           "models_total": 2,
           "models_ok": 2,
           "checks": {
@@ -1002,21 +1194,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 139.0
+              "latency_ms": 16.2
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 161.9
+              "latency_ms": 188.8
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 161.9
+              "latency_ms": 188.8
             }
           },
           "models": {
@@ -1025,158 +1217,14 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 161.9
+              "latency_ms": 188.8
             },
             "grok-4.6": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 161.9
-            }
-          }
-        },
-        "Grok Proxy": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 718.1,
-          "models_total": 2,
-          "models_ok": 2,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 356.2
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 718.1
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 718.1
-            }
-          },
-          "models": {
-            "grok-4.7": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 718.1
-            },
-            "grok-4.6": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 718.1
-            }
-          }
-        },
-        "OpenRouter": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 56.1,
-          "models_total": 2,
-          "models_ok": 2,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 18.4
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 56.1
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 56.1
-            }
-          },
-          "models": {
-            "grok-4.7": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 56.1
-            },
-            "grok-4.6": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 56.1
-            }
-          }
-        },
-        "Official": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 150.0,
-          "models_total": 2,
-          "models_ok": 2,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 16.8
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 150.0
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 150.0
-            }
-          },
-          "models": {
-            "grok-4.7": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 150.0
-            },
-            "grok-4.6": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 150.0
+              "latency_ms": 188.8
             }
           }
         }
@@ -1192,7 +1240,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 381.3,
+          "latency_ms": 303.7,
           "models_total": 2,
           "models_ok": 2,
           "checks": {
@@ -1201,21 +1249,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 73.1
+              "latency_ms": 22.9
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 381.3
+              "latency_ms": 303.7
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 381.3
+              "latency_ms": 303.7
             }
           },
           "models": {
@@ -1224,14 +1272,14 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 381.3
+              "latency_ms": 303.7
             },
             "deepseek-flash": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 381.3
+              "latency_ms": 303.7
             }
           }
         },
@@ -1240,7 +1288,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 61.5,
+          "latency_ms": 52.9,
           "models_total": 2,
           "models_ok": 2,
           "checks": {
@@ -1249,21 +1297,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 16.9
+              "latency_ms": 15.5
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 61.5
+              "latency_ms": 52.9
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 61.5
+              "latency_ms": 52.9
             }
           },
           "models": {
@@ -1272,14 +1320,14 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 61.5
+              "latency_ms": 52.9
             },
             "deepseek-flash": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 61.5
+              "latency_ms": 52.9
             }
           }
         }
@@ -1295,7 +1343,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 563.6,
+          "latency_ms": 421.0,
           "models_total": 6,
           "models_ok": 5,
           "checks": {
@@ -1304,21 +1352,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 18.7
+              "latency_ms": 21.3
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             }
           },
           "models": {
@@ -1327,42 +1375,42 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             },
             "deepseek-v4.1-flash-1017-xploded": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             },
             "glm-5.3-flash-xploded": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             },
             "glm-5.3-xploded": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             },
             "qwen3.8-27b-xploded": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             },
             "magma-1-xploded": {
               "ok": false,
               "verdict": "model_not_found",
               "severity": "red",
               "status": 200,
-              "latency_ms": 563.6
+              "latency_ms": 421.0
             }
           }
         }
@@ -1373,12 +1421,12 @@
       "models_total": 1,
       "models_ok": 1,
       "paths": {
-        "GPT Proxy 3": {
+        "To-Tokens": {
           "ok": true,
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 143.1,
+          "latency_ms": 125.7,
           "models_total": 1,
           "models_ok": 1,
           "checks": {
@@ -1387,21 +1435,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 110.3
+              "latency_ms": 67.9
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 143.1
+              "latency_ms": 125.7
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 143.1
+              "latency_ms": 125.7
             }
           },
           "models": {
@@ -1410,57 +1458,16 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 143.1
+              "latency_ms": 125.7
             }
           }
         },
-        "GPT Proxy": {
-          "ok": true,
-          "verdict": "ok",
-          "severity": "green",
-          "status": 200,
-          "latency_ms": 131.8,
-          "models_total": 1,
-          "models_ok": 1,
-          "checks": {
-            "network": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": null,
-              "latency_ms": 79.9
-            },
-            "auth": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 131.8
-            },
-            "model": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 131.8
-            }
-          },
-          "models": {
-            "gpt-6-luna": {
-              "ok": true,
-              "verdict": "ok",
-              "severity": "green",
-              "status": 200,
-              "latency_ms": 131.8
-            }
-          }
-        },
-        "GPT Proxy 2": {
+        "Codeyu": {
           "ok": false,
           "verdict": "model_not_found",
           "severity": "red",
           "status": 200,
-          "latency_ms": 744.4,
+          "latency_ms": 179.6,
           "models_total": 1,
           "models_ok": 0,
           "checks": {
@@ -1469,21 +1476,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 413.4
+              "latency_ms": 112.1
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 744.4
+              "latency_ms": 179.6
             },
             "model": {
               "ok": false,
               "verdict": "model_not_found",
               "severity": "red",
               "status": 200,
-              "latency_ms": 744.4
+              "latency_ms": 179.6
             }
           },
           "models": {
@@ -1492,7 +1499,48 @@
               "verdict": "model_not_found",
               "severity": "red",
               "status": 200,
-              "latency_ms": 744.4
+              "latency_ms": 179.6
+            }
+          }
+        },
+        "CoderPlan": {
+          "ok": false,
+          "verdict": "model_not_found",
+          "severity": "red",
+          "status": 200,
+          "latency_ms": 616.8,
+          "models_total": 1,
+          "models_ok": 0,
+          "checks": {
+            "network": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": null,
+              "latency_ms": 291.2
+            },
+            "auth": {
+              "ok": true,
+              "verdict": "ok",
+              "severity": "green",
+              "status": 200,
+              "latency_ms": 616.8
+            },
+            "model": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 200,
+              "latency_ms": 616.8
+            }
+          },
+          "models": {
+            "gpt-6-luna": {
+              "ok": false,
+              "verdict": "model_not_found",
+              "severity": "red",
+              "status": 200,
+              "latency_ms": 616.8
             }
           }
         },
@@ -1501,7 +1549,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 63.0,
+          "latency_ms": 61.9,
           "models_total": 1,
           "models_ok": 1,
           "checks": {
@@ -1510,21 +1558,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 19.4
+              "latency_ms": 13.9
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 63.0
+              "latency_ms": 61.9
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 63.0
+              "latency_ms": 61.9
             }
           },
           "models": {
@@ -1533,7 +1581,7 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 63.0
+              "latency_ms": 61.9
             }
           }
         },
@@ -1542,7 +1590,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 2134.8,
+          "latency_ms": 848.1,
           "models_total": 1,
           "models_ok": 1,
           "checks": {
@@ -1551,21 +1599,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 17.1
+              "latency_ms": 15.4
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 2134.8
+              "latency_ms": 848.1
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 2134.8
+              "latency_ms": 848.1
             }
           },
           "models": {
@@ -1574,7 +1622,7 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 2134.8
+              "latency_ms": 848.1
             }
           }
         }
@@ -1590,7 +1638,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 284.2,
+          "latency_ms": 260.6,
           "models_total": 2,
           "models_ok": 2,
           "checks": {
@@ -1599,21 +1647,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 80.6
+              "latency_ms": 50.4
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 284.2
+              "latency_ms": 260.6
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 284.2
+              "latency_ms": 260.6
             }
           },
           "models": {
@@ -1622,14 +1670,14 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 284.2
+              "latency_ms": 260.6
             },
             "glm-5.3-flash": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 284.2
+              "latency_ms": 260.6
             }
           }
         },
@@ -1638,7 +1686,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 62.3,
+          "latency_ms": 55.5,
           "models_total": 2,
           "models_ok": 2,
           "checks": {
@@ -1647,21 +1695,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 17.4
+              "latency_ms": 14.3
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 62.3
+              "latency_ms": 55.5
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 62.3
+              "latency_ms": 55.5
             }
           },
           "models": {
@@ -1670,14 +1718,14 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 62.3
+              "latency_ms": 55.5
             },
             "glm-5.3-flash": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 62.3
+              "latency_ms": 55.5
             }
           }
         }
@@ -1693,7 +1741,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 966.2,
+          "latency_ms": 678.0,
           "models_total": 1,
           "models_ok": 1,
           "checks": {
@@ -1702,21 +1750,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 462.6
+              "latency_ms": 316.8
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 966.2
+              "latency_ms": 678.0
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 966.2
+              "latency_ms": 678.0
             }
           },
           "models": {
@@ -1725,7 +1773,7 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 966.2
+              "latency_ms": 678.0
             }
           }
         }
@@ -1741,7 +1789,7 @@
           "verdict": "ok",
           "severity": "green",
           "status": 200,
-          "latency_ms": 63.8,
+          "latency_ms": 56.7,
           "models_total": 1,
           "models_ok": 1,
           "checks": {
@@ -1750,21 +1798,21 @@
               "verdict": "ok",
               "severity": "green",
               "status": null,
-              "latency_ms": 18.3
+              "latency_ms": 15.3
             },
             "auth": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 63.8
+              "latency_ms": 56.7
             },
             "model": {
               "ok": true,
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 63.8
+              "latency_ms": 56.7
             }
           },
           "models": {
@@ -1773,7 +1821,7 @@
               "verdict": "ok",
               "severity": "green",
               "status": 200,
-              "latency_ms": 63.8
+              "latency_ms": 56.7
             }
           }
         }
