@@ -63,7 +63,7 @@ jobs:
       TG_TOKEN: ${{ secrets.TG_TOKEN }}
       TIMEZONE_OFFSET: ${{ secrets.TIMEZONE_OFFSET }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: framework
           persist-credentials: false
@@ -84,7 +84,7 @@ jobs:
             echo '::error::Private repository access validation failed.'; exit 1
           fi
       - name: Checkout private data only
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ secrets.GH_REPO }}
           token: ${{ secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}

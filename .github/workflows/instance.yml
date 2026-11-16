@@ -25,7 +25,7 @@ jobs:
       matrix: ${{ steps.registry.outputs.matrix }}
       has_instances: ${{ steps.registry.outputs.has_instances }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Resolve registered and configured instances
@@ -97,7 +97,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout shared public framework
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: framework
           persist-credentials: false
@@ -125,7 +125,7 @@ jobs:
             echo '::error::The data repository must be private.'; exit 1
           fi
       - name: Checkout character data
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ vars[matrix.repository_variable] || secrets.GH_REPO }}
           token: ${{ secrets.RP_INSTANCE_TOKEN || secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
