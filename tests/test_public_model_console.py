@@ -142,12 +142,13 @@ def test_public_probe_reads_only_private_call_counters_without_telegram_credenti
     assert "repository: ${{ env.RP_DATA_REPOSITORY }}" in text
     assert "sparse-checkout: data/provider_call_history.json" in text
     assert "persist-credentials: false" in text
-    assert "gh api \"repos/$RP_DATA_REPOSITORY\" --jq .private" in text
-    assert "test \"$private\" = true" in text
+    assert 'gh api "repos/$RP_DATA_REPOSITORY" --jq .private' in text
+    assert 'test "$private" = true' in text
     assert "tenshi_log.json" not in text
     assert "TG_TOKEN" not in text
     assert "GH_TOKEN: ${{ env.RP_DATA_TOKEN }}" in text
     assert "environment: ${{ matrix.environment }}" in text
-    assert "CLAUDE_CODEYU_BASE_URL" in json.loads(
-        (CODE / "model-config.json").read_text()
-    )["environment"]
+    assert (
+        "CLAUDE_CODEYU_BASE_URL"
+        in json.loads((CODE / "model-config.json").read_text())["environment"]
+    )
