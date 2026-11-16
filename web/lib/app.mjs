@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import {authReady, handleAuth, sessionToken} from './auth.mjs';
+import {authReady, authFacts, handleAuth, lastAuthIssue, sessionToken} from './auth.mjs';
+import {renderAuthError} from './auth-page.mjs';
 import {createHash} from 'node:crypto';
 import {CONFIG_PATH, SCHEMA, validateConfig} from './validation.mjs';
 import {HttpError, settings, readPublic, instances, requireWriter, writeConfig, github} from './github.mjs';
@@ -17,9 +18,29 @@ export async function handle(request, {env = process.env, fetcher = fetch, getSe
     const url = new URL(request.url);
     const path = url.pathname;
     if (url.origin !== origin) throw new HttpError(403, '请使用配置的管理站域名');
+    if (path === '/api/auth/error' && request.method === 'GET') {
+      return new Response(renderAuthError({error: url.searchParams.get('error') || 'Configuration',
+        issue: lastAuthIssue(), facts: authFacts(env)}),
+        {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Vary': 'Cookie'}});
+    }
+    if (path === '/api/auth/diagnostics' && request.method === 'GET') {
+      return json({ready: authReady(env), ...authFacts(env), lastIssue: lastAuthIssue()});
+    }
     if (path.startsWith('/api/auth/')) {
       if (!authReady(env)) throw new HttpError(503, 'GitHub OAuth 尚未配置完成');
-      return await handleAuth(request, env);
+      const response = await handleAuth(request, env);
+      // Auth.js answers failures with a redirect to its own error page. Render ours
+      // in the same invocation so the captured cause survives cold starts.
+      const location = response.headers.get('location');
+      if (response.status >= 300 && response.status < 400 && location) {
+        const target = new URL(location, origin);
+        if (target.origin === origin && target.pathname === '/api/auth/error') {
+          return new Response(renderAuthError({error: target.searchParams.get('error') || 'Configuration',
+            issue: lastAuthIssue(), facts: authFacts(env)}),
+            {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Vary': 'Cookie'}});
+        }
+      }
+      return response;
     }
     if (path === '/api/session' && request.method === 'GET') {
       const token = await getSession(request, env);

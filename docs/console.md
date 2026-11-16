@@ -52,7 +52,8 @@ it. After insertion, the control returns to its empty state.
    PAT are needed. Set credentials only on the production environment.
 5. Redeploy. Sign in as an allowed GitHub user who can push to your public fork.
 
-OAuth requests `read:user public_repo` to identify the user and commit public model
+OAuth requests `read:user user:email public_repo` to identify the user (the
+`user:email` scope is required so accounts with a private email address can sign in) and commit public model
 configuration / trigger the public probe workflow. GitHub's OAuth scope covers
 public repositories generally; **the server constrains writes to the one configured
 public repository**, checks the numeric administrator allowlist and rechecks both

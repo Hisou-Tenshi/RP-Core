@@ -299,7 +299,7 @@ src/rp_core/compat_runtime/model-config.json
 3. 创建自己的 GitHub OAuth App，回调为 `https://YOUR_DOMAIN/api/auth/callback/github`；在 Vercel 保存 `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET` 与随机 `AUTH_SECRET`。
 4. 由在允许列表内、且对目标公开仓仍有 push 权限的账号登录保存。
 
-OAuth 申请 `read:user public_repo`；服务端将写入限制在配置的公开仓，不申请私密仓访问，也不读取模型 key、角色卡或聊天历史。保存使用 Git blob SHA 做冲突检查。控制台提交后的新任务使用新配置，已在运行的任务继续使用其检出的提交。
+OAuth 申请 `read:user user:email public_repo`（`user:email` 用于在 GitHub 隐藏邮箱时取得主邮箱，缺少它会让这类账号登录失败并显示 `error=Configuration`）；服务端将写入限制在配置的公开仓，不申请私密仓访问，也不读取模型 key、角色卡或聊天历史。保存使用 Git blob SHA 做冲突检查。控制台提交后的新任务使用新配置，已在运行的任务继续使用其检出的提交。
 
 探活由 **RP provider health** 工作流定期、手动或在模型目录变化后运行，读取各实例对应 Environment 的 key，发布 `health/<instance>/latest.json` 和 `history.json`。探活使用非生成检查；状态为绿不保证生成、流式和工具调用一定成功。
 
