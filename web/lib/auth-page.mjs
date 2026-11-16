@@ -81,6 +81,7 @@ a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
       <li>GitHub OAuth App 的 callback URL 必须与上面的地址完全一致。</li>
       <li><code>GITHUB_CLIENT_ID</code> / <code>GITHUB_CLIENT_SECRET</code> 必须来自同一个 OAuth App，改过 secret 后要在 Vercel 重新部署。</li>
       <li><code>RP_APP_ORIGIN</code> 必须是登录时访问的域名（例如 <code>${escape(facts.origin || 'https://your-console.vercel.app')}</code>）。</li>
+      <li>浏览器或隐私插件拦截 Cookie 会丢失 state（诊断显示 InvalidCheck），请换普通窗口再试。</li>
     </ul>
     <div class="actions"><a class="button primary" href="/">返回控制台</a><a class="button" href="/api/auth/diagnostics">诊断 JSON</a></div>
   </section>
