@@ -37,8 +37,13 @@ export async function handle(request, {env = process.env, fetcher = fetch, getSe
       const id = url.searchParams.get('instance') || '';
       const registered = await instances(options);
       if (!registered.some(i => i.id === id)) throw new HttpError(404, '未注册的实例');
-      const [latest, history] = await Promise.all([readPublic(`health/${id}/latest.json`, options), readPublic(`health/${id}/history.json`, options)]);
-      return json({available: Boolean(latest), latest: latest?.data || null, history: history?.data || []});
+      const [latest, history, calls] = await Promise.all([
+        readPublic(`health/${id}/latest.json`, options),
+        readPublic(`health/${id}/history.json`, options),
+        readPublic(`health/${id}/calls.json`, options),
+      ]);
+      return json({available: Boolean(latest), latest: latest?.data || null,
+        history: history?.data || [], calls: calls?.data || null});
     }
     if (path === '/api/config' && request.method === 'PUT') {
       checkMutation(request, env);

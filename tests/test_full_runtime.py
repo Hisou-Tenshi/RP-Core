@@ -209,7 +209,7 @@ def test_unauthorized_event_never_reaches_model(root, monkeypatch):
 
 def test_public_source_manifest_matches_published_bytes():
     manifest = json.loads((host.CODE / "source-manifest.json").read_text())
-    assert len(manifest["files"]) == 58
+    assert len(manifest["files"]) == 59
     for item in manifest["files"]:
         assert hashlib.sha256((host.CODE / item["path"]).read_bytes()).hexdigest() == item.get(
             "reviewed_sha256", item["published_sha256"]
@@ -249,12 +249,16 @@ def test_legacy_numpy_cache_roundtrips_without_reembedding():
 def test_persistence_uses_private_recovery_branch_after_main_failure(root, monkeypatch):
     from types import SimpleNamespace
 
+    (root / "data").mkdir(exist_ok=True)
+    (root / "data/tenshi_log.json").write_text("[]", encoding="utf-8")
     commands = []
 
     def fake(command, **kwargs):
         commands.append(command)
         if command[:2] == ["git", "rev-parse"]:
             return SimpleNamespace(returncode=0, stdout=str(root).encode())
+        if command[:3] == ["git", "status", "--porcelain=v1"]:
+            return SimpleNamespace(returncode=0, stdout=b" M data/tenshi_log.json\0")
         if command[0] == "git":
             return SimpleNamespace(returncode=0, stdout=b"")
         tier = command[command.index("--tier") + 1]

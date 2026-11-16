@@ -223,7 +223,10 @@ def test_workflow_contracts_and_pinned_actions():
                     assert "has_instances" in job["if"]
                     assert "default_branch" in workflow["jobs"]["plan"]["if"]
                     assert 'git add -- "health/' in path.read_text()
-                    assert "repository:" not in path.read_text()
+                    assert "repository: ${{ env.RP_DATA_REPOSITORY }}" in path.read_text()
+                    assert "sparse-checkout: data/provider_call_history.json" in path.read_text()
+                    assert "persist-credentials: false" in path.read_text()
+                    assert "data/tenshi_log.json" not in path.read_text()
             for step in job.get("steps", []):
                 if "uses" in step:
                     revision = step["uses"].split("@")[1]

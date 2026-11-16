@@ -183,6 +183,79 @@ def test_release_backup_verifies_private_upload_and_retains_only_own_tags(data, 
     assert deleted == ["repos/example/private/releases/2", "repos/example/private/releases/1"]
 
 
+def test_private_call_counter_persist_skips_logs_only_commit(data, monkeypatch):
+    import subprocess
+
+    commands=[]
+    def fake(command, **kwargs):
+        commands.append(command)
+        if command[:2]==["git","rev-parse"]:
+            return subprocess.CompletedProcess(command,0,str(data).encode(),b"")
+        if command[:2]==["git","diff"]:
+            return subprocess.CompletedProcess(command,0,b"",b"")
+        if command[:2]==["git","status"]:
+            return subprocess.CompletedProcess(command,0,b" M logs/debug.log\0 M logs/llm_trace.jsonl\0",b"")
+        pytest.fail("log-only persistence should not invoke git sync")
+
+    monkeypatch.setattr(service.subprocess,"run",fake)
+    assert service.persist(data)=={"persisted":False,"reason":"logs_only"}
+    assert [cmd[:2] for cmd in commands]==[["git","rev-parse"],["git","diff"],["git","status"]]
+
+
+def test_private_log_only_detection_handles_spaces_and_renames():
+    status = (
+        b" M logs/debug trace.log\0"
+        b"R  logs/new trace.log\0logs/old trace.log\0"
+    )
+    paths = service._porcelain_paths(status)
+    assert paths == [
+        "logs/debug trace.log",
+        "logs/new trace.log",
+        "logs/old trace.log",
+    ]
+    assert service._logs_only(paths)
+    assert not service._logs_only(["logs/debug.log", "data/tenshi_log.json"])
+
+
+def test_public_call_history_sanitizer_only_emits_allowlisted_counters(tmp_path):
+    import importlib.util
+    source=Path(__file__).parents[1]/"scripts/probe_public_health.py"
+    spec=importlib.util.spec_from_file_location("rp_probe_public_health",source)
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    history=tmp_path/"calls.json"
+    history.write_text(json.dumps([
+        {"ts":1,"provider":"gemini","route":"proxy3","outcome":"success","prompt":"private"},
+        {"ts":2,"provider":"gemini","route":"official","outcome":"failure"},
+        {"ts":3,"provider":"unknown","route":"official","outcome":"success"},
+    ]))
+    result=module.sanitize_call_history(history)
+    assert result["sample_size"]==2
+    assert result["providers"]["gemini"]["proxy3"]=={"calls":1,"success":1,"failure":0}
+    assert "prompt" not in json.dumps(result)
+
+
+def test_public_call_history_sanitizer_uses_a_separate_100_attempt_window_per_provider(tmp_path):
+    import importlib.util
+
+    source=Path(__file__).parents[1]/"scripts/probe_public_health.py"
+    spec=importlib.util.spec_from_file_location("rp_probe_public_health_windows",source)
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    rows=[]
+    for index in range(105):
+        rows.append({"provider":"gpt","route":"proxy3","outcome":"success","ts":index})
+        rows.append({"provider":"gemini","route":"official","outcome":"failure","ts":index})
+    rows.append({"provider":"unknown","route":"official","outcome":"success"})
+    history=tmp_path/"history.json"
+    history.write_text(json.dumps(rows))
+    result=module.sanitize_call_history(history)
+    assert result["window_per_provider"]==100
+    assert result["sample_size"]==200
+    assert result["providers"]["gpt"]["proxy3"]["calls"]==100
+    assert result["providers"]["gemini"]["official"]["failure"]==100
+
+
 def test_log_redaction_handles_chunk_boundaries_and_new_credentials(data):
     (data / "logs").mkdir()
     log = data / "logs/debug.log"

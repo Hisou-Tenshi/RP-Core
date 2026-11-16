@@ -3,6 +3,73 @@
   "basis": "Tenshi runtime; code only",
   "files": [
     {
+      "path": "scripts/build_provider_health_dashboard.py",
+      "source_sha256": "22058df128a62f48b342ce8fd354af2fc1f572fecf10cd551a17adfc0bf2e938",
+      "published_sha256": "0647f3a9e4ddc233cf426b2dd2dd01573464d77ed925d6438a2fe3b0af3198eb",
+      "functions": 54,
+      "unchanged_functions": 54,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/clean_tenshi_log.py",
+      "source_sha256": "b755b1b17118ca3866973f7fba9ef703059a5cb03ed75721733ac982150b0d12",
+      "published_sha256": "b41a19db2b27e909eaeb3c62f22014cfb14cf6606be1f6374406bc64693326a3",
+      "functions": 4,
+      "unchanged_functions": 4,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/deps_selfcheck.py",
+      "source_sha256": "42b35007a812d10dca4294bc9c68739f1914e72eece1988f483dbd158b14787b",
+      "published_sha256": "c9a6c18c39c270e76a0a5f626a027802a7ff37e420fa2903073aace5c44ccae5",
+      "functions": 5,
+      "unchanged_functions": 5,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/probe_provider_paths.py",
+      "source_sha256": "927c4234673e0ed60942c7aac32fb4e80a89a544b2d44d62dde5e15cd55b3f89",
+      "published_sha256": "33b066699074d86564d0b9f9158217bfda3046453e9f400ef60accc59785ffca",
+      "functions": 52,
+      "unchanged_functions": 52,
+      "changed_functions": [],
+      "reviewed_sha256": "d8f2f03180a8aa9bc81ddb768f8d837205bb95125ddb00ab388ef05a10ee1dd6"
+    },
+    {
+      "path": "scripts/sticker_catalog_build.py",
+      "source_sha256": "dae3290b3d39137dbe9e3e913f337307f9e4361d669fb005a1a7158fba2f357b",
+      "published_sha256": "e92c312ef8e89944a600d888b9ad4f22132671780c8b0cd59636574b00728196",
+      "functions": 10,
+      "unchanged_functions": 10,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/tenshi_git_sync.py",
+      "source_sha256": "895afddf24e6eba449309ad8c637b70485d97f9d8a895894493b485a36d0c669",
+      "published_sha256": "a79e4c0ab9671da95e79049a9840e144fa6d1c2464901d8a2a1e668813771fb0",
+      "functions": 47,
+      "unchanged_functions": 47,
+      "changed_functions": []
+    },
+    {
+      "path": "scripts/tenshi_notes_crypto.py",
+      "source_sha256": "c4f7b94d817cc22d0733f00d6d362122d65c8ee56404eb5b4cc0afeb4c3ff43e",
+      "published_sha256": "29b780a034f267c337b3bd27e80aff4ea1dedc92b13ba283da020845dafbfe84",
+      "functions": 8,
+      "unchanged_functions": 7,
+      "changed_functions": [
+        "_project_root"
+      ]
+    },
+    {
+      "path": "scripts/weekly_archive_tenshi_log.py",
+      "source_sha256": "4896876a7f29ba7f1464e1065ba0923fbfdc31a33c8fe46ca98bab47ad9554be",
+      "published_sha256": "fd448f98f9f664434ff3b9448ef0ace84e6dc73ef36f1494f4f48ebd3d8ea925",
+      "functions": 13,
+      "unchanged_functions": 13,
+      "changed_functions": []
+    },
+    {
       "path": "src/api_resilience.py",
       "source_sha256": "bdb39872cd6403e7b3f1f9f3c30f21f334458ab95a00917cd9d569fea74e085f",
       "published_sha256": "76d3c329c83618dca1ae928f33f9d1669799151585bb15f59c574efa2186a905",
@@ -75,7 +142,7 @@
       "functions": 4,
       "unchanged_functions": 4,
       "changed_functions": [],
-      "reviewed_sha256": "f8b9ec082f46a50b0328d26f08b0f8985ce9aa8c336f74ef2392d220eac60e83"
+      "reviewed_sha256": "4dbf6e2396da762eab2a928ee4428c8af5a9eb2b569d243414881879ea9afff3"
     },
     {
       "path": "src/config/tunable.py",
@@ -202,7 +269,7 @@
       "functions": 27,
       "unchanged_functions": 27,
       "changed_functions": [],
-      "reviewed_sha256": "ac348655dfc91e08d7d641f3c1b93a12442556831223860917eb0f49d261ecf5"
+      "reviewed_sha256": "b7dee6ddd4bfe721184e3fa312ee6118b2ad46eb90f3957bfe6ebee22ddddd33"
     },
     {
       "path": "src/llm_tool_schema.py",
@@ -258,7 +325,7 @@
         "get_recent_commits",
         "_maybe_reply_if_unreplied_before_probability"
       ],
-      "reviewed_sha256": "378eff60a3eece0237dd35136567888cebc09cc743cbd5a906fc09e24d5eea0d"
+      "reviewed_sha256": "70c42e9efe1072b31c2fdd47e9eb0ae5d29d1ec891ed838bc5b6fcc03f1e4158"
     },
     {
       "path": "src/perception_policy.py",
@@ -282,6 +349,14 @@
       "published_sha256": "d5019aca729e5f2d662b4a2f57d55ee039c4d3f234154dfdb0af2c6f68718812",
       "functions": 6,
       "unchanged_functions": 6,
+      "changed_functions": []
+    },
+    {
+      "path": "src/provider_call_stats.py",
+      "source_sha256": "7a6eeb9fcf3fbc12da22dbf1364f6308a504ac5c224b22dd8054aea9ce471fb0",
+      "published_sha256": "7a6eeb9fcf3fbc12da22dbf1364f6308a504ac5c224b22dd8054aea9ce471fb0",
+      "functions": 3,
+      "unchanged_functions": 3,
       "changed_functions": []
     },
     {
@@ -327,7 +402,7 @@
       "functions": 27,
       "unchanged_functions": 27,
       "changed_functions": [],
-      "reviewed_sha256": "70dd6f0e17f3031466bb853e604a4ec3fdc4d8a7a07495663072ce9de7929524"
+      "reviewed_sha256": "af49f7c7444dfe028e48d8cbc7846e920586bd9a23ab95b698a1413bb667e662"
     },
     {
       "path": "src/reply_two_stage.py",
@@ -335,7 +410,8 @@
       "published_sha256": "c5819abc734ff5b5af962336a4e60a973f91a1de70e0928dbc7c9c7172657563",
       "functions": 20,
       "unchanged_functions": 20,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "489fcf220ef7aceaad47c39d9690fbd8bb425c118425d661329d0dccadbf66dd"
     },
     {
       "path": "src/sdk_compat.py",
@@ -393,7 +469,7 @@
         "read_config_file",
         "_main_impl"
       ],
-      "reviewed_sha256": "3cf66fe5c4cc3a34ee97f223e602c5bf313b458a7d9c3c3a27927bdc5d266207"
+      "reviewed_sha256": "3edbc460c5636b55e2b4c9e232c79829c4648026cbca2231ead6849b2a0ec6e8"
     },
     {
       "path": "src/tenshi_skills.py",
@@ -436,73 +512,6 @@
       "functions": 14,
       "unchanged_functions": 14,
       "changed_functions": []
-    },
-    {
-      "path": "scripts/tenshi_git_sync.py",
-      "source_sha256": "895afddf24e6eba449309ad8c637b70485d97f9d8a895894493b485a36d0c669",
-      "published_sha256": "a79e4c0ab9671da95e79049a9840e144fa6d1c2464901d8a2a1e668813771fb0",
-      "functions": 47,
-      "unchanged_functions": 47,
-      "changed_functions": []
-    },
-    {
-      "path": "scripts/weekly_archive_tenshi_log.py",
-      "source_sha256": "4896876a7f29ba7f1464e1065ba0923fbfdc31a33c8fe46ca98bab47ad9554be",
-      "published_sha256": "fd448f98f9f664434ff3b9448ef0ace84e6dc73ef36f1494f4f48ebd3d8ea925",
-      "functions": 13,
-      "unchanged_functions": 13,
-      "changed_functions": []
-    },
-    {
-      "path": "scripts/probe_provider_paths.py",
-      "source_sha256": "927c4234673e0ed60942c7aac32fb4e80a89a544b2d44d62dde5e15cd55b3f89",
-      "published_sha256": "33b066699074d86564d0b9f9158217bfda3046453e9f400ef60accc59785ffca",
-      "functions": 52,
-      "unchanged_functions": 52,
-      "changed_functions": [],
-      "reviewed_sha256": "d8f2f03180a8aa9bc81ddb768f8d837205bb95125ddb00ab388ef05a10ee1dd6"
-    },
-    {
-      "path": "scripts/build_provider_health_dashboard.py",
-      "source_sha256": "22058df128a62f48b342ce8fd354af2fc1f572fecf10cd551a17adfc0bf2e938",
-      "published_sha256": "0647f3a9e4ddc233cf426b2dd2dd01573464d77ed925d6438a2fe3b0af3198eb",
-      "functions": 54,
-      "unchanged_functions": 54,
-      "changed_functions": []
-    },
-    {
-      "path": "scripts/clean_tenshi_log.py",
-      "source_sha256": "b755b1b17118ca3866973f7fba9ef703059a5cb03ed75721733ac982150b0d12",
-      "published_sha256": "b41a19db2b27e909eaeb3c62f22014cfb14cf6606be1f6374406bc64693326a3",
-      "functions": 4,
-      "unchanged_functions": 4,
-      "changed_functions": []
-    },
-    {
-      "path": "scripts/deps_selfcheck.py",
-      "source_sha256": "42b35007a812d10dca4294bc9c68739f1914e72eece1988f483dbd158b14787b",
-      "published_sha256": "c9a6c18c39c270e76a0a5f626a027802a7ff37e420fa2903073aace5c44ccae5",
-      "functions": 5,
-      "unchanged_functions": 5,
-      "changed_functions": []
-    },
-    {
-      "path": "scripts/sticker_catalog_build.py",
-      "source_sha256": "dae3290b3d39137dbe9e3e913f337307f9e4361d669fb005a1a7158fba2f357b",
-      "published_sha256": "e92c312ef8e89944a600d888b9ad4f22132671780c8b0cd59636574b00728196",
-      "functions": 10,
-      "unchanged_functions": 10,
-      "changed_functions": []
-    },
-    {
-      "path": "scripts/tenshi_notes_crypto.py",
-      "source_sha256": "c4f7b94d817cc22d0733f00d6d362122d65c8ee56404eb5b4cc0afeb4c3ff43e",
-      "published_sha256": "29b780a034f267c337b3bd27e80aff4ea1dedc92b13ba283da020845dafbfe84",
-      "functions": 8,
-      "unchanged_functions": 7,
-      "changed_functions": [
-        "_project_root"
-      ]
     }
   ],
   "function_metrics_scope": "Original code-only import snapshot; later public edits use reviewed_sha256."

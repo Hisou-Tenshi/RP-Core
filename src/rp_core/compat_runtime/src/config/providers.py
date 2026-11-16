@@ -26,6 +26,7 @@
 from __future__ import annotations
 
 import os
+import json
 from dataclasses import dataclass
 
 from config.env_boot import PROJECT_ROOT
@@ -90,6 +91,8 @@ __all__ = [
     "PROVIDER_PATH_POLICIES",
     "PROVIDER_PROXIES",
     "PROVIDER_PATH_ORDER",
+    "PROVIDER_ROUTE_CATALOG",
+    "PROVIDER_ROUTE_POLICIES",
     "OPENROUTER_DISABLED_PROVIDERS",
     "PROXY_ENV_SPECS",
     "proxy_config_warnings",
@@ -211,7 +214,7 @@ CLAUDE_PROXY_KEY_2 = _env("CLAUDE_PROXY_KEY_2")
 CLAUDE_PROXY_BASE_URL_3 = _env("CLAUDE_PROXY_BASE_URL_3", default="https://drc.totokens.cc")
 CLAUDE_PROXY_KEY_3 = _env("CLAUDE_PROXY_KEY_3")
 CLAUDE_PROXY3 = ({"name": "Proxy 3", "api_key": CLAUDE_PROXY_KEY_3,
-                  "base_url": CLAUDE_PROXY_BASE_URL_3}
+                  "route_id": "proxy3", "base_url": CLAUDE_PROXY_BASE_URL_3}
                  if CLAUDE_PROXY_KEY_3 and CLAUDE_PROXY_BASE_URL_3 else None)
 
 CLAUDE_PROXY1_TIERS: dict[str, dict] = {}
@@ -219,18 +222,21 @@ if CLAUDE_PROXY_BASE_URL:
     if CLAUDE_PROXY_KEY_BASE:
         CLAUDE_PROXY1_TIERS["base"] = {
             "name": "Proxy 1 Base",
+            "route_id": "proxy1_base",
             "api_key": CLAUDE_PROXY_KEY_BASE,
             "base_url": CLAUDE_PROXY_BASE_URL,
         }
     if CLAUDE_PROXY_KEY_PRIME:
         CLAUDE_PROXY1_TIERS["prime"] = {
             "name": "Proxy 1 Prime",
+            "route_id": "proxy1_prime",
             "api_key": CLAUDE_PROXY_KEY_PRIME,
             "base_url": CLAUDE_PROXY_BASE_URL,
         }
     if CLAUDE_PROXY_KEY_MAX:
         CLAUDE_PROXY1_TIERS["max"] = {
             "name": "Proxy 1 Max",
+            "route_id": "proxy1_max",
             "api_key": CLAUDE_PROXY_KEY_MAX,
             "base_url": CLAUDE_PROXY_BASE_URL,
         }
@@ -239,6 +245,7 @@ CLAUDE_PROXY2: dict | None = None
 if CLAUDE_PROXY_KEY_2 and CLAUDE_PROXY_BASE_URL_2:
     CLAUDE_PROXY2 = {
         "name": "Proxy 2",
+        "route_id": "proxy2",
         "api_key": CLAUDE_PROXY_KEY_2,
         "base_url": CLAUDE_PROXY_BASE_URL_2,
     }
@@ -261,6 +268,7 @@ for _tier in ("base", "prime", "max"):
         CLAUDE_PROXIES.append(
             {
                 "name": "Proxy 1",
+                "route_id": f"proxy1_{_tier}",
                 "api_key": CLAUDE_PROXY1_TIERS[_tier]["api_key"],
                 "base_url": CLAUDE_PROXY1_TIERS[_tier]["base_url"],
             }
@@ -282,6 +290,7 @@ GEMINI_PROXY: dict | None = None
 if GEMINI_PROXY_BASE_URL and GEMINI_PROXY_KEY:
     GEMINI_PROXY = {
         "name": "Gemini Proxy",
+        "route_id": "proxy1",
         "api_key": GEMINI_PROXY_KEY,
         "base_url": GEMINI_PROXY_BASE_URL,
     }
@@ -295,12 +304,13 @@ GEMINI_PROXY2_KEY = _env("GEMINI_PROXY2_KEY")
 GEMINI_PROXY3_BASE_URL = _env("GEMINI_PROXY3_BASE_URL", default="https://drc.totokens.cc")
 GEMINI_PROXY3_KEY = _env("GEMINI_PROXY3_KEY")
 GEMINI_PROXY3 = ({"name": "Gemini Proxy 3", "api_key": GEMINI_PROXY3_KEY,
-                  "base_url": GEMINI_PROXY3_BASE_URL}
+                  "route_id": "proxy3", "base_url": GEMINI_PROXY3_BASE_URL}
                  if GEMINI_PROXY3_KEY and GEMINI_PROXY3_BASE_URL else None)
 GEMINI_PROXY2: dict | None = None
 if GEMINI_PROXY2_KEY and GEMINI_PROXY2_BASE_URL:
     GEMINI_PROXY2 = {
         "name": "Gemini Proxy 2",
+        "route_id": "proxy2",
         "api_key": GEMINI_PROXY2_KEY,
         "base_url": GEMINI_PROXY2_BASE_URL,
     }
@@ -351,6 +361,7 @@ GPT_PROXY: dict | None = None
 if GPT_PROXY_KEY and GPT_PROXY_BASE_URL:
     GPT_PROXY = {
         "name": "GPT Proxy",
+        "route_id": "proxy1",
         "api_key": GPT_PROXY_KEY,
         "base_url": GPT_PROXY_BASE_URL,
     }
@@ -365,12 +376,13 @@ GPT_PROXY3_BASE_URL = _ensure_openai_v1(_env("GPT_PROXY3_BASE_URL", default="htt
 GPT_PROXY3_KEY = _env("GPT_PROXY3_KEY")
 GPT_PROXY3_PROTOCOL = _env("GPT_PROXY3_PROTOCOL", default="responses")
 GPT_PROXY3 = ({"name": "GPT Proxy 3", "api_key": GPT_PROXY3_KEY,
-               "base_url": GPT_PROXY3_BASE_URL, "protocol": GPT_PROXY3_PROTOCOL}
+               "route_id": "proxy3", "base_url": GPT_PROXY3_BASE_URL, "protocol": GPT_PROXY3_PROTOCOL}
               if GPT_PROXY3_KEY and GPT_PROXY3_BASE_URL else None)
 GPT_PROXY2: dict | None = None
 if GPT_PROXY2_KEY and GPT_PROXY2_BASE_URL:
     GPT_PROXY2 = {
         "name": "GPT Proxy 2",
+        "route_id": "proxy2",
         "api_key": GPT_PROXY2_KEY,
         "base_url": GPT_PROXY2_BASE_URL,
     }
@@ -400,6 +412,7 @@ GROK_PROXY: dict | None = None
 if GROK_PROXY_KEY and GROK_PROXY_BASE_URL:
     GROK_PROXY = {
         "name": "Grok Proxy",
+        "route_id": "proxy1",
         "api_key": GROK_PROXY_KEY,
         "base_url": GROK_PROXY_BASE_URL,
     }
@@ -408,7 +421,7 @@ GROK_PROXY2_BASE_URL = _ensure_openai_v1(_env("GROK_PROXY2_BASE_URL", default="h
 GROK_PROXY2_KEY = _env("GROK_PROXY2_KEY")
 GROK_PROXY2_PROTOCOL = _env("GROK_PROXY2_PROTOCOL", default="responses")
 GROK_PROXY2 = ({"name": "Grok Proxy 2", "api_key": GROK_PROXY2_KEY,
-                "base_url": GROK_PROXY2_BASE_URL, "protocol": GROK_PROXY2_PROTOCOL}
+                "route_id": "proxy2", "base_url": GROK_PROXY2_BASE_URL, "protocol": GROK_PROXY2_PROTOCOL}
                if GROK_PROXY2_KEY and GROK_PROXY2_BASE_URL else None)
 if GROK_PROXY2 is not None:
     GROK_PROXIES.insert(0, dict(GROK_PROXY2))
@@ -425,6 +438,7 @@ if FIREWORKS_API_KEY and FIREWORKS_BASE_URL:
     DEEPSEEK_PROXIES.append(
         {
             "name": "Fireworks DeepSeek Pro",
+            "route_id": "fireworks_pro",
             "api_key": FIREWORKS_API_KEY,
             "base_url": FIREWORKS_BASE_URL,
         }
@@ -551,6 +565,38 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
 PROVIDER_PATH_ORDER: dict[str, tuple[str, ...]] = {
     name: policy.resolved_order() for name, policy in PROVIDER_PATH_POLICIES.items()
 }
+
+PROVIDER_ROUTE_CATALOG = {
+    "claude": ("proxy3", "proxy1_base", "proxy1_prime", "proxy1_max", "proxy2", "openrouter", "official"),
+    "gemini": ("proxy3", "proxy1", "proxy2", "openrouter", "official"),
+    "gpt": ("proxy3", "proxy1", "proxy2", "openrouter", "official"),
+    "grok": ("proxy2", "proxy1", "openrouter", "official"),
+    "deepseek": ("official", "fireworks_pro", "openrouter"),
+    "glm": ("official", "openrouter"),
+    "qwen": ("official",),
+    "magmarouter": ("official",),
+    "openrouter": ("official",),
+}
+
+def _load_provider_route_policies():
+    try:
+        raw = json.loads(os.getenv("RP_PROVIDER_PATH_POLICIES", "{}"))
+    except (TypeError, ValueError):
+        raw = {}
+    result = {}
+    for provider, routes in PROVIDER_ROUTE_CATALOG.items():
+        supplied = raw.get(provider, {}) if isinstance(raw, dict) else {}
+        if not isinstance(supplied, dict):
+            supplied = {}
+        order, disabled = supplied.get("order", []), supplied.get("disabled", [])
+        if not isinstance(order, list) or any(route not in routes for route in order):
+            order = []
+        if not isinstance(disabled, list) or any(route not in routes for route in disabled):
+            disabled = []
+        result[provider] = {"order": tuple(order), "disabled": frozenset(disabled)}
+    return result
+
+PROVIDER_ROUTE_POLICIES = _load_provider_route_policies()
 
 
 OPENROUTER_DISABLED_PROVIDERS: set[str] = {

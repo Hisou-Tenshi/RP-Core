@@ -73,6 +73,8 @@ jobs:
       MAGMAROUTER_API_KEY: ${{ secrets.MAGMAROUTER_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      RP_DATA_REPOSITORY: ${{ vars[matrix.repository_variable] || secrets.GH_REPO }}
+      RP_DATA_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN || secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
     steps:
       - name: Checkout only public RP-Core code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -85,10 +87,28 @@ jobs:
           python-version: '3.12'
           enable-cache: false
       - run: uv sync --locked --extra full
+      - name: Verify private call-history source
+        env:
+          GH_TOKEN: ${{ env.RP_DATA_TOKEN }}
+          RP_DATA_REPOSITORY: ${{ env.RP_DATA_REPOSITORY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          private="$(gh api "repos/$RP_DATA_REPOSITORY" --jq .private)"
+          test "$private" = true
+      - name: Read only sanitized private call counters
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: ${{ env.RP_DATA_REPOSITORY }}
+          token: ${{ env.RP_DATA_TOKEN }}
+          path: character-data
+          sparse-checkout: data/provider_call_history.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Probe RP keys and publish allowlisted results
         env:
           RP_HEALTH_INSTANCE: ${{ matrix.id }}
-        run: uv run --no-sync python scripts/probe_public_health.py --instance "$RP_HEALTH_INSTANCE"
+        run: uv run --no-sync python scripts/probe_public_health.py --instance "$RP_HEALTH_INSTANCE" --call-history "$GITHUB_WORKSPACE/character-data/data/provider_call_history.json"
       - name: Persist sanitized status only
         env:
           RP_HEALTH_INSTANCE: ${{ matrix.id }}
@@ -97,7 +117,7 @@ jobs:
           set -euo pipefail
           git config user.name 'RP-Core health'
           git config user.email 'rp-health@users.noreply.github.com'
-          git add -- "health/$RP_HEALTH_INSTANCE/latest.json" "health/$RP_HEALTH_INSTANCE/history.json"
+          git add -- "health/$RP_HEALTH_INSTANCE/latest.json" "health/$RP_HEALTH_INSTANCE/history.json" "health/$RP_HEALTH_INSTANCE/calls.json"
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Update RP provider health [skip ci]'
           for attempt in 1 2 3 4 5; do

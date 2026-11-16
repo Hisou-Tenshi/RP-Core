@@ -10,7 +10,8 @@
     "low_tier_pool",
     "summary_models",
     "embedding",
-    "environment"
+    "environment",
+    "path_policies"
   ],
   "properties": {
     "schema_version": {
@@ -439,6 +440,82 @@
             "responses",
             "chat_completions"
           ]
+        }
+      }
+    },
+    "path_policies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claude",
+        "gemini",
+        "gpt",
+        "grok",
+        "deepseek",
+        "glm",
+        "qwen",
+        "magmarouter",
+        "openrouter"
+      ],
+      "properties": {
+        "claude": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "gemini": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "gpt": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "grok": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "deepseek": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "glm": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "qwen": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "magmarouter": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "openrouter": {
+          "$ref": "#/definitions/provider_route_policy"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "provider_route_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order",
+        "disabled"
+      ],
+      "properties": {
+        "order": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "disabled": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
         }
       }
     }

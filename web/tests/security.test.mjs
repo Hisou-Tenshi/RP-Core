@@ -91,3 +91,24 @@ test('a refresh after a repository write does not reuse a stale raw-content cach
   assert.equal(afterWrite.data.revision,2);
   assert.notEqual(first.sha,afterWrite.sha);
 });
+
+test('health endpoint publishes only the allowlisted call-count artifact',async()=>{
+  const calls=[];
+  const fetcher=async url=>{
+    calls.push(url);
+    const response=url.includes('/config/instances.json')
+      ? {instances:[{id:'tenshi',environment:'tenshi'}]}
+      : url.includes('/health/tenshi/calls.json?')
+        ? {schema:1,sample_size:100,providers:{gemini:{proxy3:{calls:7,success:6,failure:1}}}}
+        : url.includes('/health/tenshi/latest.json?')
+          ? {instance_id:'tenshi',providers:{}}
+          : [];
+    return new Response(JSON.stringify(response),{status:200});
+  };
+  const response=await handle(request('/api/health?instance=tenshi'),{env,fetcher});
+  const body=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(body.calls.sample_size,100);
+  assert.deepEqual(body.calls.providers.gemini.proxy3,{calls:7,success:6,failure:1});
+  assert.ok(calls.some(url=>url.includes('/health/tenshi/calls.json?')));
+});

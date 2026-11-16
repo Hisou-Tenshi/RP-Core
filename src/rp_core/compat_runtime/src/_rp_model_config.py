@@ -47,6 +47,21 @@ def validate_config(value):
 
 
 CONFIG = validate_config(json.loads((BASE / "model-config.json").read_text()))
+ROUTE_CATALOG = {
+    "claude": {"proxy3", "proxy1_base", "proxy1_prime", "proxy1_max", "proxy2", "openrouter", "official"},
+    "gemini": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
+    "gpt": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
+    "grok": {"proxy2", "proxy1", "openrouter", "official"},
+    "deepseek": {"official", "fireworks_pro", "openrouter"},
+    "glm": {"official", "openrouter"}, "qwen": {"official"},
+    "magmarouter": {"official"}, "openrouter": {"official"},
+}
+for provider, policy in CONFIG["path_policies"].items():
+    allowed = ROUTE_CATALOG[provider]
+    if (len(policy["order"]) != len(set(policy["order"]))
+            or len(policy["disabled"]) != len(set(policy["disabled"]))
+            or not set(policy["order"] + policy["disabled"]).issubset(allowed)):
+        raise ValueError("Invalid provider path settings.")
 
 
 def apply_environment():
@@ -54,6 +69,9 @@ def apply_environment():
     # Explicit public settings override legacy environment defaults. Missing names keep them.
     for name, value in CONFIG["environment"].items():
         os.environ[name] = value
+    os.environ["RP_PROVIDER_PATH_POLICIES"] = json.dumps(
+        CONFIG["path_policies"], separators=(",", ":")
+    )
     for name, key in (("EMBEDDING_MODEL", "model"), ("EMBEDDING_DIM", "dimensions"),
                       ("EMBEDDING_MAX_INPUT_CHARS", "max_input_chars")):
         os.environ[name] = str(CONFIG["embedding"][key])

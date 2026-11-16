@@ -38,6 +38,7 @@ from tenshi_reply import (
     _build_dialog_model_chain,
     build_choice_violation_text,
     rewrite_choice_text,
+    review_outgoing_reply,
 )
 import reply_two_stage
 import bond_state
@@ -886,13 +887,28 @@ async def run_perception(
 ) -> int:
     round_ctx = _DeferredRound()
     try:
-        return await _run_perception_impl(
-            force=force,
-            scheduled_force=scheduled_force,
-            schedule_note=schedule_note,
-            schedule_trigger_at_ms=schedule_trigger_at_ms,
-            round_ctx=round_ctx,
-        )
+        try:
+            return await _run_perception_impl(
+                force=force,
+                scheduled_force=scheduled_force,
+                schedule_note=schedule_note,
+                schedule_trigger_at_ms=schedule_trigger_at_ms,
+                round_ctx=round_ctx,
+            )
+        except reply_two_stage.UnsafeResponseError as error:
+            logger.warning(
+                "感知输出未通过安全检查；重新用首个 Gemini Flash 模型生成心里与打字内容（reason=%s）。",
+                error.reason,
+            )
+            return await _run_perception_impl(
+                force=force,
+                scheduled_force=scheduled_force,
+                schedule_note=schedule_note,
+                schedule_trigger_at_ms=schedule_trigger_at_ms,
+                round_ctx=round_ctx,
+                force_gemini_flash_retry=True,
+                skip_probability=True,
+            )
     finally:
         round_ctx.finish()
 
@@ -903,6 +919,8 @@ async def _run_perception_impl(
     schedule_note: str = "",
     schedule_trigger_at_ms: int = 0,
     round_ctx: "_DeferredRound | None" = None,
+    force_gemini_flash_retry: bool = False,
+    skip_probability: bool = False,
 ) -> int:
     round_ctx = round_ctx or _DeferredRound()
     user_id, last_time, last_proactive_time = get_last_interaction()
@@ -935,7 +953,9 @@ async def _run_perception_impl(
         return 0
 
     bypass_probability = force or scheduled_force
-    if _should_skip_perception_probability(bypass_probability, silence_duration_sec, current_time_ts, last_proactive_time):
+    if not skip_probability and _should_skip_perception_probability(
+        bypass_probability, silence_duration_sec, current_time_ts, last_proactive_time
+    ):
         return PERCEPTION_SKIP_EXIT_CODE
 
     logger.info("正在启动感知层...")
@@ -1133,6 +1153,12 @@ async def _run_perception_impl(
     system_prompt += TIMESTAMP_PREFIX_SYSTEM_NOTE
 
     response_text = None
+    retry_model_chain = None
+    if force_gemini_flash_retry:
+        flash_pool = list(getattr(tenshi_config, "GEMINI_FLASH_MODELS", []) or [])
+        if not flash_pool:
+            raise reply_two_stage.UnsafeResponseError("gemini_flash_unavailable")
+        retry_model_chain = [flash_pool[0]]
 
 
     _mutation_snapshot = _snapshot_mutation_targets()
@@ -1153,7 +1179,9 @@ async def _run_perception_impl(
             grade_tier="medium",
             system_prompt=system_prompt,
             messages_payload=messages_payload,
+            model_chain=retry_model_chain,
             filtered_claude_tools=CLAUDE_TOOLS,
+            tools_enabled=not force_gemini_flash_retry,
         )
     finally:
         append_llm_trace({"source": PERCEPTION_TRACE_END_SOURCE})
@@ -1161,6 +1189,8 @@ async def _run_perception_impl(
         response_text, _, _ = chain_result
 
     if not response_text:
+        if force_gemini_flash_retry:
+            raise reply_two_stage.UnsafeResponseError("gemini_flash_inner_failed")
         logger.critical("All models failed to generate perception thought.")
         if scheduled_force:
             save_perception_log(
@@ -1213,7 +1243,7 @@ async def _run_perception_impl(
         typed_text, typed_no_send, typing_model = "", True, ""
     else:
       typed_text, typed_no_send, typing_model = run_typing_stage(
-        model_chain=_build_dialog_model_chain("medium"),
+        model_chain=retry_model_chain or _build_dialog_model_chain("medium"),
         typing_system=reply_two_stage.build_typing_system(
             tenshi_config.PERSONA_CARD,
             bond_block=typing_bond,
@@ -1227,8 +1257,13 @@ async def _run_perception_impl(
             perception_situation=situation_block + (("\n" + manual_note.strip()) if manual_note.strip() else ""),
             history_limit=int(getattr(tenshi_config, "REPLY_TYPING_HISTORY_MESSAGES", 10) or 10),
         ),
+        reject=reply_two_stage.unsafe_response_reason,
+        abort_on_reject=True,
+        force_configured_model=force_gemini_flash_retry,
     )
     if not typed_text and not typed_no_send:
+        if force_gemini_flash_retry:
+            raise reply_two_stage.UnsafeResponseError("gemini_flash_typing_failed")
         logger.error("感知层打字那一步全部失败：本次按沉默处理，心里的内容不外发。")
         typed_no_send = True
     thinking_content = reply_two_stage.clean_inner(
@@ -1273,8 +1308,9 @@ async def _run_perception_impl(
             grade_tier="medium",
             system_prompt=system_prompt,
             messages_payload=payload,
+            model_chain=retry_model_chain,
             filtered_claude_tools=[],
-            tools_enabled=False,
+            tools_enabled=not force_gemini_flash_retry,
         )
         return out[0] if out else ""
 
@@ -1293,6 +1329,16 @@ async def _run_perception_impl(
         if scheduled_force:
             complete_scheduled_trigger(schedule_trigger_at_ms or None)
         return 0
+
+    body_for_review = reactions.strip_markers(response_body_cleaned)
+    unsafe_reason = reply_two_stage.unsafe_response_reason(body_for_review)
+    if unsafe_reason:
+        raise reply_two_stage.UnsafeResponseError(unsafe_reason)
+    review_outgoing_reply(
+        user_query=perception_prompt,
+        budget=None,
+        reply_text=body_for_review,
+    )
 
     logger.info("Tenshi decided to speak! Sending message...")
     if pending_intent:

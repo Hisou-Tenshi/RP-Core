@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 """Probe using this Actions environment; publish only allowlisted status data.
 
-No private repository is checked out and no model generation endpoint is used.
-Raw probe output and diagnostic bodies exist only in a temporary directory.
+Only the single bounded private provider-call counter file is sparse-checked out;
+no conversation, prompt, model response or database is read. No model generation
+endpoint is used, and raw probe bodies exist only in a temporary directory.
 """
 
 from __future__ import annotations
@@ -106,9 +107,57 @@ def sanitize(raw, instance, run_id, config_bytes):
     }
 
 
+def sanitize_call_history(path: Path | None) -> dict:
+    """Publish only the last-100 provider/path counters; no prompt, model or output."""
+    allowed = {
+        "claude": {"proxy3", "proxy1_base", "proxy1_prime", "proxy1_max", "proxy2", "openrouter", "official"},
+        "gemini": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
+        "gpt": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
+        "grok": {"proxy2", "proxy1", "openrouter", "official"},
+        "deepseek": {"official", "fireworks_pro", "openrouter"},
+        "glm": {"official", "openrouter"}, "qwen": {"official"},
+        "magmarouter": {"official"}, "openrouter": {"official"},
+    }
+    try:
+        rows = json.loads(path.read_text(encoding="utf-8")) if path and path.is_file() else []
+    except (OSError, ValueError):
+        rows = []
+    if not isinstance(rows, list):
+        rows = []
+    # The private runtime retains a 100-attempt window per provider. Apply the
+    # same bound here for older files before producing public aggregate counts.
+    per_provider = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        provider = row.get("provider")
+        if provider not in allowed:
+            continue
+        per_provider.setdefault(provider, []).append(row)
+    rows = [row for provider in allowed for row in per_provider.get(provider, [])[-100:]]
+    counts = {}
+    accepted = 0
+    for row in rows:
+        provider, route, outcome = row.get("provider"), row.get("route"), row.get("outcome")
+        if provider not in allowed or route not in allowed[provider] or outcome not in ("success", "failure"):
+            continue
+        stats = counts.setdefault(provider, {}).setdefault(route, {"calls": 0, "success": 0, "failure": 0})
+        stats["calls"] += 1
+        stats[outcome] += 1
+        accepted += 1
+    return {
+        "schema": 1,
+        "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "window_per_provider": 100,
+        "sample_size": accepted,
+        "providers": counts,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--instance", required=True)
+    parser.add_argument("--call-history", type=Path)
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,39}", args.instance):
         raise SystemExit("Invalid public instance ID.")
@@ -173,7 +222,12 @@ def main():
         for provider, item in report["providers"].items()
     }
     history = [*history[-119:], sample]
-    for path, value in ((directory / "latest.json", report), (history_path, history)):
+    calls = sanitize_call_history(args.call_history)
+    for path, value in (
+        (directory / "latest.json", report),
+        (history_path, history),
+        (directory / "calls.json", calls),
+    ):
         path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + chr(10))
     print(
         json.dumps(

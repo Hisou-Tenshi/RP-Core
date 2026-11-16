@@ -18,6 +18,23 @@ export function validateConfig(value) {
   const ids = new Set(value.models.map(m => m.id));
   if (ids.size !== value.models.length) errors.push('模型 ID 不能重复');
   if (new Set(value.providers.map(p => p.key)).size !== value.providers.length) errors.push('厂商不能重复');
+  const routeCatalog = {
+    claude:['proxy3','proxy1_base','proxy1_prime','proxy1_max','proxy2','openrouter','official'],
+    gemini:['proxy3','proxy1','proxy2','openrouter','official'],
+    gpt:['proxy3','proxy1','proxy2','openrouter','official'],
+    grok:['proxy2','proxy1','openrouter','official'],
+    deepseek:['official','fireworks_pro','openrouter'],
+    glm:['official','openrouter'],qwen:['official'],magmarouter:['official'],openrouter:['official'],
+  };
+  for (const [provider,policy] of Object.entries(value.path_policies || {})) {
+    const valid = new Set(routeCatalog[provider] || []);
+    for (const key of ['order','disabled']) {
+      const items = policy?.[key] || [];
+      if (new Set(items).size !== items.length || items.some(route => !valid.has(route))) {
+        errors.push(`通路配置无效：${provider}/${key}`);
+      }
+    }
+  }
   const refs = [...value.low_tier_pool, ...value.summary_models, ...Object.values(value.dialog_tiers).flat()];
   if (refs.some(m => !ids.has(m))) errors.push('路由链引用了未注册模型');
   const required = {claude: ['pro','flash','lite'], gemini: ['pro','flash','lite'], deepseek: ['pro','flash'],

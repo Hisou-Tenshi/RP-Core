@@ -137,10 +137,15 @@ def test_health_publisher_drops_credentials_urls_bodies_and_freeform_errors():
     assert result["providers"]["claude"]["paths"]["Official"]["models"][model_id]["ok"] is True
 
 
-def test_public_probe_has_no_private_checkout_or_telegram_credentials():
+def test_public_probe_reads_only_private_call_counters_without_telegram_credentials():
     text = (ROOT / ".github/workflows/provider-health.yml").read_text()
-    assert "repository:" not in text
+    assert "repository: ${{ env.RP_DATA_REPOSITORY }}" in text
+    assert "sparse-checkout: data/provider_call_history.json" in text
+    assert "persist-credentials: false" in text
+    assert "gh api \"repos/$RP_DATA_REPOSITORY\" --jq .private" in text
+    assert "test \"$private\" = true" in text
+    assert "tenshi_log.json" not in text
     assert "TG_TOKEN" not in text
-    assert "GH_TOKEN" not in text
+    assert "GH_TOKEN: ${{ env.RP_DATA_TOKEN }}" in text
     assert "environment: ${{ matrix.environment }}" in text
     assert "CLAUDE_PROXY_BASE_URL" in text

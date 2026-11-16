@@ -30,6 +30,29 @@ TASKS = (
 )
 
 
+def _porcelain_paths(status: bytes) -> list[str]:
+    """Decode changed paths from Git's NUL-delimited porcelain-v1 output."""
+    records = status.split(b"\0")
+    paths = []
+    index = 0
+    while index < len(records):
+        record = records[index]
+        index += 1
+        if len(record) < 4:
+            continue
+        state = record[:2].decode("ascii", errors="ignore")
+        paths.append(record[3:].decode("utf-8", errors="surrogateescape"))
+        if "R" in state or "C" in state:
+            if index < len(records) and records[index]:
+                paths.append(records[index].decode("utf-8", errors="surrogateescape"))
+            index += 1
+    return paths
+
+
+def _logs_only(paths: list[str]) -> bool:
+    return bool(paths) and all(path == "logs" or path.startswith("logs/") for path in paths)
+
+
 def merge_staging(root: Path):
     root = root.resolve()
     if os.environ.get("RP_ALLOW_LIVE") != "1":
@@ -154,6 +177,21 @@ def persist(root: Path, branch="main"):
         )
         if (root / name).exists()
     ]
+    pending = subprocess.run(
+        ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", *files],
+        cwd=root,
+        capture_output=True,
+        check=False,
+    )
+    if pending.returncode:
+        raise RPCError("persistence_failed", "Private changes could not be inspected.")
+    changed_paths = _porcelain_paths(pending.stdout)
+    if not changed_paths:
+        return {"persisted": False, "reason": "no_changes"}
+    if _logs_only(changed_paths):
+        # Debug, trace and process logs are disposable diagnostics. Leave them
+        # in the current runner; do not make a private Git commit for logs alone.
+        return {"persisted": False, "reason": "logs_only"}
     env = environment(root, root, shadow=False)
     output = root / "logs/git-sync.log"
     output.parent.mkdir(exist_ok=True)

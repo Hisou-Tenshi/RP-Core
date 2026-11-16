@@ -25,6 +25,7 @@ import copy
 import difflib
 import logging
 import re
+import unicodedata
 from typing import Any
 
 from message_split import typed_newlines_to_br, unescape_model_text
@@ -84,6 +85,74 @@ _TS_PREFIX_RE = re.compile(r"^\s*[（(][^）)\n]{1,40}[）)]\s*")
 _THINK_RE = re.compile(
     r"<(?:think(?:ing)?|analysis)>[\s\S]*?</(?:think(?:ing)?|analysis)>", re.IGNORECASE
 )
+_ZERO_WIDTH_RE = re.compile(r"[\u200b-\u200f\u2060\ufeff]")
+_ASSISTANT_REDIRECT_RE = re.compile(
+    r"if you want to talk about something i can actually be useful for|"
+    r"if you (?:want|would like).{0,100}(?:talk|help|useful|assist).{0,100}(?:i(?:'m| am| can)|here)|"
+    r"what (?:would|can) i (?:actually )?help.{0,30}\?|"
+    r"(?:happy|ready|here) to help.{0,70}(?:code|coding|writing|actual problems|something else)|"
+    r"如果你.{0,50}(?:其他|实际|真正).{0,30}(?:帮助|有用)|有什么我能真正帮助",
+    re.I | re.S,
+)
+_UNSAFE_RESPONSE_PATTERNS = (
+    (
+        "upstream_error",
+        re.compile(
+            r"(?<!\d)(?:HTTP(?:/\d(?:\.\d)?)?\s*[:=]?\s*)?(?:429|4\d\d|5\d\d)(?!\d)|"
+            r"\b(?:status|error|code)\s*[:=]?\s*(?:429|4\d\d|5\d\d)\b|"
+            r"\btoo many requests\b|\brate[ -]?limit(?:ed|ing)?\b|\bresource[_ -]exhausted\b|"
+            r"请求过于频繁|触发限流|超过请求频率",
+            re.I,
+        ),
+    ),
+    (
+        "provider_refusal",
+        re.compile(
+            r"\b(?:as an ai|i am (?:claude|chatgpt|gemini)|i'm (?:claude|chatgpt|gemini)|"
+            r"i cannot comply|i can't comply|i can't help with (?:that|this) request|"
+            r"i(?:'m| am) unable to assist|"
+            r"i'm sorry.{0,50}(?:cannot|can't|unable to)|i am unable to help|"
+            r"i can't pretend to be|i won't pretend to be|i cannot role.?play|i can't role.?play|"
+            r"i won't role.?play|i can't maintain an ongoing romantic|i won't adopt (?:that|a) (?:role|persona))\b|"
+            r"我(?:是|作为)(?:一个)?(?:ai|人工智能|claude|chatgpt|gemini)|我不是.{0,12}(?:角色|天子)|"
+            r"我(?:无法|不能|不会).{0,12}(?:扮演|角色设定|持续.{0,6}关系模拟)",
+            re.I,
+        ),
+    ),
+    (
+        "internal_reasoning",
+        re.compile(
+            r"\b(?:the user's message|the user said|the diary entry|the previous assistant turn|tool result|internal thinking step|final version:|i need to (?:trim|step into|think|respond)|i should (?:keep|remove|trim)|i'm torn between|let me think through|thinking through the scene|now it's not the moment to respond)\b|最终版本\s*[:：]|现在不是直接回复的时候",
+            re.I,
+        ),
+    ),
+)
+
+
+class UnsafeResponseError(RuntimeError):
+    """A generated answer failed the final safety or identity audit."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def unsafe_response_reason(text: str | None) -> str | None:
+    """Reject leaked chain-of-thought, provider refusals and upstream error bodies."""
+    if not isinstance(text, str) or not text.strip():
+        return None
+    normalized = unicodedata.normalize("NFKC", _ZERO_WIDTH_RE.sub("", text))
+    normalized = normalized.replace("’", "'").replace("‘", "'").replace("<br>", "\n")
+    if _THINK_RE.search(normalized) or re.search(
+        r"</?(?:think(?:ing)?|analysis)\b", normalized, re.I
+    ):
+        return "thinking_markup"
+    if _ASSISTANT_REDIRECT_RE.search(normalized):
+        return "assistant_redirect"
+    for reason, pattern in _UNSAFE_RESPONSE_PATTERNS:
+        if pattern.search(normalized):
+            return reason
+    return None
 
 
 def _content_text(content: Any) -> str:

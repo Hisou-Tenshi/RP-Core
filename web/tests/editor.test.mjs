@@ -10,7 +10,7 @@ const source = readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
 const config = JSON.parse(readFileSync(new URL('../../src/rp_core/compat_runtime/model-config.json',import.meta.url),'utf8'));
 const schema = JSON.parse(readFileSync(new URL('../lib/model-config.schema.json',import.meta.url),'utf8'));
 
-async function page({catalog=config}={}) {
+async function page({catalog=config,healthResult={available:false,latest:null,history:[],calls:null}}={}) {
   const dom=new JSDOM(html,{url:'https://console.example/#models',runScripts:'outside-only'});
   dom.window.structuredClone=structuredClone;
   const writes=[],reads=[];
@@ -20,7 +20,7 @@ async function page({catalog=config}={}) {
     if(!options.method || options.method==='GET')reads.push(originalPath);
     if(path==='/api/session')return Response.json({authenticated:true,login:'owner',repository:'example/framework',branch:'main',oauth_ready:true});
     if(path==='/api/instances')return Response.json({instances:[{id:'example'}]});
-    if(path.startsWith('/api/health'))return Response.json({available:false,latest:null,history:[]});
+    if(path.startsWith('/api/health'))return Response.json(healthResult);
     if(path==='/api/config'&&options.method==='PUT'){
       writes.push(JSON.parse(options.body));
       return Response.json({saved:true,sha:'b'.repeat(40),config_hash:'d'.repeat(64),commit:'c'.repeat(40),url:'https://github.com/example/framework/commit/test'});
@@ -80,7 +80,7 @@ test('page refreshes use fresh data URLs while keeping authenticated writes unch
   } finally {dom.window.close();}
 });
 
-test('all route add selectors start blank with a left label and disabled add button',async()=>{
+test('all model route selectors start blank with a left label and disabled add button',async()=>{
   const {dom,writes}=await page();
   try {
     const {document}=dom.window;
@@ -143,4 +143,34 @@ test('renaming a model preserves route references through intermediate edits and
     assert.ok(![...Object.values(saved.dialog_tiers).flat(),...saved.low_tier_pool,...saved.summary_models].includes(oldId));
     assert.deepEqual(validateConfig(saved),[]);
   } finally {dom.window.close();}
+});
+
+test('per-vendor proxy and official routes can be reordered and disabled before OAuth save',async()=>{
+  const {dom,writes}=await page();
+  try{
+    const {document,Event}=dom.window;
+    const before=[...config.path_policies.gemini.order];
+    document.querySelector('[data-route-move][data-provider="gemini"][data-index="0"][data-direction="1"]').click();
+    assert.deepEqual(config.path_policies.gemini.order,before);
+    assert.deepEqual(document.querySelector('#save').disabled,false);
+    const official=document.querySelector('[data-provider="gemini"][data-route-disabled="official"]');
+    official.checked=true;official.dispatchEvent(new Event('change',{bubbles:true}));
+    await document.querySelector('#save').onclick();
+    assert.deepEqual(writes[0].config.path_policies.gemini.order.slice(0,2),['proxy1','proxy3']);
+    assert.deepEqual(writes[0].config.path_policies.gemini.disabled,['official']);
+    assert.deepEqual(validateConfig(writes[0].config),[]);
+  }finally{dom.window.close();}
+});
+
+test('health panel renders sanitized near-100 provider route counts',async()=>{
+  const callStats={generated_at_utc:'2026-11-16T00:00:00Z',sample_size:100,providers:{gemini:{proxy3:{calls:31,success:29,failure:2},official:{calls:9,success:9,failure:0}}}};
+  const result=await page({healthResult:{available:true,latest:{instance_id:'example',generated_at_utc:'2026-11-16T00:00:00Z',run_id:'1',config_sha256:'d'.repeat(64),providers:{}},history:[],calls:callStats}});
+  try{
+    const {document}=result.dom.window;
+    document.querySelector('[data-tab="health"]').click();
+    assert.match(document.querySelector('.call-stats').textContent,/最近 100 次通路调用/);
+    assert.match(document.querySelector('.call-stats').textContent,/Gemini Proxy 3/);
+    assert.match(document.querySelector('.call-stats').textContent,/31/);
+    assert.match(document.querySelector('.call-stats').textContent,/2/);
+  }finally{result.dom.window.close();}
 });

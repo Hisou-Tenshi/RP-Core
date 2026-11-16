@@ -241,6 +241,7 @@ class TelegramStreamer:
         self.token = token
         self.chat_id = chat_id
         self.message_id = None
+        self.sent_message_ids: list[int] = []
         self.delivery_status = "delivery_unknown"
         self.full_text = ""
         self.last_sent_text = ""
@@ -339,10 +340,10 @@ class TelegramStreamer:
     def update(self, chunk):
         """Accumulates text and updates Telegram if interval passed."""
         ensure_active()
-        if not self.is_active:
-            return
-
+        sender_to_start = None
         with self._lock:
+            if not self.is_active:
+                return
 
             self.raw_stream_buffer += chunk
 
@@ -353,29 +354,25 @@ class TelegramStreamer:
                 self.full_text += emit
                 self.stream_buffer += emit
             has_visible_text = bool(self.full_text.strip())
+            if has_visible_text:
+                current_time = time.time()
+                if (
+                    current_time - self.last_update_time >= self.update_interval
+                    and (self._sending_thread is None or not self._sending_thread.is_alive())
+                ):
+                    context = copy_context()
 
+                    def send_scoped():
+                        try:
+                            context.run(self._send_edit)
+                        except CallCancelled:
+                            pass
 
-
-        if not has_visible_text:
-            return
-
-        current_time = time.time()
-
-        if current_time - self.last_update_time >= self.update_interval:
-
-            if self._sending_thread is None or not self._sending_thread.is_alive():
-
-                context = copy_context()
-
-                def send_scoped():
-                    try:
-                        context.run(self._send_edit)
-                    except CallCancelled:
-                        pass
-
-                self._sending_thread = threading.Thread(target=send_scoped)
-                self._sending_thread.start()
-                self.last_update_time = current_time
+                    sender_to_start = threading.Thread(target=send_scoped)
+                    self._sending_thread = sender_to_start
+                    self.last_update_time = current_time
+        if sender_to_start is not None:
+            sender_to_start.start()
 
     def _send_edit(self, max_retries=1):
         """把当前缓冲同步到 Telegram：还没消息就先新建，之后走编辑。"""
@@ -424,6 +421,7 @@ class TelegramStreamer:
                         result = {}
                     if result.get("ok"):
                         self.message_id = result["result"]["message_id"]
+                        self._remember_sent_message(self.message_id)
                         self.last_sent_text = text_to_send
                         logger.info(f"Stream message created. Message ID: {self.message_id}")
                         return True
@@ -445,6 +443,7 @@ class TelegramStreamer:
                             result_retry = {}
                         if result_retry.get("ok"):
                             self.message_id = result_retry["result"]["message_id"]
+                            self._remember_sent_message(self.message_id)
                             self.last_sent_text = text_to_send
                             logger.info(
                                 f"Stream message created (plain text). Message ID: {self.message_id}"
@@ -555,7 +554,9 @@ class TelegramStreamer:
                 if resp.status_code == 200:
                     out = resp.json()
                     if out.get("ok"):
-                        return out["result"]["message_id"]
+                        message_id = out["result"]["message_id"]
+                        self._remember_sent_message(message_id)
+                        return message_id
                 if resp.status_code == 429 and rate_limit_waits < _FOLLOWUP_MAX_429_WAITS:
 
                     retry_after = 1.0
@@ -737,7 +738,9 @@ class TelegramStreamer:
                     out = resp.json()
                     if out.get("ok"):
                         logger.info(f"[sticker] 已发贴纸：{name}")
-                        return out["result"]["message_id"]
+                        message_id = out["result"]["message_id"]
+                        self._remember_sent_message(message_id)
+                        return message_id
                 if resp.status_code == 429 and rate_limit_waits < _FOLLOWUP_MAX_429_WAITS:
                     retry_after = 1.0
                     try:
@@ -833,7 +836,55 @@ class TelegramStreamer:
             return False
         if self._delete_current_message():
             self.is_active = False
+            if self.message_id in self.sent_message_ids:
+                self.sent_message_ids.remove(self.message_id)
             self.message_id = None
             self.last_sent_text = ""
             return True
         return False
+
+    def _remember_sent_message(self, message_id):
+        if message_id is not None and message_id not in self.sent_message_ids:
+            self.sent_message_ids.append(message_id)
+
+    def withdraw(self) -> bool:
+        """Delete every Telegram message emitted by this turn."""
+        self.stop_typing()
+        with self._lock:
+            self.is_active = False
+        sender = self._sending_thread
+        if sender and sender.is_alive() and sender is not threading.current_thread():
+            # A send that began just before withdrawal can return a new message ID.
+            # Wait for the bounded Telegram request to finish before snapshotting IDs.
+            sender.join(timeout=25.0)
+            if sender.is_alive():
+                logger.error("Cannot confirm withdrawal while a Telegram send is still in flight.")
+                return False
+        ids = list(dict.fromkeys([*self.sent_message_ids, self.message_id]))
+        ids = [message_id for message_id in ids if message_id is not None]
+        if not ids:
+            return True
+        if not self.token or not self.chat_id:
+            return False
+        success = True
+        url = f"https://api.telegram.org/bot{self.token}/deleteMessage"
+        for message_id in reversed(ids):
+            try:
+                response = requests.post(
+                    url, json={"chat_id": self.chat_id, "message_id": message_id}, timeout=8
+                )
+                body = response.json() if response.status_code == 200 else {}
+                already_missing = (
+                    response.status_code == 400
+                    and "message to delete not found" in str(body.get("description") or "").lower()
+                )
+                success = (bool(body.get("ok")) or already_missing) and success
+            except Exception:
+                success = False
+        if success:
+            self.sent_message_ids.clear()
+            self.message_id = None
+            self.last_sent_text = ""
+            self.full_text = self.stream_buffer = self.raw_stream_buffer = self._pending = ""
+            self._sending_thread = None
+        return success

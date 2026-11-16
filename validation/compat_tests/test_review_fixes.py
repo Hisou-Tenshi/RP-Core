@@ -255,6 +255,151 @@ class ReviewRegressions(unittest.TestCase):
             streamer.finalize_with_text('first<br>second')
         self.assertEqual(streamer.delivery_status, 'delivery_unknown')
 
+    def test_unsafe_response_classifier_covers_the_recent_failure_shapes(self):
+        from reply_two_stage import unsafe_response_reason
+
+        cases = {
+            "If you want to talk about something I can actually be useful for, I'm here.": "assistant_redirect",
+            "错误429重试\u200d\u2060": "upstream_error",
+            "HTTP 503: upstream unavailable": "upstream_error",
+            "I cannot role-play as that character.": "provider_refusal",
+            "The user's message needs a final version:": "internal_reasoning",
+        }
+        for response, reason in cases.items():
+            with self.subTest(reason=reason):
+                self.assertEqual(unsafe_response_reason(response), reason)
+        self.assertIsNone(unsafe_response_reason("过来，被子裹紧，今天先睡。"))
+
+    def test_gpt_lite_scoring_and_safety_review_is_one_fail_closed_call(self):
+        verdict = {
+            "unsafe": False,
+            "reason": "",
+            "info_tickets": 1,
+            "signature_tickets": 0,
+            "ask_clusters": 0,
+            "clusters_are_hook": False,
+            "is_closing": False,
+            "has_dangling_hook": False,
+            "style_violations": [],
+            "over_budget": False,
+            "chases_unanswered": False,
+            "notes": "ok",
+        }
+        with mock.patch.object(tr, "_plain_text_call", return_value=json.dumps(verdict)) as call:
+            result = tr.review_outgoing_reply(
+                user_query="synthetic", budget=None, reply_text="synthetic safe"
+            )
+        self.assertFalse(result["unsafe"])
+        self.assertEqual(call.call_count, 1)
+        first_gpt_lite = next(
+            spec.id for spec in tr.tenshi_config.MODELS
+            if spec.provider == "gpt" and spec.tier == "lite"
+        )
+        self.assertEqual(call.call_args.args[:2], ("gpt", first_gpt_lite))
+        self.assertIn("安全后审查", call.call_args.args[3][0]["content"])
+
+    def test_incomplete_gpt_lite_review_is_rejected(self):
+        with mock.patch.object(tr, "_plain_text_call", return_value='{"unsafe": false}'):
+            with self.assertRaises(tr.reply_two_stage.UnsafeResponseError):
+                tr.review_outgoing_reply(
+                    user_query="synthetic", budget=None, reply_text="synthetic"
+                )
+
+    def test_perception_unsafe_candidate_retries_once_with_flash_only(self):
+        import perception_layer
+
+        with mock.patch.object(
+            perception_layer,
+            "_run_perception_impl",
+            side_effect=[tr.reply_two_stage.UnsafeResponseError("provider_refusal"), 0],
+        ) as run:
+            self.assertEqual(asyncio.run(perception_layer.run_perception()), 0)
+        self.assertEqual(run.call_count, 2)
+        self.assertTrue(run.call_args.kwargs["force_gemini_flash_retry"])
+        self.assertTrue(run.call_args.kwargs["skip_probability"])
+
+    def test_forced_flash_dialog_chain_uses_exact_single_model_without_tools(self):
+        model = tr.tenshi_config.GEMINI_FLASH_MODELS[0]
+        with mock.patch.object(tr, "_plain_text_call", return_value="safe inner") as plain:
+            result = tr.invoke_dialog_model_chain(
+                grade_tier="medium",
+                system_prompt="synthetic",
+                messages_payload=[],
+                model_chain=[model],
+                tools_enabled=False,
+            )
+        self.assertEqual(result[0], "safe inner")
+        self.assertEqual(plain.call_count, 1)
+        self.assertEqual(plain.call_args.args[:2], ("gemini", model))
+
+    def test_provider_call_history_keeps_100_per_provider_and_only_route_metadata(self):
+        import provider_call_stats
+
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.dict(
+            os.environ, {"RP_DATA_ROOT": temporary}
+        ):
+            for index in range(104):
+                provider_call_stats.record(
+                    "gpt", {"route_id": "proxy3", "api_key": "never-store"}, success=index % 2 == 0
+                )
+                provider_call_stats.record(
+                    "gemini", {"route_id": "official"}, success=True
+                )
+            path = Path(temporary) / "data/provider_call_history.json"
+            rows = json.loads(path.read_text())
+        self.assertEqual(sum(row["provider"] == "gpt" for row in rows), 100)
+        self.assertEqual(sum(row["provider"] == "gemini" for row in rows), 100)
+        self.assertEqual(set(rows[-1]), {"ts", "provider", "route", "outcome"})
+        self.assertNotIn("never-store", json.dumps(rows))
+
+    def test_public_path_policy_reorders_and_disables_actual_paths(self):
+        import llm_routing
+
+        original = tr.tenshi_config.PROVIDER_ROUTE_POLICIES
+        try:
+            tr.tenshi_config.PROVIDER_ROUTE_POLICIES = {
+                **original,
+                "gpt": {
+                    "order": ("official", "proxy3", "proxy1", "proxy2", "openrouter"),
+                    "disabled": frozenset({"proxy1"}),
+                },
+            }
+            paths = [
+                {"name": "GPT Proxy 3", "route_id": "proxy3"},
+                {"name": "GPT Proxy", "route_id": "proxy1"},
+                {"name": "GPT Proxy 2", "route_id": "proxy2"},
+                {"name": "OpenAI", "is_official": True},
+            ]
+            actual = llm_routing.apply_provider_route_policy("gpt", paths)
+        finally:
+            tr.tenshi_config.PROVIDER_ROUTE_POLICIES = original
+        self.assertEqual([path["name"] for path in actual], ["OpenAI", "GPT Proxy 3", "GPT Proxy 2"])
+
+    def test_withdraw_waits_for_pending_send_before_deleting_message(self):
+        streamer = reply_streaming.TelegramStreamer("token", 1)
+        streamer.is_active = True
+        entered, release = threading.Event(), threading.Event()
+        def pending_send():
+            entered.set()
+            release.wait(1)
+            streamer.message_id = 101
+            streamer._remember_sent_message(101)
+        sender = threading.Thread(target=pending_send)
+        streamer._sending_thread = sender
+        sender.start()
+        self.assertTrue(entered.wait(1))
+        deleted = []
+        def delete(url, *, json, **kwargs):
+            deleted.append(json["message_id"])
+            response = __import__("requests").Response()
+            response.status_code = 200
+            response._content = b'{"ok":true,"result":true}'
+            return response
+        with mock.patch.object(reply_streaming.requests, "post", side_effect=delete):
+            release.set()
+            self.assertTrue(streamer.withdraw())
+        self.assertEqual(deleted, [101])
+
 
 if __name__ == '__main__':
     unittest.main()

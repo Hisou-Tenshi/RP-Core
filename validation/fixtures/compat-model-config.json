@@ -407,5 +407,43 @@
     "GPT_PROXY3_PROTOCOL": "responses",
     "GROK_PROXY2_PROTOCOL": "responses"
   },
-  "summary_models": []
+  "summary_models": [],
+  "path_policies": {
+    "claude": {
+      "order": [],
+      "disabled": []
+    },
+    "gemini": {
+      "order": [],
+      "disabled": []
+    },
+    "gpt": {
+      "order": [],
+      "disabled": []
+    },
+    "grok": {
+      "order": [],
+      "disabled": []
+    },
+    "deepseek": {
+      "order": [],
+      "disabled": []
+    },
+    "glm": {
+      "order": [],
+      "disabled": []
+    },
+    "qwen": {
+      "order": [],
+      "disabled": []
+    },
+    "magmarouter": {
+      "order": [],
+      "disabled": []
+    },
+    "openrouter": {
+      "order": [],
+      "disabled": []
+    }
+  }
 }

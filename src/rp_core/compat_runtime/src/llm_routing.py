@@ -311,6 +311,42 @@ def _proxy_entries(proxy_configs: Iterable[dict[str, Any]] | None) -> list[dict[
     return paths
 
 
+
+def _provider_route_id(provider: str, path: dict[str, Any]) -> str:
+    from provider_call_stats import route_id
+
+    return route_id(provider, path)
+
+
+def apply_provider_route_policy(provider: str, paths: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Apply the console's per-route ordering and disable switches to configured paths."""
+    import tenshi_config
+
+    candidates = list(paths or [])
+    settings = (getattr(tenshi_config, "PROVIDER_ROUTE_POLICIES", {}) or {}).get(provider, {})
+    disabled = set(settings.get("disabled", ()))
+    candidates = [path for path in candidates if _provider_route_id(provider, path) not in disabled]
+    order = list(settings.get("order", ()))
+    if not order:
+        return candidates
+    rank = {route: index for index, route in enumerate(order)}
+    original = {id(path): index for index, path in enumerate(candidates)}
+
+    def route_rank(path):
+        route = _provider_route_id(provider, path)
+        if route:
+            return rank.get(route, len(rank)), 0, original[id(path)]
+        # Preserve legacy/unclassified proxy paths ahead of OpenRouter and
+        # official routes while still applying configured proxy ordering.
+        before_fallback = min(
+            (rank[route] for route in ("openrouter", "official") if route in rank),
+            default=len(rank),
+        )
+        return before_fallback, -1, original[id(path)]
+
+    return sorted(candidates, key=route_rank)
+
+
 def _official_path(
     provider: str,
     official_key: str | None,
@@ -405,7 +441,7 @@ def build_provider_paths(
             continue
         seen.add(key)
         unique.append(path)
-    return unique
+    return apply_provider_route_policy(provider, unique)
 
 
 def build_gemini_paths(
@@ -522,7 +558,7 @@ def build_grok_slot_tiers(
       → OpenRouter（原主路，降级为下一级备选）
       → Grok（官方 + 代理）。
     """
-    return [
+    tiers = [
         {
             "provider": "magmarouter",
             "label": "MagmaRouter 主路",
@@ -542,6 +578,20 @@ def build_grok_slot_tiers(
             "paths": build_grok_paths(grok_key, grok_base_url, proxy_configs),
         },
     ]
+    import tenshi_config
+
+    route_policies = getattr(tenshi_config, "PROVIDER_ROUTE_POLICIES", {}) or {}
+    magma_settings = (getattr(tenshi_config, "PROVIDER_ROUTE_POLICIES", {}) or {}).get("magmarouter", {})
+    openrouter_settings = route_policies.get("openrouter", {})
+    magma_disabled = "official" in set(magma_settings.get("disabled", ()))
+    openrouter_disabled = "official" in set(openrouter_settings.get("disabled", ()))
+    tiers = [
+        tier for tier in tiers
+        if not (tier["provider"] == "magmarouter" and magma_disabled)
+        and not (tier["provider"] == "openrouter" and openrouter_disabled)
+    ]
+    return tiers
+
 
 
 def run_slot_path_first(
