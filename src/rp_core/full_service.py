@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from rp_core import identity
 from rp_core.full_runtime import CODE, environment, run_full, sanitize_logs, validate_layout
 from rp_core.legacy import write_json
 from rp_core.protocol import EVENT, RPCError, validate
@@ -85,12 +86,17 @@ def merge_staging(root: Path):
             )
             if history.returncode:
                 raise RPCError("persistence_failed", "Recovery ancestry could not be fetched.")
+        merge_name, merge_email = identity.resolve(root, "system:sync")
         result = subprocess.run(
             [
                 sys.executable,
                 str(CODE / "scripts/tenshi_git_sync.py"),
                 "--repo",
                 str(root),
+                "--git-name",
+                merge_name,
+                "--git-email",
+                merge_email,
                 "merge-staging",
             ],
             cwd=root,
@@ -146,10 +152,17 @@ def legacy_payload(item: dict) -> dict:
     return payload
 
 
-def persist(root: Path, branch="main"):
-    """Stage only private state; the mature sync helper handles retry/merge."""
+def persist(root: Path, branch="main", *, task="reply", message: str | None = None):
+    """Stage only private state; the mature sync helper handles retry/merge.
+
+    Each task commits as its own author with its own one-line title, so private
+    history distinguishes a message from a reply, an observation or a sync.
+    """
     if not branch or branch.startswith("-") or ".." in branch:
         raise RPCError("invalid_configuration", "Invalid data branch.")
+    role, category, event = identity.plan(task)
+    name, email = identity.resolve(root, role)
+    title = message or identity.title(category, event)
     top = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"], cwd=root, capture_output=True, check=False
     )
@@ -202,13 +215,17 @@ def persist(root: Path, branch="main"):
                 str(CODE / "scripts/tenshi_git_sync.py"),
                 "--repo",
                 str(root),
+                "--git-name",
+                name,
+                "--git-email",
+                email,
                 "push",
                 "--tier",
                 "reply",
                 "--branch",
                 branch,
                 "--message",
-                "Persist RP private state [skip ci]",
+                title,
                 "--push-when-clean",
                 "--files",
                 *files,
@@ -222,6 +239,7 @@ def persist(root: Path, branch="main"):
         )
     sanitize_logs(root, env)
     if result.returncode:
+        recovery_name, recovery_email, recovery_title = identity.recovery(root)
         with output.open("ab") as log:
             recovery = subprocess.run(
                 [
@@ -229,6 +247,10 @@ def persist(root: Path, branch="main"):
                     str(CODE / "scripts/tenshi_git_sync.py"),
                     "--repo",
                     str(root),
+                    "--git-name",
+                    recovery_name,
+                    "--git-email",
+                    recovery_email,
                     "push",
                     "--tier",
                     "edge",
@@ -239,7 +261,7 @@ def persist(root: Path, branch="main"):
                     "--workflow",
                     "rp-core-recovery",
                     "--message",
-                    "Preserve private RP recovery state [skip ci]",
+                    recovery_title,
                     "--push-when-clean",
                     "--files",
                     *files,
@@ -278,12 +300,12 @@ def execute(root, task, payload, *, remote=False, branch="main"):
         ):
             quarantine_reply(root, payload)
         if remote:
-            persist(root, branch)
+            persist(root, branch, task=task)
         raise
     if task == "reply" and result.get("status") == "delivery_unknown":
         quarantine_reply(root, payload)
     if remote:
-        persist(root, branch)
+        persist(root, branch, task=task)
     return result
 
 
@@ -316,7 +338,14 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
         merge_staging(root)
     receipts = root / ".rp/full-receipts"
     receipts.mkdir(parents=True, exist_ok=True)
-    counts = {"engine": "full", "processed": 0, "replayed": 0, "quarantined": 0, "failed": 0}
+    counts = {
+        "engine": "full",
+        "processed": 0,
+        "replayed": 0,
+        "quarantined": 0,
+        "skipped": 0,
+        "failed": 0,
+    }
     items = []
     safe_tasks = {"probe", "summary", "archive", "cleanup", "daily-backup", "weekly-backup"}
     matched = False
@@ -338,8 +367,23 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
             continue
         attempts = int(previous.get("attempts", 0))
         if previous and previous.get("status") != "retryable_failure" and task not in safe_tasks:
+            if previous.get("status") == "quarantined":
+                # Already isolated, usually because one attempt died after it may
+                # have delivered. Never resend it, and never re-alarm every run.
+                counts["skipped"] += 1
+                continue
             if task == "reply" and quarantine_reply(root, legacy_payload(item)) and remote:
-                persist(root, branch)
+                persist(root, branch, task=task)
+            write_json(
+                receipt,
+                {
+                    "event_id": identifier,
+                    "task": task,
+                    "status": "quarantined",
+                    "attempts": attempts,
+                    "updated_at": time.time(),
+                },
+            )
             counts["quarantined"] += 1
             continue
         if attempts >= 3:
@@ -374,7 +418,7 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
             quarantine_reply(root, event_payload or {})
         write_json(receipt, value)
         if remote:
-            persist(root, branch)
+            persist(root, branch, task=task)
 
     for _, _, identifier, task, payload, receipt, attempts in sorted(
         items, key=lambda row: row[:3]
@@ -426,5 +470,5 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
             # Commit task data and the maintenance ledger together, also on failure.
             # Persistence failures remain fatal: no further delivery is safe then.
             if remote:
-                persist(root, branch)
+                persist(root, branch, task=task)
     return counts

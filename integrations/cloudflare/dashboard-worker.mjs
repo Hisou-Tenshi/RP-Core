@@ -26,6 +26,29 @@ function decode(text) {
   return new TextDecoder().decode(Uint8Array.from(atob(text.replace(/\s/g, '')), c => c.charCodeAt(0)));
 }
 
+// Shared commit metadata for writes into the private data repository.
+// Titles follow `<category>｜<event> · MM-DD HH:MM:SS [skip ci]` in Beijing time.
+// Identity is only attached when the deployment supplies both owner variables;
+// the public repository never hardcodes a personal name or address.
+const COMMIT_EVENTS = { queue: '消息已入队' };
+
+function privateCommitMessage(kind, now = new Date()) {
+  const event = COMMIT_EVENTS[kind];
+  if (!event) throw new Error('commit kind');
+  const stamp = new Date(now.getTime() + 8 * 3600 * 1000);
+  const pad = value => String(value).padStart(2, '0');
+  const when = pad(stamp.getUTCMonth() + 1) + '-' + pad(stamp.getUTCDate()) + ' '
+    + pad(stamp.getUTCHours()) + ':' + pad(stamp.getUTCMinutes()) + ':' + pad(stamp.getUTCSeconds());
+  return '收讯｜' + event + ' · ' + when + ' [skip ci]';
+}
+
+function privateCommitIdentity(env = {}) {
+  const name = String(env.RP_OWNER_GIT_NAME || '').trim();
+  const email = String(env.RP_OWNER_GIT_EMAIL || '').trim();
+  if (!name || !email) return {};
+  return { author: { name, email }, committer: { name, email } };
+}
+
 async function github(path, token, options = {}) {
   return fetch('https://api.github.com/' + path, { ...options, headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, 'User-Agent': 'RP-Core-ingress', 'Content-Type': 'application/json', ...(options.headers || {}) } });
 }
@@ -96,7 +119,7 @@ async function enqueueLegacy(env, task, payload) {
   const ref = '?ref=' + encodeURIComponent(env.DATA_BRANCH || 'main');
   const existing = await github(location + ref, env.DATA_TOKEN);
   if (existing.status === 404) {
-    const saved = await github(location, env.DATA_TOKEN, { method: 'PUT', body: JSON.stringify({ message: 'Queue private RP event [skip ci]', branch: env.DATA_BRANCH || 'main', content: encode(JSON.stringify({ full_task: task, legacy_payload: payload })) }) });
+    const saved = await github(location, env.DATA_TOKEN, { method: 'PUT', body: JSON.stringify({ message: privateCommitMessage('queue'), branch: env.DATA_BRANCH || 'main', content: encode(JSON.stringify({ full_task: task, legacy_payload: payload })), ...privateCommitIdentity(env) }) });
     if (!saved.ok && !(saved.status === 422 && (await github(location + ref, env.DATA_TOKEN)).ok)) throw new Error('private queue');
   } else if (!existing.ok) throw new Error('private queue');
   const credentials = [...new Set([env.DISPATCH_TOKEN, env.CALLING_GH_TOKEN, env['CALLING_GH_TOKEN '], env.GH_TOKEN].filter(Boolean))];

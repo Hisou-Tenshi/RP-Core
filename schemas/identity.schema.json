@@ -33,6 +33,21 @@
         }
       },
       "required": []
+    },
+    "git": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "object"
+        },
+        "character": {
+          "type": "object"
+        },
+        "systems": {
+          "type": "object"
+        }
+      },
+      "required": []
     }
   },
   "required": [

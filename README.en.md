@@ -8,7 +8,7 @@ RP-Core centralizes model integrations, routing, tools, memory, messaging, maint
 
 The project uses **AGPL-3.0-only**. The current package version is **0.3.0**. Tenshi is an independently written example; the original user's private character instructions and personal history are not included.
 
-[Model and health console](https://rp-core-console.vercel.app) · [Full runtime](docs/full-runtime.md) · [Console deployment](docs/console.md) · [Review fixes](docs/review-fixes.md)
+[Model and health console](https://rp-core-console.vercel.app) · [Full runtime](docs/full-runtime.md) · [Console deployment](docs/console.md) · [Review fixes](docs/review-fixes.md) · [Commit identity](docs/commit-identity.md)
 
 ## Contents
 
@@ -127,7 +127,7 @@ flowchart TD
 
 </details>
 
-The diagram shows the full engine's main boundaries; public configuration controls individual branches. `replied_flag`, nonempty reply text, and successful generation alone do not prove Telegram delivery. Ambiguous delivery is quarantined while independent tasks continue, and the workflow ultimately reports a nonzero exit status. Failure to persist the guard before delivery stops execution immediately.
+The diagram shows the full engine's main boundaries; public configuration controls individual branches. `replied_flag`, nonempty reply text, and successful generation alone do not prove Telegram delivery. Ambiguous delivery is quarantined while independent tasks continue; an isolated event only leaves a warning and is skipped on later runs, so a nonzero exit status is reserved for unrecoverable failures. Failure to persist the guard before delivery stops execution immediately.
 
 ## Capabilities and runtime modes
 

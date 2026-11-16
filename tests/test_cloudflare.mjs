@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import worker, { normalize } from '../integrations/cloudflare/telegram.mjs';
+import worker, { normalize, privateCommitMessage, privateCommitIdentity } from '../integrations/cloudflare/telegram.mjs';
 
 const update = JSON.parse(await readFile(new URL('./fixtures/telegram-update.json', import.meta.url)));
 const identity = { allowed_user_ids: [123], telegram: { allowed_chat_ids: [123] } };
@@ -56,4 +56,45 @@ test('failed private persistence never dispatches', async t => {
   };
   assert.equal((await worker.fetch(request(), env)).status, 503);
   assert.equal(dispatched, false);
+});
+
+test('private commit titles use the shared category format in Beijing time', () => {
+  assert.equal(privateCommitMessage('queue', new Date('2026-11-16T09:50:08Z')), '收讯｜消息已入队 · 11-16 17:50:08 [skip ci]');
+  assert.equal(privateCommitMessage('queue', new Date('2026-11-16T16:30:00Z')), '收讯｜消息已入队 · 11-17 00:30:00 [skip ci]');
+  assert.match(privateCommitMessage('queue'), /^收讯｜消息已入队 · \d{2}-\d{2} \d{2}:\d{2}:\d{2} \[skip ci\]$/);
+  assert.throws(() => privateCommitMessage('unknown'), /commit kind/);
+});
+
+test('private commit identity attaches only when owner variables are complete', () => {
+  const owner = { name: 'Example Owner', email: 'owner@users.noreply.github.com' };
+  assert.deepEqual(privateCommitIdentity({ RP_OWNER_GIT_NAME: owner.name, RP_OWNER_GIT_EMAIL: owner.email }), { author: owner, committer: owner });
+  assert.deepEqual(privateCommitIdentity({}), {});
+  assert.deepEqual(privateCommitIdentity({ RP_OWNER_GIT_NAME: owner.name }), {});
+  assert.deepEqual(privateCommitIdentity({ RP_OWNER_GIT_EMAIL: owner.email }), {});
+  assert.deepEqual(privateCommitIdentity({ RP_OWNER_GIT_NAME: '  ', RP_OWNER_GIT_EMAIL: ' ' }), {});
+});
+
+test('queued commits carry the readable title and only explicitly configured identity', async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  const run = async configured => {
+    const calls = [];
+    globalThis.fetch = async (url, options) => {
+      calls.push({ url, ...options });
+      if (url.includes('/contents/io.json')) return file({ schema_version: 1, driver: 'native' });
+      if (url.includes('/contents/identity.json')) return file(identity);
+      if (options.method === 'PUT') return new Response('{}', { status: 201 });
+      if (url.endsWith('/dispatches')) return new Response(null, { status: 204 });
+      return new Response('{}', { status: 404 });
+    };
+    assert.equal((await worker.fetch(request(), configured)).status, 200);
+    return JSON.parse(calls.find(c => c.method === 'PUT').body);
+  };
+  const owner = { name: 'Example Owner', email: 'owner@users.noreply.github.com' };
+  const identified = await run({ ...env, RP_OWNER_GIT_NAME: owner.name, RP_OWNER_GIT_EMAIL: owner.email });
+  assert.match(identified.message, /^收讯｜消息已入队 · \d{2}-\d{2} \d{2}:\d{2}:\d{2} \[skip ci\]$/);
+  assert.deepEqual(identified.author, owner);
+  assert.deepEqual(identified.committer, owner);
+  const anonymous = await run({ ...env });
+  assert.ok(!('author' in anonymous));
+  assert.ok(!('committer' in anonymous));
 });

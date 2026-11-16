@@ -56,6 +56,7 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -126,6 +127,13 @@ LOCAL_WINS_PREFIXES = ("reports/provider_health/",)
 
 DEFAULT_GIT_NAME = os.getenv("RP_ROLE_GIT_NAME", "RP character")
 DEFAULT_GIT_EMAIL = os.getenv("RP_ROLE_GIT_EMAIL", "rp-character@example.invalid")
+
+BEIJING_TZ = timezone(timedelta(hours=8))
+
+
+def _commit_stamp() -> str:
+    """北京时间提交时间戳，格式与其它自动提交标题一致（MM-DD HH:MM:SS）。"""
+    return datetime.now(BEIJING_TZ).strftime("%m-%d %H:%M:%S")
 
 
 class SyncError(RuntimeError):
@@ -836,7 +844,7 @@ def _merge_staging_branch(repo: Repo, branch: str, branch_sha: str) -> bool:
         "--no-ff",
         "--no-edit",
         "-m",
-        f"汇流：{branch} [skip ci]",
+        f"汇流｜{branch} 并入 {DEFAULT_BRANCH} · {_commit_stamp()} [skip ci]",
         branch_sha,
         check=False,
     )

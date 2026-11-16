@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { github, readData, encode, safePath } from './telegram.mjs';
+import { github, readData, encode, safePath, privateCommitMessage, privateCommitIdentity } from './telegram.mjs';
 
 export async function bindings(env) {
   for (const key of ['DATA_REPOSITORY', 'PUBLIC_REPOSITORY']) {
@@ -36,7 +36,7 @@ export async function enqueueLegacy(env, task, payload) {
   const ref = '?ref=' + encodeURIComponent(env.DATA_BRANCH || 'main');
   const existing = await github(location + ref, env.DATA_TOKEN);
   if (existing.status === 404) {
-    const saved = await github(location, env.DATA_TOKEN, { method: 'PUT', body: JSON.stringify({ message: 'Queue private RP event [skip ci]', branch: env.DATA_BRANCH || 'main', content: encode(JSON.stringify({ full_task: task, legacy_payload: payload })) }) });
+    const saved = await github(location, env.DATA_TOKEN, { method: 'PUT', body: JSON.stringify({ message: privateCommitMessage('queue'), branch: env.DATA_BRANCH || 'main', content: encode(JSON.stringify({ full_task: task, legacy_payload: payload })), ...privateCommitIdentity(env) }) });
     if (!saved.ok && !(saved.status === 422 && (await github(location + ref, env.DATA_TOKEN)).ok)) throw new Error('private queue');
   } else if (!existing.ok) throw new Error('private queue');
   const credentials = [...new Set([env.DISPATCH_TOKEN, env.CALLING_GH_TOKEN, env['CALLING_GH_TOKEN '], env.GH_TOKEN].filter(Boolean))];

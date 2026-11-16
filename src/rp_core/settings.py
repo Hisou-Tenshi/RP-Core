@@ -104,6 +104,10 @@ IDENTITY_SCHEMA = obj(
                 "allowed_chat_ids": {"type": "array", "items": {"type": ["integer", "string"]}},
             }
         ),
+        # Commit authorship is data, never capability: only the outer shape is
+        # checked here, while rp_core.identity parses each name/email and falls
+        # back to neutral placeholders rather than blocking a private write.
+        "git": obj({"owner": OBJECT, "character": OBJECT, "systems": OBJECT}),
     },
     ("allowed_user_ids",),
 )

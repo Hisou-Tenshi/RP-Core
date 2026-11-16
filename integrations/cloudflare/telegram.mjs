@@ -24,6 +24,29 @@ function decode(text) {
   return new TextDecoder().decode(Uint8Array.from(atob(text.replace(/\s/g, '')), c => c.charCodeAt(0)));
 }
 
+// Shared commit metadata for writes into the private data repository.
+// Titles follow `<category>｜<event> · MM-DD HH:MM:SS [skip ci]` in Beijing time.
+// Identity is only attached when the deployment supplies both owner variables;
+// the public repository never hardcodes a personal name or address.
+const COMMIT_EVENTS = { queue: '消息已入队' };
+
+export function privateCommitMessage(kind, now = new Date()) {
+  const event = COMMIT_EVENTS[kind];
+  if (!event) throw new Error('commit kind');
+  const stamp = new Date(now.getTime() + 8 * 3600 * 1000);
+  const pad = value => String(value).padStart(2, '0');
+  const when = pad(stamp.getUTCMonth() + 1) + '-' + pad(stamp.getUTCDate()) + ' '
+    + pad(stamp.getUTCHours()) + ':' + pad(stamp.getUTCMinutes()) + ':' + pad(stamp.getUTCSeconds());
+  return '收讯｜' + event + ' · ' + when + ' [skip ci]';
+}
+
+export function privateCommitIdentity(env = {}) {
+  const name = String(env.RP_OWNER_GIT_NAME || '').trim();
+  const email = String(env.RP_OWNER_GIT_EMAIL || '').trim();
+  if (!name || !email) return {};
+  return { author: { name, email }, committer: { name, email } };
+}
+
 export async function github(path, token, options = {}) {
   return fetch('https://api.github.com/' + path, { ...options, headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, 'User-Agent': 'RP-Core-ingress', 'Content-Type': 'application/json', ...(options.headers || {}) } });
 }
@@ -77,7 +100,7 @@ export default {
       const path = directory + '/' + event.id + '.json';
       const existing = await github('repos/' + env.DATA_REPOSITORY + '/contents/' + path + '?ref=' + encodeURIComponent(env.DATA_BRANCH || 'main'), env.DATA_TOKEN);
       if (existing.status === 404) {
-        const saved = await github('repos/' + env.DATA_REPOSITORY + '/contents/' + path, env.DATA_TOKEN, { method: 'PUT', body: JSON.stringify({ message: 'Queue RP event [skip ci]', content: encode(JSON.stringify({ event })), branch: env.DATA_BRANCH || 'main' }) });
+        const saved = await github('repos/' + env.DATA_REPOSITORY + '/contents/' + path, env.DATA_TOKEN, { method: 'PUT', body: JSON.stringify({ message: privateCommitMessage('queue'), content: encode(JSON.stringify({ event })), branch: env.DATA_BRANCH || 'main', ...privateCommitIdentity(env) }) });
         if (!saved.ok && saved.status !== 422) return reply(503, 'Queue unavailable');
         if (saved.status === 422) {
           const checked = await github('repos/' + env.DATA_REPOSITORY + '/contents/' + path + '?ref=' + encodeURIComponent(env.DATA_BRANCH || 'main'), env.DATA_TOKEN);

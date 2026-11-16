@@ -104,7 +104,9 @@ def test_maintenance_persists_task_and_ledger_once(data, monkeypatch):
     monkeypatch.setattr(
         service,
         "persist",
-        lambda root, branch: saved.append(json.loads((root / ".rp/maintenance.json").read_text())),
+        lambda root, branch, *, task=None: saved.append(
+            json.loads((root / ".rp/maintenance.json").read_text())
+        ),
     )
     service.run_queue(
         data, {"persistence": {"driver": "git"}, "maintenance_seconds": {"cleanup": 60}}
@@ -311,20 +313,16 @@ def test_ambiguous_history_is_marked_before_next_turn(data, monkeypatch):
     assert history[0]["chat_history"][0]["rp_delivery_quarantined"] is True
 
 
-def test_cli_failure_counts_produce_failed_workflow_without_skipping_work(
-    data, monkeypatch, capsys
-):
+def test_cli_fails_only_on_failed_work_and_warns_about_isolated_events(data, monkeypatch, capsys):
     from rp_core import cli, runtime
 
-    monkeypatch.setattr(
-        runtime,
-        "run_data",
-        lambda *a, **k: {
-            "engine": "full",
-            "processed": 2,
-            "quarantined": 1,
-            "failed": 0,
-        },
-    )
+    results = {"engine": "full", "processed": 2, "quarantined": 1, "failed": 0}
+    monkeypatch.setattr(runtime, "run_data", lambda *a, **k: dict(results))
+    # An isolated event is reconciliation debt, not a red scheduled run: the
+    # JSON result stays clean on stdout while the warning goes to stderr.
+    assert cli.main(["run", "--data-root", str(data), "--config", "synthetic.json"]) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["processed"] == 2
+    assert "::warning::1 private event(s) isolated" in captured.err
+    results["failed"] = 1
     assert cli.main(["run", "--data-root", str(data), "--config", "synthetic.json"]) == 1
-    assert json.loads(capsys.readouterr().out)["processed"] == 2

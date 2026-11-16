@@ -182,8 +182,11 @@ def test_queue_failure_requires_reconciliation(root, monkeypatch):
     monkeypatch.setattr(service, "run_full", fail)
     config = {"persistence": {"driver": "local"}}
     assert service.run_queue(root, config)["quarantined"] == 1
-    # The same ambiguous event is isolated, never blindly resent.
+    # The ambiguous event is isolated once, then only reported as skipped: the
+    # same reconciliation debt must not fail every scheduled run forever.
     assert service.run_queue(root, config)["quarantined"] == 1
+    receipt = next((root / ".rp/full-receipts").glob("*.json"))
+    assert json.loads(receipt.read_text())["status"] == "quarantined"
     write_json(root / "inbox/probe.json", {"full_task": "probe", "legacy_payload": {}})
     calls = []
 
@@ -195,7 +198,8 @@ def test_queue_failure_requires_reconciliation(root, monkeypatch):
     config["maintenance_seconds"] = {"cleanup": 60}
     result = service.run_queue(root, config)
     assert result["processed"] == 1
-    assert result["quarantined"] == 1
+    assert result["quarantined"] == 0
+    assert result["skipped"] == 1
     assert calls == ["probe", "cleanup"]
 
 

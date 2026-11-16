@@ -222,7 +222,14 @@ def main(argv: list[str] | None = None) -> int:
                 require_remote=args.require_remote_persistence,
             )
             print(dumps(result))
-            if result.get("failed") or result.get("quarantined"):
+            if result.get("quarantined"):
+                # An isolated event stays visible for manual reconciliation, but it
+                # must not keep an otherwise healthy scheduled run permanently red.
+                print(
+                    f"::warning::{result['quarantined']} private event(s) isolated for reconciliation",
+                    file=sys.stderr,
+                )
+            if result.get("failed"):
                 return 1
         elif args.command == "inspect-data":
             io = load_io(args.data_root, args.io)

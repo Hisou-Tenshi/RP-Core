@@ -8,7 +8,7 @@ RP-Core 将角色扮演机器人的模型接入、路由、工具、记忆、消
 
 项目采用 **AGPL-3.0-only**，当前包版本为 **0.3.0**。天子是独立编写的示例角色，不包含原使用者的私密角色卡或真实经历。
 
-[模型与探活控制台](https://rp-core-console.vercel.app) · [完整运行时](docs/full-runtime.md) · [控制台部署](docs/console.md) · [审查修复记录](docs/review-fixes.md)
+[模型与探活控制台](https://rp-core-console.vercel.app) · [完整运行时](docs/full-runtime.md) · [控制台部署](docs/console.md) · [审查修复记录](docs/review-fixes.md) · [提交身份](docs/commit-identity.md)
 
 ## 目录
 
@@ -127,7 +127,7 @@ flowchart TD
 
 </details>
 
-流程图描述完整引擎的主要边界，具体分支由公开配置决定。`replied_flag`、非空回复文本或成功生成，都不能单独证明 Telegram 已送达。发送不明确时会隔离，独立任务继续处理，工作流最终以非零状态报告问题。发送前的持久化失败则立即停止，不继续发送。
+流程图描述完整引擎的主要边界，具体分支由公开配置决定。`replied_flag`、非空回复文本或成功生成，都不能单独证明 Telegram 已送达。发送不明确时会隔离，独立任务继续处理；已隔离的事件只留下警告、后续运行直接跳过，只有真正无法恢复的失败才让工作流以非零状态报告问题。发送前的持久化失败则立即停止，不继续发送。
 
 ## 能力与运行模式
 
