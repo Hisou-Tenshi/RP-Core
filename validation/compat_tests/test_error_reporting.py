@@ -77,13 +77,13 @@ class ErrorTextTest(unittest.TestCase):
 
     def test_format_errors_keeps_every_attempt(self):
         errors = [
-            ("claude-opus-5 via Proxy 1 Base (attempt 1)", ValueError("first-boom")),
-            ("claude-opus-5 via Proxy 2 (attempt 1)", RuntimeError("second-boom")),
+            ("claude-opus-5 via Codeyu Base (attempt 1)", ValueError("first-boom")),
+            ("claude-opus-5 via CoderPlan (attempt 1)", RuntimeError("second-boom")),
         ]
         text = format_errors(errors)
         self.assertIn("first-boom", text)
         self.assertIn("second-boom", text)
-        self.assertIn("Proxy 1 Base", text)
+        self.assertIn("Codeyu Base", text)
 
     def test_none_is_rendered_not_crashed(self):
         self.assertEqual(format_exception_inline(None), "<无异常>")
@@ -205,7 +205,7 @@ class ClaudePreflightTextTest(unittest.TestCase):
     def test_preflight_flag_is_retired_and_always_false(self):
         import tenshi_reply
 
-        for name in ("Proxy 1 Base", "Proxy 1 Prime", "Proxy 2", "Official", ""):
+        for name in ("Codeyu Base", "Codeyu Prime", "CoderPlan", "Official", ""):
             self.assertFalse(
                 tenshi_reply._is_claude_proxy_dead_this_round(name),
                 f"代理预检已退役，不应再判死 {name!r}",

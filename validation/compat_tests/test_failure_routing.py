@@ -93,12 +93,12 @@ class PathOrderTest(unittest.TestCase):
     def test_gpt_two_proxies_keep_list_order(self):
         """2026-11：GPT 有代理1/代理2 两条，build_gpt_paths 必须按传入列表顺序排（代理1 → 代理2）。"""
         proxies = [
-            {"name": "GPT Proxy", "api_key": "k1", "base_url": "https://codeyu.shop/v1"},
-            {"name": "GPT Proxy 2", "api_key": "k2", "base_url": "https://api.coderplan.ai/v1"},
+            {"name": "Codeyu", "api_key": "k1", "base_url": "https://codeyu.shop/v1"},
+            {"name": "CoderPlan", "api_key": "k2", "base_url": "https://api.coderplan.ai/v1"},
         ]
         paths = build_gpt_paths("k", "https://api.openai.com/v1", proxies)
         self.assertEqual(
-            [p["name"] for p in paths], ["GPT Proxy", "GPT Proxy 2", "OpenAI"]
+            [p["name"] for p in paths], ["Codeyu", "CoderPlan", "OpenAI"]
         )
         self.assertTrue(paths[-1]["is_official"])
 

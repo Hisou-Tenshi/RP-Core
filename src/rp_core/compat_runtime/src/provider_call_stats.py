@@ -22,15 +22,35 @@ _PROVIDERS = {
     "openrouter",
 }
 _ROUTES_BY_PROVIDER = {
-    "claude": {"proxy3", "proxy1_base", "proxy1_prime", "proxy1_max", "proxy2", "openrouter", "official"},
-    "gemini": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
-    "gpt": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
-    "grok": {"proxy2", "proxy1", "openrouter", "official"},
+    "claude": {
+        "totokens",
+        "codeyu_base",
+        "codeyu_prime",
+        "codeyu_max",
+        "coderplan",
+        "openrouter",
+        "official",
+    },
+    "gemini": {"totokens", "codeyu", "coderplan", "openrouter", "official"},
+    "gpt": {"totokens", "codeyu", "coderplan", "openrouter", "official"},
+    "grok": {"codeyu", "totokens", "coderplan", "openrouter", "official"},
     "deepseek": {"official", "fireworks_pro", "openrouter"},
     "glm": {"official", "openrouter"},
     "qwen": {"official"},
     "magmarouter": {"official"},
     "openrouter": {"official"},
+}
+_LEGACY_ROUTE_IDS = {
+    "claude": {
+        "proxy3": "totokens",
+        "proxy1_base": "codeyu_base",
+        "proxy1_prime": "codeyu_prime",
+        "proxy1_max": "codeyu_max",
+        "proxy2": "coderplan",
+    },
+    "gemini": {"proxy3": "totokens", "proxy1": "codeyu", "proxy2": "coderplan"},
+    "gpt": {"proxy3": "totokens", "proxy1": "codeyu", "proxy2": "coderplan"},
+    "grok": {"proxy2": "totokens", "proxy1": "coderplan"},
 }
 
 
@@ -39,6 +59,7 @@ def route_id(provider: str, path: dict) -> str:
         return "official"
     explicit = path.get("route_id")
     allowed_routes = _ROUTES_BY_PROVIDER.get(provider, set())
+    explicit = _LEGACY_ROUTE_IDS.get(provider, {}).get(explicit, explicit)
     if explicit in allowed_routes:
         return explicit
     name = str(path.get("name") or "").strip().lower()
@@ -52,19 +73,45 @@ def route_id(provider: str, path: dict) -> str:
         return "official"
     aliases = {
         "claude": {
-            "proxy 3": "proxy3",
-            "proxy 1 base": "proxy1_base",
-            "proxy 1 prime": "proxy1_prime",
-            "proxy 1 max": "proxy1_max",
-            "proxy 2": "proxy2",
+            "to-tokens": "totokens",
+            "totokens": "totokens",
+            "codeyu base": "codeyu_base",
+            "codeyu prime": "codeyu_prime",
+            "codeyu max": "codeyu_max",
+            "codeyu": "codeyu_base",
+            "coderplan": "coderplan",
+            "proxy 3": "totokens",
+            "proxy 1 base": "codeyu_base",
+            "proxy 1 prime": "codeyu_prime",
+            "proxy 1 max": "codeyu_max",
+            "proxy 2": "coderplan",
         },
         "gemini": {
-            "gemini proxy 3": "proxy3",
-            "gemini proxy": "proxy1",
-            "gemini proxy 2": "proxy2",
+            "to-tokens": "totokens",
+            "totokens": "totokens",
+            "codeyu": "codeyu",
+            "coderplan": "coderplan",
+            "gemini proxy 3": "totokens",
+            "gemini proxy": "codeyu",
+            "gemini proxy 2": "coderplan",
         },
-        "gpt": {"gpt proxy 3": "proxy3", "gpt proxy": "proxy1", "gpt proxy 2": "proxy2"},
-        "grok": {"grok proxy 2": "proxy2", "grok proxy": "proxy1"},
+        "gpt": {
+            "to-tokens": "totokens",
+            "totokens": "totokens",
+            "codeyu": "codeyu",
+            "coderplan": "coderplan",
+            "gpt proxy 3": "totokens",
+            "gpt proxy": "codeyu",
+            "gpt proxy 2": "coderplan",
+        },
+        "grok": {
+            "codeyu": "codeyu",
+            "to-tokens": "totokens",
+            "totokens": "totokens",
+            "coderplan": "coderplan",
+            "grok proxy 2": "totokens",
+            "grok proxy": "coderplan",
+        },
         "deepseek": {"fireworks deepseek pro": "fireworks_pro"},
     }
     alias = aliases.get(provider, {}).get(name, "")
@@ -94,16 +141,20 @@ def record(provider: str, path: dict, *, success: bool) -> None:
                 existing = []
             if not isinstance(existing, list):
                 existing = []
-            existing.append({
-                "ts": time.time(),
-                "provider": provider,
-                "route": route,
-                "outcome": "success" if success else "failure",
-            })
+            existing.append(
+                {
+                    "ts": time.time(),
+                    "provider": provider,
+                    "route": route,
+                    "outcome": "success" if success else "failure",
+                }
+            )
             counts: dict[str, int] = {}
             retained = []
             for row in reversed(existing):
-                row_provider = str(row.get("provider") or "").lower() if isinstance(row, dict) else ""
+                row_provider = (
+                    str(row.get("provider") or "").lower() if isinstance(row, dict) else ""
+                )
                 if row_provider not in _PROVIDERS:
                     continue
                 if counts.get(row_provider, 0) >= 100:

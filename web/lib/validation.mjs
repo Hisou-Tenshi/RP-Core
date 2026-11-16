@@ -19,10 +19,10 @@ export function validateConfig(value) {
   if (ids.size !== value.models.length) errors.push('模型 ID 不能重复');
   if (new Set(value.providers.map(p => p.key)).size !== value.providers.length) errors.push('厂商不能重复');
   const routeCatalog = {
-    claude:['proxy3','proxy1_base','proxy1_prime','proxy1_max','proxy2','openrouter','official'],
-    gemini:['proxy3','proxy1','proxy2','openrouter','official'],
-    gpt:['proxy3','proxy1','proxy2','openrouter','official'],
-    grok:['proxy2','proxy1','openrouter','official'],
+    claude:['totokens','codeyu_base','codeyu_prime','codeyu_max','coderplan','openrouter','official'],
+    gemini:['totokens','codeyu','coderplan','openrouter','official'],
+    gpt:['totokens','codeyu','coderplan','openrouter','official'],
+    grok:['codeyu','totokens','coderplan','openrouter','official'],
     deepseek:['official','fireworks_pro','openrouter'],
     glm:['official','openrouter'],qwen:['official'],magmarouter:['official'],openrouter:['official'],
   };

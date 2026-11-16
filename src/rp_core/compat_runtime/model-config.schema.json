@@ -273,11 +273,6 @@
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "CODERPLAN_PROXY_BASE_URL": {
-          "type": "string",
-          "maxLength": 300,
-          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
-        },
         "GROK_BASE_URL": {
           "type": "string",
           "maxLength": 300,
@@ -318,37 +313,37 @@
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "CLAUDE_PROXY_BASE_URL": {
+        "CLAUDE_CODEYU_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "CLAUDE_PROXY_BASE_URL_2": {
+        "CLAUDE_CODERPLAN_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GEMINI_PROXY_BASE_URL": {
+        "GEMINI_CODEYU_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GEMINI_PROXY2_BASE_URL": {
+        "GEMINI_CODERPLAN_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GPT_PROXY_BASE_URL": {
+        "GPT_CODEYU_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GPT_PROXY2_BASE_URL": {
+        "GPT_CODERPLAN_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GROK_PROXY_BASE_URL": {
+        "GROK_CODERPLAN_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
@@ -409,37 +404,42 @@
           "maxLength": 180,
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
         },
-        "CLAUDE_PROXY_BASE_URL_3": {
+        "CLAUDE_TOTOKENS_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GEMINI_PROXY3_BASE_URL": {
+        "GEMINI_TOTOKENS_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GPT_PROXY3_BASE_URL": {
+        "GPT_TOTOKENS_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GROK_PROXY2_BASE_URL": {
+        "GROK_TOTOKENS_BASE_URL": {
           "type": "string",
           "maxLength": 300,
           "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         },
-        "GPT_PROXY3_PROTOCOL": {
+        "GPT_TOTOKENS_PROTOCOL": {
           "enum": [
             "responses",
             "chat_completions"
           ]
         },
-        "GROK_PROXY2_PROTOCOL": {
+        "GROK_TOTOKENS_PROTOCOL": {
           "enum": [
             "responses",
             "chat_completions"
           ]
+        },
+        "GROK_CODEYU_BASE_URL": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(?:/[A-Za-z0-9_./-]*)?/?$"
         }
       }
     },

@@ -70,23 +70,32 @@ Reads are public. Everyone can inspect nonprivate settings and sanitized health
 results; only authorized users can save or start a probe. OAuth is deliberately
 disabled until all credentials and the administrator list are present.
 
+## Site names and route switches
+
+Route checkboxes use **checked = enabled**, unchecked = disabled. With the current
+empty disabled lists all routes are checked. Proxy labels, IDs and credentials use
+Codeyu, CoderPlan and To-Tokens instead of numbered proxies.
+
+See [the Actions secret migration guide](provider-secrets.md) for the 13 new secret
+names, the public Claude Codeyu URL variable, and the safe cutover order.
+
 ## Probe architecture
 
-### First-priority To-Tokens routes
+### Site-labelled proxy routes
 
-Creation numbers and attempt priority are independent. The new routes are tried
-first without renaming any existing route:
+Routes use their upstream site names. To-Tokens is first for Claude, Gemini, and
+GPT. Grok Codeyu is now the first Grok route:
 
 | Provider | First route | Public URL setting | Actions secret |
 |---|---|---|---|
-| Claude | Proxy 3 | `CLAUDE_PROXY_BASE_URL_3` | `CLAUDE_PROXY_KEY_3` |
-| GPT | GPT Proxy 3 | `GPT_PROXY3_BASE_URL` | `GPT_PROXY3_KEY` |
-| Gemini | Gemini Proxy 3 | `GEMINI_PROXY3_BASE_URL` | `GEMINI_PROXY3_KEY` |
-| Grok | Grok Proxy 2 | `GROK_PROXY2_BASE_URL` | `GROK_PROXY2_KEY` |
+| Claude | To-Tokens | `CLAUDE_TOTOKENS_BASE_URL` | `CLAUDE_TOTOKENS_API_KEY` |
+| GPT | To-Tokens | `GPT_TOTOKENS_BASE_URL` | `GPT_TOTOKENS_API_KEY` |
+| Gemini | To-Tokens | `GEMINI_TOTOKENS_BASE_URL` | `GEMINI_TOTOKENS_API_KEY` |
+| Grok | Codeyu | `GROK_CODEYU_BASE_URL` | `GROK_CODEYU_API_KEY` |
 
 The vendor's key-use panels specify `https://drc.totokens.cc`; OpenAI-compatible
-clients use its `/v1` base. GPT Proxy 3 and Grok Proxy 2 use the Responses protocol,
-configured by `GPT_PROXY3_PROTOCOL` / `GROK_PROXY2_PROTOCOL`. The public compatibility
+clients use its `/v1` base. GPT and Grok To-Tokens routes use the Responses protocol,
+configured by `GPT_TOTOKENS_PROTOCOL` / `GROK_TOTOKENS_PROTOCOL`. The public compatibility
 adapter preserves existing Chat callers, tool IDs/history, response text, streaming
 deltas, finish reasons and token accounting. Existing proxies retain their transport.
 Claude's model-specific proxy builder and Gemini's auxiliary dual client honor the

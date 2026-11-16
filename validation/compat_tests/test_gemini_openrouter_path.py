@@ -46,7 +46,7 @@ class BuildGeminiPathsPassthroughTest(unittest.TestCase):
     """build_llm_paths 对 proxy dict 附加字段（protocol / vendor_prefix）的透传。"""
 
     PROXIES = [
-        {"name": "Gemini Proxy", "api_key": "k1", "base_url": "https://codeyu.shop"},
+        {"name": "Codeyu", "api_key": "k1", "base_url": "https://codeyu.shop"},
         {
             "name": "OpenRouter",
             "api_key": "k2",
@@ -59,7 +59,7 @@ class BuildGeminiPathsPassthroughTest(unittest.TestCase):
     def test_proxy_first_order_with_official_last(self):
         paths = build_gemini_paths("official-key", self.PROXIES)
         self.assertEqual(
-            [p["name"] for p in paths], ["Gemini Proxy", "OpenRouter", "Official"]
+            [p["name"] for p in paths], ["Codeyu", "OpenRouter", "Official"]
         )
         self.assertTrue(paths[-1]["is_official"])
         self.assertFalse(paths[0]["is_official"])
@@ -97,14 +97,14 @@ class FixedGeminiProxiesOrderTest(unittest.TestCase):
         names = [p.get("name") for p in fixed.GEMINI_PROXIES]
         for name in names:
             self.assertTrue(
-                str(name).startswith("Gemini Proxy"),
+                str(name).startswith("Codeyu"),
                 f"GEMINI_PROXIES 只应有 Gemini 系代理，实际出现 {name!r}",
             )
 
         self.assertNotIn("OpenRouter", names)
 
-        self.assertNotIn("Proxy 1", names)
-        self.assertNotIn("Proxy 2", names)
+        self.assertNotIn("Codeyu", names)
+        self.assertNotIn("CoderPlan", names)
 
     def _build_with_openrouter_key(self, key):
         import tenshi_config

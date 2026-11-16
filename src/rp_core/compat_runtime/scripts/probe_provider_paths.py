@@ -1,93 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -149,13 +62,6 @@ VERDICTS: dict[str, str] = {
 }
 
 
-
-
-
-
-
-
-
 WARN_VERDICTS = {"rate_limited"}
 
 
@@ -167,6 +73,7 @@ def severity_of(verdict: str) -> str:
     if verdict in WARN_VERDICTS:
         return "warn"
     return "red"
+
 
 _REDACT: list[str] = []
 
@@ -195,12 +102,9 @@ def elapsed_ms(start: float) -> float:
     return round((time.perf_counter() - start) * 1000.0, 1)
 
 
-
-
-
-
-
-def _target(provider: str, name: str, base_url: str | None, api_key: str | None, protocol: str, model: str) -> dict:
+def _target(
+    provider: str, name: str, base_url: str | None, api_key: str | None, protocol: str, model: str
+) -> dict:
     return {
         "provider": provider,
         "name": name or (base_url or "?"),
@@ -224,11 +128,6 @@ def _dedupe_models(models: list[str]) -> list[str]:
         if m and m not in out:
             out.append(m)
     return out
-
-
-
-
-
 
 
 def _provider_model_ids(provider: str) -> list[str]:
@@ -277,7 +176,6 @@ def _path_model_id(
         slug = tenshi_config.openrouter_fallback_slug(native_model)
         if slug:
             return slug
-
 
         return f"{vendor_prefix}{native_model}" if vendor_prefix else native_model
     return native_model
@@ -347,11 +245,15 @@ def collect_targets(providers: list[str]) -> list[dict]:
             name = conf.get("name") or "Proxy"
             candidates = _claude_probe_models(name)
             target = _target(
-                "claude", name, conf.get("base_url"), conf.get("api_key"), "anthropic", candidates[0]
+                "claude",
+                name,
+                conf.get("base_url"),
+                conf.get("api_key"),
+                "anthropic",
+                candidates[0],
             )
             target["model_candidates"] = candidates
             targets.append(_with_all_models(target))
-
 
         if tenshi_config.OPENROUTER_API_KEY:
             _lite = tenshi_config.claude_lite_primary()
@@ -365,23 +267,40 @@ def collect_targets(providers: list[str]) -> list[dict]:
             )
             targets.append(_with_all_models(or_target, openrouter=True, vendor_prefix="anthropic/"))
 
-
         configured_names = {str(c.get("name") or "") for c in proxy_confs}
-        _proxy1_url = getattr(tenshi_config, "CLAUDE_PROXY_BASE_URL", None)
-        if _proxy1_url:
-            for _tier_name in ("Proxy 1 Base", "Proxy 1 Prime", "Proxy 1 Max"):
+        _codeyu_url = getattr(tenshi_config, "CLAUDE_CODEYU_BASE_URL", None)
+        if _codeyu_url:
+            for _tier_name in ("Codeyu Base", "Codeyu Prime", "Codeyu Max"):
                 if _tier_name in configured_names:
                     continue
                 targets.append(
                     _with_all_models(
-                        _target("claude", _tier_name, _proxy1_url, None, "anthropic", tenshi_config.claude_lite_primary())
+                        _target(
+                            "claude",
+                            _tier_name,
+                            _codeyu_url,
+                            None,
+                            "anthropic",
+                            tenshi_config.claude_lite_primary(),
+                        )
                     )
                 )
-        _proxy2_url = getattr(tenshi_config, "CLAUDE_PROXY_BASE_URL_2", None)
-        if _proxy2_url and getattr(tenshi_config, "CLAUDE_PROXY2", None) is None and "Proxy 2" not in configured_names:
+        _coderplan_url = getattr(tenshi_config, "CLAUDE_CODERPLAN_BASE_URL", None)
+        if (
+            _coderplan_url
+            and getattr(tenshi_config, "CLAUDE_CODERPLAN", None) is None
+            and "CoderPlan" not in configured_names
+        ):
             targets.append(
                 _with_all_models(
-                    _target("claude", "Proxy 2", _proxy2_url, None, "anthropic", tenshi_config.claude_lite_primary())
+                    _target(
+                        "claude",
+                        "CoderPlan",
+                        _coderplan_url,
+                        None,
+                        "anthropic",
+                        tenshi_config.claude_lite_primary(),
+                    )
                 )
             )
         target = _target(
@@ -393,14 +312,15 @@ def collect_targets(providers: list[str]) -> list[dict]:
             tenshi_config.claude_lite_primary(),
         )
         target["model_candidates"] = _dedupe_models(
-            [tenshi_config.claude_lite_primary(), *list(getattr(tenshi_config, "CLAUDE_LITE_MODELS", []) or [])]
+            [
+                tenshi_config.claude_lite_primary(),
+                *list(getattr(tenshi_config, "CLAUDE_LITE_MODELS", []) or []),
+            ]
         ) or [tenshi_config.claude_lite_primary()]
         targets.append(_with_all_models(target))
 
     if "gemini" in providers:
         model = tenshi_config.gemini_lite_primary()
-
-
 
         for path in build_gemini_paths(tenshi_config.GEMINI_API_KEY, tenshi_config.GEMINI_PROXIES):
             is_openai = path.get("protocol") == "openai"
@@ -411,23 +331,20 @@ def collect_targets(providers: list[str]) -> list[dict]:
                 path.get("base_url") or GEMINI_DEFAULT_BASE,
                 path.get("api_key"),
                 "openai" if is_openai else "gemini",
-                (
-                    tenshi_config.openrouter_fallback_slug(model)
-                    or f"{vendor_prefix}{model}"
-                )
+                (tenshi_config.openrouter_fallback_slug(model) or f"{vendor_prefix}{model}")
                 if is_openai
                 else model,
             )
             targets.append(
-                _with_all_models(
-                    target, openrouter=is_openai, vendor_prefix=vendor_prefix
-                )
+                _with_all_models(target, openrouter=is_openai, vendor_prefix=vendor_prefix)
             )
 
     if "deepseek" in providers:
         base_model = tenshi_config.deepseek_preprocess_primary()
         for path in build_deepseek_paths(
-            tenshi_config.DEEPSEEK_API_KEY, tenshi_config.DEEPSEEK_BASE_URL, tenshi_config.DEEPSEEK_PROXIES
+            tenshi_config.DEEPSEEK_API_KEY,
+            tenshi_config.DEEPSEEK_BASE_URL,
+            tenshi_config.DEEPSEEK_PROXIES,
         ):
             base_url = (path.get("base_url") or "").rstrip("/")
             is_fireworks = "fireworks" in base_url
@@ -439,14 +356,18 @@ def collect_targets(providers: list[str]) -> list[dict]:
             elif is_openrouter:
                 model = tenshi_config.openrouter_fallback_slug(base_model) or base_model
             target = _target(
-                "deepseek", path.get("name") or "Proxy", base_url, path.get("api_key"), "openai", model
+                "deepseek",
+                path.get("name") or "Proxy",
+                base_url,
+                path.get("api_key"),
+                "openai",
+                model,
             )
             targets.append(
                 _with_all_models(target, openrouter=is_openrouter, fireworks=is_fireworks)
             )
 
     if "gpt" in providers:
-
         configured_names = {str(p.get("name") or "") for p in tenshi_config.GPT_PROXIES}
         for path in build_gpt_paths(
             tenshi_config.GPT_API_KEY,
@@ -469,10 +390,9 @@ def collect_targets(providers: list[str]) -> list[dict]:
             )
             targets.append(_with_all_models(target, openrouter=is_openrouter))
 
-
         for _proxy_name, _proxy_url in (
-            ("GPT Proxy", getattr(tenshi_config, "GPT_PROXY_BASE_URL", None)),
-            ("GPT Proxy 2", getattr(tenshi_config, "GPT_PROXY2_BASE_URL", None)),
+            ("Codeyu", getattr(tenshi_config, "GPT_CODEYU_BASE_URL", None)),
+            ("CoderPlan", getattr(tenshi_config, "GPT_CODERPLAN_BASE_URL", None)),
         ):
             if _proxy_url and _proxy_name not in configured_names:
                 targets.append(
@@ -489,10 +409,6 @@ def collect_targets(providers: list[str]) -> list[dict]:
                 )
 
     if "glm" in providers:
-
-
-
-
         for path in build_glm_paths(tenshi_config.GLM_API_KEY, tenshi_config.GLM_BASE_URL):
             is_openrouter = bool(path.get("openrouter")) or path.get("name") == "OpenRouter"
             _glm_model = tenshi_config.glm_pro_primary()
@@ -509,8 +425,6 @@ def collect_targets(providers: list[str]) -> list[dict]:
             targets.append(_with_all_models(target, openrouter=is_openrouter))
 
     if "magmarouter" in providers:
-
-
         for path in build_magmarouter_paths(
             tenshi_config.MAGMAROUTER_API_KEY, tenshi_config.MAGMAROUTER_BASE_URL
         ):
@@ -525,7 +439,9 @@ def collect_targets(providers: list[str]) -> list[dict]:
             targets.append(_with_all_models(target))
 
     if "openrouter" in providers:
-        for path in build_openrouter_paths(tenshi_config.OPENROUTER_API_KEY, tenshi_config.OPENROUTER_BASE_URL):
+        for path in build_openrouter_paths(
+            tenshi_config.OPENROUTER_API_KEY, tenshi_config.OPENROUTER_BASE_URL
+        ):
             target = _target(
                 "openrouter",
                 path.get("name") or "OpenRouter",
@@ -558,22 +474,34 @@ def collect_targets(providers: list[str]) -> list[dict]:
             )
             targets.append(_with_all_models(target, openrouter=is_openrouter))
 
-
     if "qwen" in providers:
-        targets.append(_with_all_models(_target(
-            "qwen", "Official", tenshi_config.QWEN_BASE_URL,
-            tenshi_config.QWEN_API_KEY, "openai", tenshi_config.EMBEDDING_MODEL,
-        )))
+        targets.append(
+            _with_all_models(
+                _target(
+                    "qwen",
+                    "Official",
+                    tenshi_config.QWEN_BASE_URL,
+                    tenshi_config.QWEN_API_KEY,
+                    "openai",
+                    tenshi_config.EMBEDDING_MODEL,
+                )
+            )
+        )
 
-    # Include missing-key placeholders for the additive first-priority routes.
+    # Include missing-key placeholders for the site-labelled routes.
     for provider, name, url_name, protocol in (
-        ("claude", "Proxy 3", "CLAUDE_PROXY_BASE_URL_3", "anthropic"),
-        ("gemini", "Gemini Proxy 3", "GEMINI_PROXY3_BASE_URL", "gemini"),
-        ("gpt", "GPT Proxy 3", "GPT_PROXY3_BASE_URL", "openai"),
-        ("grok", "Grok Proxy 2", "GROK_PROXY2_BASE_URL", "openai"),
+        ("claude", "To-Tokens", "CLAUDE_TOTOKENS_BASE_URL", "anthropic"),
+        ("gemini", "To-Tokens", "GEMINI_TOTOKENS_BASE_URL", "gemini"),
+        ("gpt", "To-Tokens", "GPT_TOTOKENS_BASE_URL", "openai"),
+        ("grok", "Codeyu", "GROK_CODEYU_BASE_URL", "openai"),
+        ("grok", "To-Tokens", "GROK_TOTOKENS_BASE_URL", "openai"),
     ):
         base = getattr(tenshi_config, url_name, None)
-        if provider in providers and base and not any(t["provider"] == provider and t["name"] == name for t in targets):
+        if (
+            provider in providers
+            and base
+            and not any(t["provider"] == provider and t["name"] == name for t in targets)
+        ):
             model = _provider_model_ids(provider)[0]
             targets.append(_with_all_models(_target(provider, name, base, None, protocol, model)))
 
@@ -586,11 +514,6 @@ def collect_targets(providers: list[str]) -> list[dict]:
         seen.add(key)
         unique.append(item)
     return unique
-
-
-
-
-
 
 
 def probe_dns(host: str, port: int) -> dict:
@@ -633,7 +556,16 @@ def probe_tcp(host: str, port: int, timeout: float) -> dict:
 
 
 def probe_tls(host: str, port: int, timeout: float) -> dict:
-    out: dict = {"ok": False, "error": None, "version": None, "cert_cn": None, "issuer": None, "days_left": None, "cert_error": None, "unverified_ok": None}
+    out: dict = {
+        "ok": False,
+        "error": None,
+        "version": None,
+        "cert_cn": None,
+        "issuer": None,
+        "days_left": None,
+        "cert_error": None,
+        "unverified_ok": None,
+    }
     start = time.perf_counter()
 
     def _handshake(ctx: ssl.SSLContext):
@@ -666,7 +598,9 @@ def probe_tls(host: str, port: int, timeout: float) -> dict:
         not_after = cert.get("notAfter")
         if not_after:
             try:
-                expiry = dt.datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
+                expiry = dt.datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(
+                    tzinfo=dt.timezone.utc
+                )
                 out["days_left"] = (expiry - now_utc()).days
             except ValueError:
                 pass
@@ -715,11 +649,16 @@ def http_json(url: str, *, headers: dict, payload: dict | None = None, timeout: 
 
     start = time.perf_counter()
     raw = b""
-    out: dict = {"status": None, "ok": False, "latency_ms": None, "body": "", "json": None, "error": None}
+    out: dict = {
+        "status": None,
+        "ok": False,
+        "latency_ms": None,
+        "body": "",
+        "json": None,
+        "error": None,
+    }
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-
-
             raw = resp.read(HTTP_BODY_READ_LIMIT)
             out["status"] = resp.status
             out["ok"] = 200 <= resp.status < 300
@@ -788,8 +727,6 @@ def count_tokens_gemini(target: dict, timeout: float) -> dict:
     )
 
 
-
-
 COUNT_TOKEN_CALLERS = {
     "anthropic": count_tokens_anthropic,
     "gemini": count_tokens_gemini,
@@ -797,14 +734,6 @@ COUNT_TOKEN_CALLERS = {
 
 
 _NO_GENERATIVE_CALL_NOTE = "（只做非生成校验，不发真实调用）"
-
-
-
-
-
-
-
-
 
 
 def auth_anthropic(target: dict, timeout: float) -> dict:
@@ -817,7 +746,9 @@ def auth_anthropic(target: dict, timeout: float) -> dict:
 
 def auth_gemini(target: dict, timeout: float) -> dict:
     base = target["base_url"] or GEMINI_DEFAULT_BASE
-    return http_json(f"{base}/v1beta/models", headers={"x-goog-api-key": target["api_key"]}, timeout=timeout)
+    return http_json(
+        f"{base}/v1beta/models", headers={"x-goog-api-key": target["api_key"]}, timeout=timeout
+    )
 
 
 def auth_openai_compatible(target: dict, timeout: float) -> dict:
@@ -856,16 +787,20 @@ def classify_auth(target: dict, result: dict | None) -> tuple[str, str]:
         return "unknown", "未执行鉴权探测"
     status = result.get("status")
     message = _error_message(result)
-    detail = f"HTTP {status}" + (f"：{message[:200]}" if message else (f"：{result.get('error')}" if result.get("error") else ""))
+    detail = f"HTTP {status}" + (
+        f"：{message[:200]}"
+        if message
+        else (f"：{result.get('error')}" if result.get("error") else "")
+    )
     if result.get("ok"):
         return "ok", f"鉴权通过（{detail}）"
     if status == 404:
-
-
         return "unknown", f"该通路未实现列模型端点（404），本次不下结论：{detail}"
     if status in (401, 403):
         low = (result.get("body") or "").lower()
-        if status == 403 and any(w in low for w in ("cloudflare", "<html", "access denied", "forbidden by", "waf")):
+        if status == 403 and any(
+            w in low for w in ("cloudflare", "<html", "access denied", "forbidden by", "waf")
+        ):
             return "blocked", f"被代理侧 / WAF 拒绝（403）：{detail}"
         return "auth_denied", f"key 被拒（{status}）：{detail}"
     if status == 429:
@@ -879,16 +814,6 @@ def classify_auth(target: dict, result: dict | None) -> tuple[str, str]:
     if result.get("error"):
         return "http_error", f"{result['error']}：{detail}"
     return "unknown", detail
-
-
-
-
-
-
-
-
-
-
 
 
 _MODEL_MISSING_MARKERS = (
@@ -936,7 +861,7 @@ def _extract_model_ids(payload: dict | list | str | None) -> list[str] | None:
                 continue
             value = str(value)
             if value.startswith("models/"):
-                value = value[len("models/"):]
+                value = value[len("models/") :]
             ids.append(value)
     return ids or None
 
@@ -958,7 +883,7 @@ def _match_model(candidates: list[str], ids: list[str]) -> str | None:
         prefix = candidate.lower() + "-"
         for mid in ids:
             low = mid.lower()
-            if low.startswith(prefix) and low[len(prefix):].isdigit():
+            if low.startswith(prefix) and low[len(prefix) :].isdigit():
                 return mid
     return None
 
@@ -972,7 +897,9 @@ def classify_model_list(target: dict, auth_result: dict | None) -> tuple[str, st
     if not auth_result.get("ok"):
         return "unknown", "鉴权未通过，本次不核对模型列表（由鉴权层下结论）"
     ids = _extract_model_ids(
-        auth_result.get("json") if auth_result.get("json") is not None else (auth_result.get("body") or "")
+        auth_result.get("json")
+        if auth_result.get("json") is not None
+        else (auth_result.get("body") or "")
     )
     if ids is None:
         return "unknown", "该通路的列模型响应不可解析，本次不核对模型"
@@ -995,12 +922,18 @@ def classify_count_tokens(target: dict, result: dict | None) -> tuple[str, str]:
     status = result.get("status")
     message = _error_message(result)
     body = result.get("body") or ""
-    detail = f"HTTP {status}" + (f"：{message[:200]}" if message else (f"：{result.get('error')}" if result.get("error") else ""))
+    detail = f"HTTP {status}" + (
+        f"：{message[:200]}"
+        if message
+        else (f"：{result.get('error')}" if result.get("error") else "")
+    )
     if result.get("ok"):
         return "ok", f"官方 count tokens 通过{_NO_GENERATIVE_CALL_NOTE}"
     if status in (401, 403):
         low = body.lower()
-        if status == 403 and any(w in low for w in ("cloudflare", "<html", "access denied", "forbidden by", "waf")):
+        if status == 403 and any(
+            w in low for w in ("cloudflare", "<html", "access denied", "forbidden by", "waf")
+        ):
             return "blocked", f"被代理侧 / WAF 拒绝（403）：{detail}"
         return "auth_denied", f"key 被拒（{status}）：{detail}"
     if status == 404:
@@ -1016,24 +949,12 @@ def classify_count_tokens(target: dict, result: dict | None) -> tuple[str, str]:
     if status and status >= 500:
         return "upstream_error", f"上游错误（{status}）：{detail}"
     if status == 400:
-
         return "unknown", f"该通路不接受 token 计数请求（400），本次不下结论：{detail}"
     if result.get("error") and "timeout" in str(result["error"]).lower():
         return "timeout", f"请求超时：{detail}"
     if result.get("error"):
         return "http_error", f"{result['error']}：{detail}"
     return "unknown", detail
-
-
-
-
-
-
-
-
-
-
-
 
 
 def _model_method_label(method: str | None) -> str:
@@ -1122,7 +1043,6 @@ def _probe_one_model(
         status = result.get("status")
         latency_ms = result.get("latency_ms")
 
-
         if count_verdict != "unknown":
             verdict, detail = count_verdict, count_detail
         elif verdict == "unknown":
@@ -1141,7 +1061,9 @@ def probe_models(
     """逐模型判定，返回 {原生模型 id: 逐模型结论}。"""
     checks: dict[str, dict] = {}
     for native_model, path_model in _probe_model_plan(target, all_models):
-        checks[native_model] = _probe_one_model(target, native_model, path_model, auth_result, timeout)
+        checks[native_model] = _probe_one_model(
+            target, native_model, path_model, auth_result, timeout
+        )
 
         if not all_models and checks[native_model].get("ok") is True:
             break
@@ -1226,7 +1148,9 @@ def _check_cell(check: dict | None) -> str:
     return "❌"
 
 
-def _check(verdict: str | None, detail: str, *, latency_ms=None, status=None, extra: dict | None = None) -> dict:
+def _check(
+    verdict: str | None, detail: str, *, latency_ms=None, status=None, extra: dict | None = None
+) -> dict:
     """一条检查记录。ok=None 表示「没下结论」——不参与外层 ban（fail-open）。
 
     注意 `unknown` 也算「没结论」：例如某些代理不实现「列模型」/ count tokens 端点，
@@ -1239,7 +1163,6 @@ def _check(verdict: str | None, detail: str, *, latency_ms=None, status=None, ex
         ok = True
         severity = "green"
     elif verdict in WARN_VERDICTS:
-
         ok = True
         severity = "warn"
     else:
@@ -1278,23 +1201,24 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         if layers["tcp"] and layers["tcp"]["ok"]:
             layers["tls"] = probe_tls(host, port, timeout)
 
-    network_ok = bool(host and layers["dns"] and layers["dns"]["ok"] and layers["tcp"] and layers["tcp"]["ok"])
+    network_ok = bool(
+        host and layers["dns"] and layers["dns"]["ok"] and layers["tcp"] and layers["tcp"]["ok"]
+    )
     https_ok = parsed.scheme == "https"
 
     if network_ok and target["api_key"] and https_ok:
         auth_result = AUTH_CALLERS[target["protocol"]](target, timeout)
 
-
-
-
-
-
     if not target["api_key"]:
         model_checks = _mark_models(target, "not_configured", "未配置 key", all_models=all_models)
     elif not network_ok:
-        model_checks = _mark_models(target, "unknown", "网络不可达，未做模型校验", all_models=all_models)
+        model_checks = _mark_models(
+            target, "unknown", "网络不可达，未做模型校验", all_models=all_models
+        )
     elif not https_ok:
-        model_checks = _mark_models(target, "unknown", "非 HTTPS 通路，跳过模型校验", all_models=all_models)
+        model_checks = _mark_models(
+            target, "unknown", "非 HTTPS 通路，跳过模型校验", all_models=all_models
+        )
     else:
         model_checks = probe_models(target, auth_result, timeout=timeout, all_models=all_models)
 
@@ -1305,7 +1229,9 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
     av, ad = classify_auth(target, auth_result)
 
     model_latencies = [
-        entry.get("latency_ms") for entry in model_checks.values() if entry.get("latency_ms") is not None
+        entry.get("latency_ms")
+        for entry in model_checks.values()
+        if entry.get("latency_ms") is not None
     ]
     model_status = next(
         (entry.get("status") for entry in model_checks.values() if entry.get("status") is not None),
@@ -1315,7 +1241,8 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         "network": _check(
             nv,
             nd,
-            latency_ms=(layers["tls"] or {}).get("latency_ms") or (layers["tcp"] or {}).get("latency_ms"),
+            latency_ms=(layers["tls"] or {}).get("latency_ms")
+            or (layers["tcp"] or {}).get("latency_ms"),
         ),
         "auth": _check(
             av,
@@ -1332,13 +1259,8 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         ),
     }
 
-
-
     reds = [name for name, c in checks.items() if c["ok"] is False]
     if not target["api_key"]:
-
-
-
         severity = "not_configured"
         verdict = "not_configured"
         detail = "未配置 key：运行时不构建该通路（探活占位，用于报告展示覆盖范围）"
@@ -1347,14 +1269,18 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         verdict = checks[reds[0]]["verdict"]
         detail = "；".join(f"{name}: {checks[name]['verdict_text']}" for name in reds)
     else:
-        warnings = [name for name, c in checks.items() if c["ok"] is True and c["verdict"] in WARN_VERDICTS]
+        warnings = [
+            name for name, c in checks.items() if c["ok"] is True and c["verdict"] in WARN_VERDICTS
+        ]
         severity = "warn" if warnings else "green"
         verdict = checks[warnings[0]]["verdict"] if warnings else "ok"
         if warnings:
             detail = checks[warnings[0]]["verdict_text"]
         else:
             unknown = [name for name, c in checks.items() if c["ok"] is None]
-            detail = "三层检查均通过" + (f"（{'、'.join(unknown)} 未下结论，按可用处理）" if unknown else "")
+            detail = "三层检查均通过" + (
+                f"（{'、'.join(unknown)} 未下结论，按可用处理）" if unknown else ""
+            )
 
     latencies = [
         result.get("latency_ms")
@@ -1368,8 +1294,9 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         "base_url": target["base_url"],
         "protocol": target["protocol"],
         "model": target["model"],
-
-        "key_masked": (target["api_key"][:4] + "…") if len(target["api_key"]) > 10 else ("***" if target["api_key"] else ""),
+        "key_masked": (target["api_key"][:4] + "…")
+        if len(target["api_key"]) > 10
+        else ("***" if target["api_key"] else ""),
         "ok": severity in ("green", "warn"),
         "severity": severity,
         "verdict": verdict,
@@ -1388,17 +1315,12 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
     }
 
 
-
-
-
-
-
 def _short_model_label(model: str) -> str:
     """报告表头用的模型短名：去掉 Fireworks 命名空间前缀，过长时截断但保留可读性。"""
     label = str(model or "")
     prefix = "accounts/fireworks/models/"
     if label.startswith(prefix):
-        label = label[len(prefix):]
+        label = label[len(prefix) :]
     if len(label) > 38:
         label = label[:37] + "…"
     return label
@@ -1412,16 +1334,20 @@ def build_markdown(context: dict, results: list[dict]) -> str:
     def _provider_models(items: list[dict]) -> list[str]:
         models: list[str] = []
         for item in items:
-            for model_id in (item.get("models") or {}):
+            for model_id in item.get("models") or {}:
                 if model_id not in models:
                     models.append(model_id)
         return models
 
     lines: list[str] = ["# 全通路探活报告", ""]
-    lines.append(f"- 时间：`{context['generated_at_bj']}`（北京时间 UTC+8） / `{context['generated_at_utc']}`（UTC）")
+    lines.append(
+        f"- 时间：`{context['generated_at_bj']}`（北京时间 UTC+8） / `{context['generated_at_utc']}`（UTC）"
+    )
     lines.append(f"- 环境：{context['environment']} · run `{context.get('run_id') or '本地'}`")
     if context.get("deployment") or context.get("deployment_label"):
-        lines.append(f"- 部署：`{context.get('deployment') or 'unknown'}` · {context.get('deployment_label') or '—'}")
+        lines.append(
+            f"- 部署：`{context.get('deployment') or 'unknown'}` · {context.get('deployment_label') or '—'}"
+        )
     lines.append(
         "- 方式：**不真实调用模型**（官方非生成端点：DNS/TCP/TLS → 列模型鉴权 → "
         "全模型 模型列表 / count tokens 校验）"
@@ -1429,7 +1355,8 @@ def build_markdown(context: dict, results: list[dict]) -> str:
     lines.append(
         "- 覆盖："
         + ", ".join(
-            f"{k}（{len(v)} 条 / {len(_provider_models(v))} 个模型）" for k, v in by_provider.items()
+            f"{k}（{len(v)} 条 / {len(_provider_models(v))} 个模型）"
+            for k, v in by_provider.items()
         )
     )
     lines.append("")
@@ -1455,9 +1382,7 @@ def build_markdown(context: dict, results: list[dict]) -> str:
         )
         lines.append(
             f"| `{provider}` | {len(ok)}/{len(items)} | {models_ok}/{len(model_ids)} | "
-            f"{verdict_cell} | "
-            + ("、".join(f"`{i['name']}`" for i in red) or "—")
-            + " |"
+            f"{verdict_cell} | " + ("、".join(f"`{i['name']}`" for i in red) or "—") + " |"
         )
     lines.append("")
     warn = [i for i in results if i.get("severity") == "warn"]
@@ -1482,8 +1407,10 @@ def build_markdown(context: dict, results: list[dict]) -> str:
     method_labels = {"models_list": "列表", "count_tokens": "count"}
     for item in results:
         checks = item.get("checks") or {}
+
         def _cell(name: str) -> str:
             return _check_cell(checks.get(name))
+
         model_method = (checks.get("model") or {}).get("method")
         model_cell = _cell("model")
         if model_cell != "—" and model_method in method_labels:
@@ -1496,7 +1423,6 @@ def build_markdown(context: dict, results: list[dict]) -> str:
             f"{item['verdict_text'][:140]} |"
         )
     lines.append("")
-
 
     lines.append("## 全模型矩阵")
     lines.append("")
@@ -1529,7 +1455,6 @@ def build_markdown(context: dict, results: list[dict]) -> str:
     return "\n".join(lines)
 
 
-
 HISTORY_LIMIT = 400
 
 
@@ -1559,7 +1484,6 @@ def write_outputs(
             "severity": item.get("severity"),
             "verdict": item["verdict"],
             "verdict_text": item["verdict_text"],
-
             "checks": item.get("checks"),
             "model_check_method": item.get("model_check_method"),
             "status": item["status"],
@@ -1567,20 +1491,17 @@ def write_outputs(
             "base_url": item["base_url"],
             "model": item["model"],
             "key_masked": item["key_masked"],
-
             "models_total": item.get("models_total", len(item_models)),
-            "models_ok": item.get("models_ok", sum(1 for m in item_models.values() if _model_available(m))),
+            "models_ok": item.get(
+                "models_ok", sum(1 for m in item_models.values() if _model_available(m))
+            ),
             "models": item_models,
         }
         state = provider_model_state.setdefault(item["provider"], {})
         for model_id, model_entry in item_models.items():
-
             state[model_id] = state.get(model_id, False) or _model_available(model_entry)
         if item["ok"]:
             entry["enabled"] = True
-
-
-
 
     coverage: dict[str, int] = {}
     for provider, state in provider_model_state.items():
@@ -1596,10 +1517,16 @@ def write_outputs(
         "coverage": coverage,
         "providers": providers,
         "summary": {
-            "green": [f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "green"],
-            "warn": [f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "warn"],
+            "green": [
+                f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "green"
+            ],
+            "warn": [
+                f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "warn"
+            ],
             "red": [f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "red"],
-            "not_configured": [f"{i['provider']}/{i['name']}" for i in results if i["verdict"] == "not_configured"],
+            "not_configured": [
+                f"{i['provider']}/{i['name']}" for i in results if i["verdict"] == "not_configured"
+            ],
         },
     }
     json_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1608,14 +1535,6 @@ def write_outputs(
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(build_markdown(context, results), encoding="utf-8")
     return payload
-
-
-
-
-
-
-
-
 
 
 def build_history_entry(context: dict, payload: dict) -> dict:
@@ -1683,13 +1602,6 @@ def append_history(history_path: pathlib.Path, entry: dict, *, limit: int = HIST
     return len(lines)
 
 
-
-
-
-
-
-
-
 DEPLOYMENT_LABELS = {
     "calling": "Calling 运行时（Calling secrets）",
     "tenshi": "Tenshi 备用运行时（Tenshi secrets）",
@@ -1702,10 +1614,18 @@ def deployment_label_for(deployment: str) -> str:
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="全 provider / 全通路 / 全模型探活（不真实调用模型）")
-    parser.add_argument("--providers", default="claude,gemini,deepseek,gpt,glm,magmarouter,openrouter,grok", help="要探测的类别（逗号分隔）")
+    parser = argparse.ArgumentParser(
+        description="全 provider / 全通路 / 全模型探活（不真实调用模型）"
+    )
+    parser.add_argument(
+        "--providers",
+        default="claude,gemini,deepseek,gpt,glm,magmarouter,openrouter,grok",
+        help="要探测的类别（逗号分隔）",
+    )
     parser.add_argument("--timeout", type=float, default=20.0, help="单次网络操作超时（秒）")
-    parser.add_argument("--json", default=str(ROOT / "data" / "provider_health.json"), help="健康 JSON 输出路径")
+    parser.add_argument(
+        "--json", default=str(ROOT / "data" / "provider_health.json"), help="健康 JSON 输出路径"
+    )
     parser.add_argument("--report", default=None, help="Markdown 报告输出路径（可选）")
     parser.add_argument("--history", default=None, help="追加历史 JSONL 路径（可选；默认不写）")
     parser.add_argument(
@@ -1714,7 +1634,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default="local",
         help="部署身份（写进 JSON / 历史；Calling 与 Tenshi 两套运行时各自独立探活）",
     )
-    parser.add_argument("--deployment-label", default=None, help="部署展示名（默认按 --deployment 生成）")
+    parser.add_argument(
+        "--deployment-label", default=None, help="部署展示名（默认按 --deployment 生成）"
+    )
     parser.add_argument(
         "--no-all-models",
         action="store_true",
@@ -1725,8 +1647,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
-
-
 
     for _stream in (sys.stdout, sys.stderr):
         if hasattr(_stream, "reconfigure"):
@@ -1740,14 +1660,14 @@ def main(argv: list[str] | None = None) -> int:
 
     for value in (
         tenshi_config.CLAUDE_API_KEY,
-        tenshi_config.CLAUDE_PROXY_KEY_BASE,
-        tenshi_config.CLAUDE_PROXY_KEY_PRIME,
-        tenshi_config.CLAUDE_PROXY_KEY_MAX,
-        tenshi_config.CLAUDE_PROXY_KEY_2,
+        tenshi_config.CLAUDE_CODEYU_BASE_API_KEY,
+        tenshi_config.CLAUDE_CODEYU_PRIME_API_KEY,
+        tenshi_config.CLAUDE_CODEYU_MAX_API_KEY,
+        tenshi_config.CLAUDE_CODERPLAN_API_KEY,
         tenshi_config.GEMINI_API_KEY,
-        tenshi_config.GEMINI_PROXY_KEY,
-        tenshi_config.GPT_PROXY_KEY,
-        tenshi_config.GPT_PROXY2_KEY,
+        tenshi_config.GEMINI_CODEYU_API_KEY,
+        tenshi_config.GPT_CODEYU_API_KEY,
+        tenshi_config.GPT_CODERPLAN_API_KEY,
         tenshi_config.DEEPSEEK_API_KEY,
         tenshi_config.FIREWORKS_API_KEY,
         tenshi_config.GPT_API_KEY,
@@ -1770,11 +1690,12 @@ def main(argv: list[str] | None = None) -> int:
         "deployment_label": deployment_label,
         "run_id": os.getenv("GITHUB_RUN_ID"),
         "script": "scripts/probe_provider_paths.py",
-
         "probe_method": "official_non_call",
     }
 
-    model_count = sum(len(t.get("models") or [t["model"]]) for t in targets) if all_models else len(targets)
+    model_count = (
+        sum(len(t.get("models") or [t["model"]]) for t in targets) if all_models else len(targets)
+    )
     print(
         f"[探活] 方式=不真实调用（官方非生成端点）· 部署={args.deployment}（{deployment_label}）"
         f" · 共 {len(targets)} 条通路 / {model_count} 个模型点，类别 {providers}"
@@ -1816,7 +1737,9 @@ def main(argv: list[str] | None = None) -> int:
             f" {item['latency_ms']}ms"
         )
 
-    payload = write_outputs(json_path, pathlib.Path(args.report) if args.report else None, context, results)
+    payload = write_outputs(
+        json_path, pathlib.Path(args.report) if args.report else None, context, results
+    )
 
     if args.history:
         history_path = pathlib.Path(args.history)
@@ -1826,13 +1749,10 @@ def main(argv: list[str] | None = None) -> int:
     print("\n[汇总]")
     for provider, entry in payload["providers"].items():
         good = sum(1 for p in entry["paths"].values() if p["ok"])
-        configured = sum(
-            1 for p in entry["paths"].values() if p.get("verdict") != "not_configured"
-        )
+        configured = sum(1 for p in entry["paths"].values() if p.get("verdict") != "not_configured")
         if entry["enabled"]:
             state = "✅ 绿"
         elif configured == 0:
-
             state = "➖ 未配置"
         else:
             state = "❌ 红"

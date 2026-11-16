@@ -360,20 +360,20 @@ class ReviewRegressions(unittest.TestCase):
             tr.tenshi_config.PROVIDER_ROUTE_POLICIES = {
                 **original,
                 "gpt": {
-                    "order": ("official", "proxy3", "proxy1", "proxy2", "openrouter"),
-                    "disabled": frozenset({"proxy1"}),
+                    "order": ("official", "totokens", "codeyu", "coderplan", "openrouter"),
+                    "disabled": frozenset({"codeyu"}),
                 },
             }
             paths = [
-                {"name": "GPT Proxy 3", "route_id": "proxy3"},
-                {"name": "GPT Proxy", "route_id": "proxy1"},
-                {"name": "GPT Proxy 2", "route_id": "proxy2"},
+                {"name": "To-Tokens", "route_id": "totokens"},
+                {"name": "Codeyu", "route_id": "codeyu"},
+                {"name": "CoderPlan", "route_id": "coderplan"},
                 {"name": "OpenAI", "is_official": True},
             ]
             actual = llm_routing.apply_provider_route_policy("gpt", paths)
         finally:
             tr.tenshi_config.PROVIDER_ROUTE_POLICIES = original
-        self.assertEqual([path["name"] for path in actual], ["OpenAI", "GPT Proxy 3", "GPT Proxy 2"])
+        self.assertEqual([path["name"] for path in actual], ["OpenAI", "To-Tokens", "CoderPlan"])
 
     def test_withdraw_waits_for_pending_send_before_deleting_message(self):
         streamer = reply_streaming.TelegramStreamer("token", 1)

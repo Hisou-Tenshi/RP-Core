@@ -363,15 +363,15 @@ from config.models import (
 )
 from config.providers import (
     CLAUDE_PROXIES,
-    CLAUDE_PROXY1_TIERS,
-    CLAUDE_PROXY2,
+    CLAUDE_CODEYU_TIERS,
+    CLAUDE_CODERPLAN,
     GEMINI_PROXIES,
-    GEMINI_PROXY,
-    GEMINI_PROXY2,
+    GEMINI_CODEYU,
+    GEMINI_CODERPLAN,
     GPT_PROXIES,
-    GPT_PROXY,
+    GPT_CODEYU,
     GROK_PROXIES,
-    GROK_PROXY,
+    GROK_CODERPLAN,
 )
 
 

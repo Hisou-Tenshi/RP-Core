@@ -69,7 +69,7 @@ def _write_health(path: pathlib.Path, providers: dict) -> None:
 class EmptyResponseHelperTest(unittest.TestCase):
     def test_helper_raises_with_canonical_message(self):
         with self.assertRaises(EmptyModelResponseError) as ctx:
-            require_nonempty_model_text("   ", "claude:claude-sonnet-5-5 via Proxy 1 Prime")
+            require_nonempty_model_text("   ", "claude:claude-sonnet-5-5 via Codeyu Prime")
         self.assertIn(
             "returned a completed response with no content",
             str(ctx.exception),
@@ -82,7 +82,7 @@ class EmptyResponseHelperTest(unittest.TestCase):
     def test_empty_response_is_not_a_provider_breaker(self):
         """空响应不是 provider 级确定性错误：不许因此熔断整厂。"""
         skip_ok, _reason = should_skip_provider_on_error(
-            EmptyModelResponseError("claude:x via Proxy 1 Prime")
+            EmptyModelResponseError("claude:x via Codeyu Prime")
         )
         self.assertFalse(skip_ok)
 
@@ -101,8 +101,8 @@ class CallClaudeEmptyResponseFailoverTest(unittest.TestCase):
         tenshi_reply.CLAUDE_API_KEY = None
         tenshi_reply.anthropic_client = None
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k1", "base_url": "https://p1-base.example"},
-            {"name": "Proxy 1 Prime", "api_key": "k2", "base_url": "https://p1-prime.example"},
+            {"name": "Codeyu Base", "api_key": "k1", "base_url": "https://p1-base.example"},
+            {"name": "Codeyu Prime", "api_key": "k2", "base_url": "https://p1-prime.example"},
         ]
 
         self._orig_filter = provider_health.filter_paths
@@ -186,14 +186,14 @@ class CallClaudeEmptyResponseFailoverTest(unittest.TestCase):
                 "claude": {
                     "enabled": True,
                     "paths": {
-                        "Proxy 1 Base": {
+                        "Codeyu Base": {
                             "ok": True,
                             "verdict": "ok",
                             "models": {
                                 "claude-sonnet-5-5": {"ok": False, "verdict": "model_not_found", "severity": "red"},
                             },
                         },
-                        "Proxy 1 Prime": {"ok": True, "verdict": "ok"},
+                        "Codeyu Prime": {"ok": True, "verdict": "ok"},
                     },
                 },
             },
@@ -206,8 +206,8 @@ class CallClaudeEmptyResponseFailoverTest(unittest.TestCase):
 
 
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k1", "base_url": "https://p1-base.example"},
-            {"name": "Proxy 1 Prime", "api_key": "k2", "base_url": "https://p1-prime.example"},
+            {"name": "Codeyu Base", "api_key": "k1", "base_url": "https://p1-base.example"},
+            {"name": "Codeyu Prime", "api_key": "k2", "base_url": "https://p1-prime.example"},
         ]
         seen_urls: list[str] = []
 
@@ -245,7 +245,7 @@ class PathFirstEmptyResponseFailoverTest(unittest.TestCase):
 
     def _run(self, fake_call):
         tenshi_reply.build_gemini_paths = lambda *a, **k: [
-            {"name": "Gemini Proxy", "api_key": "k", "base_url": "https://gp.example"},
+            {"name": "Codeyu", "api_key": "k", "base_url": "https://gp.example"},
             {"name": "Official", "api_key": "k2", "base_url": None, "is_official": True},
         ]
         tenshi_reply.call_gemini = fake_call
@@ -271,11 +271,11 @@ class PathFirstEmptyResponseFailoverTest(unittest.TestCase):
 
         out = self._run(fake_call)
         self.assertEqual(out[0], "official ok")
-        self.assertEqual(calls, ["Gemini Proxy", "Official"])
+        self.assertEqual(calls, ["Codeyu", "Official"])
 
     def test_all_empty_responses_raise(self):
         tenshi_reply.build_gemini_paths = lambda *a, **k: [
-            {"name": "Gemini Proxy", "api_key": "k", "base_url": "https://gp.example"},
+            {"name": "Codeyu", "api_key": "k", "base_url": "https://gp.example"},
         ]
         tenshi_reply.call_gemini = lambda *a, **k: ("", "", False)
 
@@ -305,14 +305,14 @@ class PathFirstEmptyResponseFailoverTest(unittest.TestCase):
 
         out = self._run(fake_call)
         self.assertEqual(out[0], "official ok")
-        self.assertEqual(calls, ["Gemini Proxy", "Official"])
+        self.assertEqual(calls, ["Codeyu", "Official"])
 
     def test_model_level_ban_skips_combo(self):
         """「通路 × 模型」探活红 → 该组合抛 RuntimeError，run_path_first 继续下一个。"""
         provider_health.filter_paths = self._orig_filter
         provider_health.path_state = self._orig_path_state
         provider_health.model_path_state = lambda provider, path_name, model_id: (
-            False if (provider == "gemini" and path_name == "Gemini Proxy") else None
+            False if (provider == "gemini" and path_name == "Codeyu") else None
         )
         calls: list[str] = []
 

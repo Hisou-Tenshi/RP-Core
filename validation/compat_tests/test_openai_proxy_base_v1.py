@@ -57,7 +57,7 @@ class ReloadProvidersMixin:
                 return SimpleNamespace(
                     GPT_PROXIES=[dict(x) for x in mod.GPT_PROXIES],
                     DEEPSEEK_PROXIES=[dict(x) for x in mod.DEEPSEEK_PROXIES],
-                    GPT_PROXY_BASE_URL=mod.GPT_PROXY_BASE_URL,
+                    GPT_CODEYU_BASE_URL=mod.GPT_CODEYU_BASE_URL,
                     FIREWORKS_BASE_URL=mod.FIREWORKS_BASE_URL,
                     PROVIDER_PATH_POLICIES=dict(mod.PROVIDER_PATH_POLICIES),
                 )
@@ -96,16 +96,16 @@ class EnsureOpenaiV1Test(unittest.TestCase):
 
     def test_gpt_and_grok_proxy_configs_end_with_v1(self):
 
-        self.assertIn("/v1", providers.GPT_PROXY_BASE_URL)
-        self.assertIn("/v1", providers.GPT_PROXY2_BASE_URL)
-        self.assertIn("/v1", providers.GROK_PROXY_BASE_URL)
+        self.assertIn("/v1", providers.GPT_CODEYU_BASE_URL)
+        self.assertIn("/v1", providers.GPT_CODERPLAN_BASE_URL)
+        self.assertIn("/v1", providers.GROK_CODERPLAN_BASE_URL)
 
     def test_env_specs_document_v1_defaults(self):
         specs = _url_spec_defaults()
 
-        self.assertEqual(specs["GPT_PROXY_BASE_URL"], "https://codeyu.shop/v1")
-        self.assertEqual(specs["GPT_PROXY2_BASE_URL"], "https://api.coderplan.ai/v1")
-        self.assertEqual(specs["GROK_PROXY_BASE_URL"], "https://api.coderplan.ai/v1")
+        self.assertEqual(specs["GPT_CODEYU_BASE_URL"], "https://codeyu.shop/v1")
+        self.assertEqual(specs["GPT_CODERPLAN_BASE_URL"], "https://api.coderplan.ai/v1")
+        self.assertEqual(specs["GROK_CODERPLAN_BASE_URL"], "https://api.coderplan.ai/v1")
 
 
 class GptTwoHopsTest(ReloadProvidersMixin, unittest.TestCase):
@@ -113,12 +113,12 @@ class GptTwoHopsTest(ReloadProvidersMixin, unittest.TestCase):
 
     def test_two_proxies_in_order(self):
         p = self._reload_with(
-            GPT_PROXY_BASE_URL="",
-            GPT_PROXY_KEY="key-proxy1",
-            GPT_PROXY2_BASE_URL="",
-            GPT_PROXY2_KEY="key-proxy2",
+            GPT_CODEYU_BASE_URL="",
+            GPT_CODEYU_API_KEY="key-proxy1",
+            GPT_CODERPLAN_BASE_URL="",
+            GPT_CODERPLAN_API_KEY="key-proxy2",
         )
-        self.assertEqual([x["name"] for x in p.GPT_PROXIES], ["GPT Proxy", "GPT Proxy 2"])
+        self.assertEqual([x["name"] for x in p.GPT_PROXIES], ["Codeyu", "CoderPlan"])
         self.assertEqual([x["base_url"] for x in p.GPT_PROXIES], [
             "https://codeyu.shop/v1",
             "https://api.coderplan.ai/v1",
@@ -126,20 +126,20 @@ class GptTwoHopsTest(ReloadProvidersMixin, unittest.TestCase):
         self.assertEqual([x["api_key"] for x in p.GPT_PROXIES], ["key-proxy1", "key-proxy2"])
 
     def test_proxy1_url_default_and_custom_override(self):
-        p = self._reload_with(GPT_PROXY_BASE_URL="", GPT_PROXY_KEY="k")
-        self.assertEqual(p.GPT_PROXY_BASE_URL, "https://codeyu.shop/v1")
+        p = self._reload_with(GPT_CODEYU_BASE_URL="", GPT_CODEYU_API_KEY="k")
+        self.assertEqual(p.GPT_CODEYU_BASE_URL, "https://codeyu.shop/v1")
         p = self._reload_with(
-            GPT_PROXY_BASE_URL="https://gpt-relay.example", GPT_PROXY_KEY="k"
+            GPT_CODEYU_BASE_URL="https://gpt-relay.example", GPT_CODEYU_API_KEY="k"
         )
-        self.assertEqual(p.GPT_PROXY_BASE_URL, "https://gpt-relay.example/v1")
+        self.assertEqual(p.GPT_CODEYU_BASE_URL, "https://gpt-relay.example/v1")
 
     def test_proxy2_without_key_is_not_built(self):
         p = self._reload_with(
-            GPT_PROXY_BASE_URL="",
-            GPT_PROXY_KEY="k1",
-            GPT_PROXY2_KEY="",
+            GPT_CODEYU_BASE_URL="",
+            GPT_CODEYU_API_KEY="k1",
+            GPT_CODERPLAN_API_KEY="",
         )
-        self.assertEqual([x["name"] for x in p.GPT_PROXIES], ["GPT Proxy"])
+        self.assertEqual([x["name"] for x in p.GPT_PROXIES], ["Codeyu"])
 
     def test_proxy_order_survives_policy(self):
 

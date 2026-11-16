@@ -231,7 +231,7 @@ def test_public_call_history_sanitizer_only_emits_allowlisted_counters(tmp_path)
     ]))
     result=module.sanitize_call_history(history)
     assert result["sample_size"]==2
-    assert result["providers"]["gemini"]["proxy3"]=={"calls":1,"success":1,"failure":0}
+    assert result["providers"]["gemini"]["totokens"]=={"calls":1,"success":1,"failure":0}
     assert "prompt" not in json.dumps(result)
 
 
@@ -252,7 +252,7 @@ def test_public_call_history_sanitizer_uses_a_separate_100_attempt_window_per_pr
     result=module.sanitize_call_history(history)
     assert result["window_per_provider"]==100
     assert result["sample_size"]==200
-    assert result["providers"]["gpt"]["proxy3"]["calls"]==100
+    assert result["providers"]["gpt"]["totokens"]["calls"]==100
     assert result["providers"]["gemini"]["official"]["failure"]==100
 
 

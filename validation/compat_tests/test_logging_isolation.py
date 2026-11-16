@@ -125,17 +125,17 @@ class ProviderHealthLoggingTest(unittest.TestCase):
                 "claude": {
                     "enabled": True,
                     "paths": {
-                        "Proxy 1 Base": {"ok": True, "verdict": "ok"},
-                        "Proxy 2": {"ok": False, "verdict": "dns_fail"},
+                        "Codeyu Base": {"ok": True, "verdict": "ok"},
+                        "CoderPlan": {"ok": False, "verdict": "dns_fail"},
                     },
                 }
             }
         )
         kept = provider_health.filter_paths(
-            "claude", [{"name": "Proxy 1 Base"}, {"name": "Proxy 2"}]
+            "claude", [{"name": "Codeyu Base"}, {"name": "CoderPlan"}]
         )
-        self.assertEqual([p["name"] for p in kept], ["Proxy 1 Base"])
-        self.assertTrue(any("Proxy 2" in r and "ban" in r for r in self.records), self.records)
+        self.assertEqual([p["name"] for p in kept], ["Codeyu Base"])
+        self.assertTrue(any("CoderPlan" in r and "ban" in r for r in self.records), self.records)
 
     def test_blank_key_decision_is_logged(self):
         self._write_health(

@@ -145,7 +145,24 @@ test('renaming a model preserves route references through intermediate edits and
   } finally {dom.window.close();}
 });
 
-test('per-vendor proxy and official routes can be reordered and disabled before OAuth save',async()=>{
+test('all current routes start checked, with named sites and an explicit enabled label',async()=>{
+  const {dom}=await page();
+  try{
+    const {document}=dom.window;
+    const routes=[...document.querySelectorAll('[data-route-enabled]')];
+    assert.ok(routes.length>20);
+    assert.ok(routes.every(route=>route.checked));
+    assert.ok(routes.every(route=>route.closest('label').textContent==='启用'));
+    const policies=document.querySelector('.path-policy-grid').textContent;
+    assert.match(policies,/Codeyu/);
+    assert.match(policies,/CoderPlan/);
+    assert.match(policies,/To-Tokens/);
+    assert.doesNotMatch(policies,/Proxy|proxy[123]/);
+    assert.equal(document.querySelector('#save').disabled,true);
+  }finally{dom.window.close();}
+});
+
+test('per-vendor routes save named priorities and unchecking disables a route',async()=>{
   const {dom,writes}=await page();
   try{
     const {document,Event}=dom.window;
@@ -153,13 +170,66 @@ test('per-vendor proxy and official routes can be reordered and disabled before 
     document.querySelector('[data-route-move][data-provider="gemini"][data-index="0"][data-direction="1"]').click();
     assert.deepEqual(config.path_policies.gemini.order,before);
     assert.deepEqual(document.querySelector('#save').disabled,false);
-    const official=document.querySelector('[data-provider="gemini"][data-route-disabled="official"]');
-    official.checked=true;official.dispatchEvent(new Event('change',{bubbles:true}));
+    const official=document.querySelector('[data-provider="gemini"][data-route-enabled="official"]');
+    official.checked=false;official.dispatchEvent(new Event('change',{bubbles:true}));
     await document.querySelector('#save').onclick();
-    assert.deepEqual(writes[0].config.path_policies.gemini.order.slice(0,2),['proxy1','proxy3']);
+    assert.deepEqual(writes[0].config.path_policies.gemini.order.slice(0,2),['codeyu','totokens']);
     assert.deepEqual(writes[0].config.path_policies.gemini.disabled,['official']);
     assert.deepEqual(validateConfig(writes[0].config),[]);
   }finally{dom.window.close();}
+});
+
+test('a saved disabled route starts unchecked and checking it enables it again',async()=>{
+  const catalog=structuredClone(config);
+  catalog.path_policies.gemini.disabled=['codeyu'];
+  const {dom,writes}=await page({catalog});
+  try{
+    const {document,Event}=dom.window;
+    const route=document.querySelector('[data-provider="gemini"][data-route-enabled="codeyu"]');
+    assert.equal(route.checked,false);
+    assert.ok(route.closest('.chain-item').classList.contains('route-disabled'));
+    route.checked=true;route.dispatchEvent(new Event('change',{bubbles:true}));
+    await document.querySelector('#save').onclick();
+    assert.deepEqual(writes[0].config.path_policies.gemini.disabled,[]);
+    assert.ok([...document.querySelectorAll('[data-route-enabled]')].every(input=>input.checked));
+  }finally{dom.window.close();}
+});
+
+test('partial route priorities still show all routes and can move an appended route',async()=>{
+  const catalog=structuredClone(config);
+  catalog.path_policies.gpt.order=['official'];
+  const {dom,writes}=await page({catalog});
+  try{
+    const {document}=dom.window;
+    const routes=[...document.querySelectorAll('[data-provider="gpt"][data-route-enabled]')];
+    assert.equal(routes.length,5);
+    assert.equal(routes[0].dataset.routeEnabled,'official');
+    document.querySelector('[data-route-move][data-provider="gpt"][data-index="4"][data-direction="-1"]').click();
+    await document.querySelector('#save').onclick();
+    assert.deepEqual(writes[0].config.path_policies.gpt.order,['official','totokens','codeyu','openrouter','coderplan']);
+    assert.deepEqual(validateConfig(writes[0].config),[]);
+  }finally{dom.window.close();}
+});
+
+test('health labels and history bridge old numbered names and new site names',async()=>{
+  const ok={ok:true,verdict:'ok',severity:'green',latency_ms:10,models:{}};
+  const timestamp='2026-11-16T00:00:00Z';
+  for(const [oldName,newName,provider] of [
+    ['Proxy 1 Base','Codeyu Base','claude'],['Gemini Proxy 3','To-Tokens','gemini'],
+    ['GPT Proxy','Codeyu','gpt'],['Grok Proxy 2','To-Tokens','grok'],['Grok Proxy','CoderPlan','grok'],
+  ]){
+    for(const [latestName,historyName] of [[oldName,newName],[newName,oldName]]){
+      const latest={instance_id:'example',generated_at_utc:timestamp,run_id:'1',providers:{[provider]:{paths:{[latestName]:ok}}}};
+      const history=[{generated_at_utc:timestamp,providers:{[provider]:{paths:{[historyName]:ok}}}}];
+      const {dom}=await page({healthResult:{available:true,latest,history,calls:null}});
+      try{
+        const {document}=dom.window;
+        assert.equal(document.querySelector('.path-name').textContent,newName);
+        assert.ok(document.querySelector('.history-cell').classList.contains('green'));
+        assert.doesNotMatch(document.querySelector('.provider-card').textContent,/Proxy/);
+      }finally{dom.window.close();}
+    }
+  }
 });
 
 test('health panel renders sanitized near-100 provider route counts',async()=>{
@@ -169,7 +239,7 @@ test('health panel renders sanitized near-100 provider route counts',async()=>{
     const {document}=result.dom.window;
     document.querySelector('[data-tab="health"]').click();
     assert.match(document.querySelector('.call-stats').textContent,/最近 100 次通路调用/);
-    assert.match(document.querySelector('.call-stats').textContent,/Gemini Proxy 3/);
+    assert.match(document.querySelector('.call-stats').textContent,/To-Tokens/);
     assert.match(document.querySelector('.call-stats').textContent,/31/);
     assert.match(document.querySelector('.call-stats').textContent,/2/);
   }finally{result.dom.window.close();}

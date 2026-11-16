@@ -24,9 +24,9 @@ class NoClaudeClientError(RuntimeError):
 class EmptyModelResponseError(RuntimeError):
     """模型返回了「HTTP 成功但内容为空」的响应。
 
-    这是 2026-10-29 事故的直接教训：claude-sonnet-5-5 在 Proxy 1 Prime 上拿到
+    这是 2026-10-29 事故的直接教训：claude-sonnet-5-5 在 Codeyu Prime 上拿到
     200 + 空流（无 text / 无 thinking / 无 tool_use），旧代码把它当「成功」直接
-    return，导致同一次调用里 Prime 之后的 Max → Proxy2 → OpenRouter → Official
+    return，导致同一次调用里 Prime 之后的 Max → CoderPlan → OpenRouter → Official
     全部被短路，主链直接跳去下一个模型的容灾组。
 
     语义：这**不是** provider 级确定性错误（换个模型/通路可能完全正常），
@@ -62,7 +62,7 @@ def is_claude_thinking_model(model_id: str) -> bool:
 
 
 def is_claude_fable_model(model_id: str) -> bool:
-    """Fable 系列：代理1走 Prime → Max（不用 Base）。"""
+    """Fable 系列：Codeyu 走 Prime → Max（不用 Base）。"""
     return "fable" in (model_id or "").lower()
 
 
@@ -74,26 +74,26 @@ def should_skip_claude_client(model_id: str, client_name: str) -> bool:
 
 def build_claude_proxy_configs_for_model(model_id: str) -> list[dict[str, Any]]:
     """
-    代理3固定优先，再按模型选择代理1档位顺序，最后接代理2：
-    - Fable（5.1）：Prime → Max → Proxy2
-    - Opus / Sonnet 及其他：Base → Prime → Max → Proxy2
+    To-Tokens 固定优先，再按模型选择 Codeyu 档位顺序，最后接 CoderPlan：
+    - Fable（5.1）：Prime → Max → CoderPlan
+    - Opus / Sonnet 及其他：Base → Prime → Max → CoderPlan
     """
     import tenshi_config
 
-    tiers = getattr(tenshi_config, "CLAUDE_PROXY1_TIERS", {}) or {}
-    proxy2 = getattr(tenshi_config, "CLAUDE_PROXY2", None)
+    tiers = getattr(tenshi_config, "CLAUDE_CODEYU_TIERS", {}) or {}
+    coderplan = getattr(tenshi_config, "CLAUDE_CODERPLAN", None)
     order = ("prime", "max") if is_claude_fable_model(model_id) else ("base", "prime", "max")
 
     out: list[dict[str, Any]] = []
-    proxy3 = getattr(tenshi_config, "CLAUDE_PROXY3", None)
-    if proxy3 and proxy3.get("api_key") and proxy3.get("base_url"):
-        out.append(proxy3)
+    totokens = getattr(tenshi_config, "CLAUDE_TOTOKENS", None)
+    if totokens and totokens.get("api_key") and totokens.get("base_url"):
+        out.append(totokens)
     for tier in order:
         conf = tiers.get(tier)
         if conf and conf.get("api_key") and conf.get("base_url"):
             out.append(conf)
-    if proxy2 and proxy2.get("api_key") and proxy2.get("base_url"):
-        out.append(proxy2)
+    if coderplan and coderplan.get("api_key") and coderplan.get("base_url"):
+        out.append(coderplan)
     return out
 
 
@@ -448,7 +448,7 @@ def build_gemini_paths(
     gemini_api_key: str | None,
     proxy_configs: Iterable[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Gemini 通路:代理1 → 代理2 → OpenRouter → 官方。"""
+    """Gemini 通路:To-Tokens → Codeyu → CoderPlan → OpenRouter → 官方。"""
     import tenshi_config
 
     return build_provider_paths(

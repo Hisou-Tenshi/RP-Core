@@ -129,10 +129,10 @@ class OfficialSurvivesProxyPreflightTest(unittest.TestCase):
 
     def test_official_is_tried_when_all_proxies_are_dead(self):
 
-        tenshi_reply._is_claude_proxy_dead_this_round = lambda name: name == "Proxy 1 Base"
+        tenshi_reply._is_claude_proxy_dead_this_round = lambda name: name == "Codeyu Base"
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k", "base_url": "https://p1.example"},
-            {"name": "Proxy 2", "api_key": "k2", "base_url": "https://p2.example"},
+            {"name": "Codeyu Base", "api_key": "k", "base_url": "https://p1.example"},
+            {"name": "CoderPlan", "api_key": "k2", "base_url": "https://p2.example"},
         ]
         tenshi_reply.CLAUDE_API_KEY = "official-key"
 
@@ -168,7 +168,7 @@ class OfficialSurvivesProxyPreflightTest(unittest.TestCase):
         order = []
         tenshi_reply._is_claude_proxy_dead_this_round = lambda name: True
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k", "base_url": "https://p1.example"},
+            {"name": "Codeyu Base", "api_key": "k", "base_url": "https://p1.example"},
         ]
         tenshi_reply.CLAUDE_API_KEY = "official-key"
         sentinel = _Sentinel("official-client")
@@ -191,7 +191,7 @@ class OfficialSurvivesProxyPreflightTest(unittest.TestCase):
         """Opus/Fable 依旧只用代理（官方直连的成本约束不变）。"""
         tenshi_reply._is_claude_proxy_dead_this_round = lambda name: True
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k", "base_url": "https://p1.example"},
+            {"name": "Codeyu Base", "api_key": "k", "base_url": "https://p1.example"},
         ]
         tenshi_reply.CLAUDE_API_KEY = "official-key"
         tenshi_reply.anthropic_client = object()
@@ -206,7 +206,7 @@ class OfficialSurvivesProxyPreflightTest(unittest.TestCase):
         seen = []
         tenshi_reply._is_claude_proxy_dead_this_round = lambda name: False
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k", "base_url": "https://p1.example"},
+            {"name": "Codeyu Base", "api_key": "k", "base_url": "https://p1.example"},
         ]
         tenshi_reply.CLAUDE_API_KEY = "official-key"
         tenshi_reply.anthropic_client = object()

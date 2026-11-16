@@ -400,12 +400,20 @@
     "max_input_chars": 9000
   },
   "environment": {
-    "CLAUDE_PROXY_BASE_URL_3": "https://drc.totokens.cc",
-    "GEMINI_PROXY3_BASE_URL": "https://drc.totokens.cc",
-    "GPT_PROXY3_BASE_URL": "https://drc.totokens.cc/v1",
-    "GROK_PROXY2_BASE_URL": "https://drc.totokens.cc/v1",
-    "GPT_PROXY3_PROTOCOL": "responses",
-    "GROK_PROXY2_PROTOCOL": "responses"
+    "CLAUDE_TOTOKENS_BASE_URL": "https://drc.totokens.cc",
+    "GEMINI_TOTOKENS_BASE_URL": "https://drc.totokens.cc",
+    "GPT_TOTOKENS_BASE_URL": "https://drc.totokens.cc/v1",
+    "GROK_TOTOKENS_BASE_URL": "https://drc.totokens.cc/v1",
+    "GPT_TOTOKENS_PROTOCOL": "responses",
+    "GROK_TOTOKENS_PROTOCOL": "responses",
+    "CLAUDE_CODERPLAN_BASE_URL": "https://api.coderplan.ai",
+    "GEMINI_CODEYU_BASE_URL": "https://codeyu.shop",
+    "GEMINI_CODERPLAN_BASE_URL": "https://api.coderplan.ai",
+    "GPT_CODEYU_BASE_URL": "https://codeyu.shop/v1",
+    "GPT_CODERPLAN_BASE_URL": "https://api.coderplan.ai/v1",
+    "GROK_CODERPLAN_BASE_URL": "https://api.coderplan.ai/v1",
+    "GROK_CODEYU_BASE_URL": "https://codeyu.shop/v1",
+    "CLAUDE_CODEYU_BASE_URL": "https://codeyu.shop"
   },
   "summary_models": [],
   "path_policies": {

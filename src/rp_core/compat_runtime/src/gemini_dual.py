@@ -89,14 +89,15 @@ class DualGeminiClient:
 
 
 def build_gemini_dual_client() -> DualGeminiClient:
-    """构造「代理优先、官方兜底」的双路客户端。
+    """构造「代理优先、官方兜底」的多通路客户端。
 
-    * 代理 1：key 取 ``GEMINI_PROXY_KEY``（**未单独配置时按历史口径回退官方 key**），
-      base_url 取 ``GEMINI_PROXY_BASE_URL``（默认 codeyu.shop）。
-    * 代理 2：key 取 ``GEMINI_PROXY2_KEY``（**不**回退官方 key，未配则不建），
-      base_url 取 ``GEMINI_PROXY2_BASE_URL``（默认 api.coderplan.ai）。
+    * To-Tokens：key 取 ``GEMINI_TOTOKENS_API_KEY``，优先尝试。
+    * Codeyu：key 取 ``GEMINI_CODEYU_API_KEY``（未配则不建），
+      base_url 取 ``GEMINI_CODEYU_BASE_URL``（默认 codeyu.shop）。
+    * CoderPlan：key 取 ``GEMINI_CODERPLAN_API_KEY``（**不**回退官方 key，未配则不建），
+      base_url 取 ``GEMINI_CODERPLAN_BASE_URL``（默认 api.coderplan.ai）。
     * 官方路：key 取 ``GEMINI_API_KEY``；key 缺失时官方路不建。
-    * 两路都缺失：返回空路客户端（调用时抛 RuntimeError，与旧版单 client
+    * 所有通路都缺失：返回空路客户端（调用时抛 RuntimeError，与旧版单 client
       在无 key 时调用必炸的行为等价，不会让模块 import 失败）。
     """
     http_kwargs: dict[str, Any] = dict(
@@ -109,18 +110,18 @@ def build_gemini_dual_client() -> DualGeminiClient:
 
 
     proxies: list[dict] = []
-    _p3_key = getattr(tenshi_config, "GEMINI_PROXY3_KEY", None)
-    _p3_url = getattr(tenshi_config, "GEMINI_PROXY3_BASE_URL", None)
-    if _p3_key and _p3_url:
-        proxies.append({"name": "Gemini Proxy 3", "api_key": _p3_key, "base_url": _p3_url})
-    _p1_key = getattr(tenshi_config, "GEMINI_PROXY_KEY", None)
-    _p1_url = getattr(tenshi_config, "GEMINI_PROXY_BASE_URL", None)
-    if _p1_key and _p1_url:
-        proxies.append({"name": "Gemini Proxy", "api_key": _p1_key, "base_url": _p1_url})
-    _p2_key = getattr(tenshi_config, "GEMINI_PROXY2_KEY", None)
-    _p2_url = getattr(tenshi_config, "GEMINI_PROXY2_BASE_URL", None)
-    if _p2_key and _p2_url:
-        proxies.append({"name": "Gemini Proxy 2", "api_key": _p2_key, "base_url": _p2_url})
+    _totokens_key = getattr(tenshi_config, "GEMINI_TOTOKENS_API_KEY", None)
+    _totokens_url = getattr(tenshi_config, "GEMINI_TOTOKENS_BASE_URL", None)
+    if _totokens_key and _totokens_url:
+        proxies.append({"name": "To-Tokens", "api_key": _totokens_key, "base_url": _totokens_url})
+    _codeyu_key = getattr(tenshi_config, "GEMINI_CODEYU_API_KEY", None)
+    _codeyu_url = getattr(tenshi_config, "GEMINI_CODEYU_BASE_URL", None)
+    if _codeyu_key and _codeyu_url:
+        proxies.append({"name": "Codeyu", "api_key": _codeyu_key, "base_url": _codeyu_url})
+    _coderplan_key = getattr(tenshi_config, "GEMINI_CODERPLAN_API_KEY", None)
+    _coderplan_url = getattr(tenshi_config, "GEMINI_CODERPLAN_BASE_URL", None)
+    if _coderplan_key and _coderplan_url:
+        proxies.append({"name": "CoderPlan", "api_key": _coderplan_key, "base_url": _coderplan_url})
     if not proxies:
         proxies = [
             dict(p)
@@ -139,7 +140,7 @@ def build_gemini_dual_client() -> DualGeminiClient:
             continue
         clients.append(
             (
-                str(proxy.get("name") or "Gemini Proxy"),
+                str(proxy.get("name") or "Codeyu"),
                 genai.Client(
                     api_key=proxy_key,
                     http_options=types.HttpOptions(base_url=proxy_base, **http_kwargs),

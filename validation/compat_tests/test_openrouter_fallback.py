@@ -304,7 +304,7 @@ class CallClaudeAttemptOrderTest(unittest.TestCase):
         tenshi_reply.anthropic_client = self._official
         tenshi_reply.OPENROUTER_API_KEY = "dummy-for-tests"
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k", "base_url": "https://p1.example"}
+            {"name": "Codeyu Base", "api_key": "k", "base_url": "https://p1.example"}
         ]
 
         tenshi_reply.anthropic.Anthropic = lambda *a, **k: self._proxy
@@ -354,20 +354,20 @@ class CallClaudeAttemptOrderTest(unittest.TestCase):
         self.assertEqual(order, ["Proxy", "OpenRouter", "Official"], "官方必须排最后")
 
     def test_proxy1_then_proxy2_then_openrouter_then_official(self):
-        """Proxy 2 已恢复使用：排在 OpenRouter 之前。"""
+        """CoderPlan 已恢复使用：排在 OpenRouter 之前。"""
         p1 = _Sentinel("p1")
         p2 = _Sentinel("p2")
         order: list[str] = []
         tenshi_reply.build_claude_proxy_configs_for_model = lambda model_id: [
-            {"name": "Proxy 1 Base", "api_key": "k1", "base_url": "https://p1.example"},
-            {"name": "Proxy 2", "api_key": "k2", "base_url": "https://p2.example"},
+            {"name": "Codeyu Base", "api_key": "k1", "base_url": "https://p1.example"},
+            {"name": "CoderPlan", "api_key": "k2", "base_url": "https://p2.example"},
         ]
         tenshi_reply.anthropic.Anthropic = (
             lambda *a, **k: p1 if k.get("api_key") == "k1" else p2
         )
 
         def fake_impl(client, model_name, *a, **k):
-            order.append({p1: "Proxy 1", p2: "Proxy 2", self._official: "Official"}[client])
+            order.append({p1: "Codeyu", p2: "CoderPlan", self._official: "Official"}[client])
             raise RuntimeError("fail-for-order")
 
         def fake_openrouter(*a, **k):
@@ -378,7 +378,7 @@ class CallClaudeAttemptOrderTest(unittest.TestCase):
         tenshi_reply.call_openrouter = fake_openrouter
         self._call()
         self.assertEqual(
-            order, ["Proxy 1", "Proxy 2", "OpenRouter", "Official"], "官方必须最后"
+            order, ["Codeyu", "CoderPlan", "OpenRouter", "Official"], "官方必须最后"
         )
 
     def test_without_openrouter_key_proxy_then_official(self):

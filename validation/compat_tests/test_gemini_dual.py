@@ -47,7 +47,7 @@ class DualGeminiClientTest(unittest.TestCase):
         proxy = _FakeClient("proxy", result="P")
         official = _FakeClient("official", result="O")
         dual = gemini_dual.DualGeminiClient(
-            [("Gemini Proxy", proxy), ("Official", official)]
+            [("Codeyu", proxy), ("Official", official)]
         )
         self.assertEqual(dual.models.generate_content(model="m", contents="x"), "P")
         self.assertEqual(len(official.models.calls), 0)
@@ -56,7 +56,7 @@ class DualGeminiClientTest(unittest.TestCase):
         proxy = _FakeClient("proxy", exc=RuntimeError("proxy down"))
         official = _FakeClient("official", result="O")
         dual = gemini_dual.DualGeminiClient(
-            [("Gemini Proxy", proxy), ("Official", official)]
+            [("Codeyu", proxy), ("Official", official)]
         )
         self.assertEqual(dual.models.generate_content("x"), "O")
         self.assertEqual(len(official.models.calls), 1)
@@ -64,7 +64,7 @@ class DualGeminiClientTest(unittest.TestCase):
     def test_raises_last_error_when_all_paths_fail(self):
         dual = gemini_dual.DualGeminiClient(
             [
-                ("Gemini Proxy", _FakeClient("p", exc=RuntimeError("e1"))),
+                ("Codeyu", _FakeClient("p", exc=RuntimeError("e1"))),
                 ("Official", _FakeClient("o", exc=ValueError("e2"))),
             ]
         )
@@ -85,7 +85,7 @@ class DualGeminiClientTest(unittest.TestCase):
 
     def test_embed_content_shape_forwarded(self):
         proxy = _FakeClient("proxy", result={"embedding": [0.1, 0.2]})
-        dual = gemini_dual.DualGeminiClient([("Gemini Proxy", proxy)])
+        dual = gemini_dual.DualGeminiClient([("Codeyu", proxy)])
         out = dual.models.embed_content(model="gemini-embedding", contents="hi")
         self.assertEqual(out, {"embedding": [0.1, 0.2]})
         _, kwargs = proxy.models.calls[0]
@@ -94,7 +94,7 @@ class DualGeminiClientTest(unittest.TestCase):
 
 
 class BuildClientTest(unittest.TestCase):
-    """build_gemini_dual_client：2026-10 起按 GEMINI_PROXY_KEY / GEMINI_PROXY2_KEY
+    """build_gemini_dual_client：2026-10 起按 GEMINI_CODEYU_API_KEY / GEMINI_CODERPLAN_API_KEY
     动态建代理路（代理1 → 代理2），其后才是官方；GEMINI_PROXIES 仅在动态代理全缺时兜底。
     """
 
@@ -110,10 +110,10 @@ class BuildClientTest(unittest.TestCase):
 
         with mock.patch.multiple(
             tenshi_config,
-            GEMINI_PROXY_KEY=proxy_key,
-            GEMINI_PROXY_BASE_URL="https://proxy.test",
-            GEMINI_PROXY2_KEY=proxy2_key,
-            GEMINI_PROXY2_BASE_URL="https://proxy2.test",
+            GEMINI_CODEYU_API_KEY=proxy_key,
+            GEMINI_CODEYU_BASE_URL="https://proxy.test",
+            GEMINI_CODERPLAN_API_KEY=proxy2_key,
+            GEMINI_CODERPLAN_BASE_URL="https://proxy2.test",
             GEMINI_API_KEY=official_key,
             GEMINI_PROXIES=list(proxies),
             LLM_CLIENT_READ_TIMEOUT_SEC=30,
@@ -126,7 +126,7 @@ class BuildClientTest(unittest.TestCase):
             proxy_key="pk1", proxy2_key="pk2", official_key="ok"
         )
         self.assertEqual(
-            dual.path_names, ["Gemini Proxy", "Gemini Proxy 2", "Official"]
+            dual.path_names, ["Codeyu", "CoderPlan", "Official"]
         )
 
     def test_proxy_disabled_when_no_key(self):
@@ -170,19 +170,19 @@ class BuildClientTest(unittest.TestCase):
         self.assertEqual(seen[1][1]["api_key"], "pk2")
 
     def test_gemini_proxies_fallback_when_no_dynamic_proxy(self):
-        """GEMINI_PROXY_KEY / PROXY2_KEY 都没配时，退回配置层的 GEMINI_PROXIES。"""
+        """GEMINI_CODEYU_API_KEY / PROXY2_KEY 都没配时，退回配置层的 GEMINI_PROXIES。"""
         dual = self._build_with(
             proxy_key=None,
             official_key="ok",
             proxies=[
                 {
-                    "name": "Gemini Proxy",
+                    "name": "Codeyu",
                     "api_key": "legacy-key",
                     "base_url": "https://legacy.test",
                 }
             ],
         )
-        self.assertEqual(dual.path_names, ["Gemini Proxy", "Official"])
+        self.assertEqual(dual.path_names, ["Codeyu", "Official"])
         seen: list = []
 
         def _grab(c):

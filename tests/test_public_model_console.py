@@ -148,4 +148,6 @@ def test_public_probe_reads_only_private_call_counters_without_telegram_credenti
     assert "TG_TOKEN" not in text
     assert "GH_TOKEN: ${{ env.RP_DATA_TOKEN }}" in text
     assert "environment: ${{ matrix.environment }}" in text
-    assert "CLAUDE_PROXY_BASE_URL" in text
+    assert "CLAUDE_CODEYU_BASE_URL" in json.loads(
+        (CODE / "model-config.json").read_text()
+    )["environment"]

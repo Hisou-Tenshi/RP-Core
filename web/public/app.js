@@ -3,13 +3,36 @@ const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels = {health:'通路探活',models:'模型注册表',routing:'路由配置',settings:'请求与向量'};
 const pathCatalog = {
-  claude:[['proxy3','Proxy 3'],['proxy1_base','Proxy 1 Base'],['proxy1_prime','Proxy 1 Prime'],['proxy1_max','Proxy 1 Max'],['proxy2','Proxy 2'],['openrouter','OpenRouter'],['official','Official']],
-  gemini:[['proxy3','Gemini Proxy 3'],['proxy1','Gemini Proxy'],['proxy2','Gemini Proxy 2'],['openrouter','OpenRouter'],['official','Official']],
-  gpt:[['proxy3','GPT Proxy 3'],['proxy1','GPT Proxy'],['proxy2','GPT Proxy 2'],['openrouter','OpenRouter'],['official','OpenAI 官方']],
-  grok:[['proxy2','Grok Proxy 2'],['proxy1','Grok Proxy'],['openrouter','OpenRouter'],['official','Grok 官方']],
+  claude:[['totokens','To-Tokens'],['codeyu_base','Codeyu · Base'],['codeyu_prime','Codeyu · Prime'],['codeyu_max','Codeyu · Max'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Official']],
+  gemini:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Official']],
+  gpt:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','OpenAI 官方']],
+  grok:[['codeyu','Codeyu'],['totokens','To-Tokens'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Grok 官方']],
   deepseek:[['official','DeepSeek 官方'],['fireworks_pro','Fireworks DeepSeek Pro'],['openrouter','OpenRouter']],
   glm:[['official','GLM 官方'],['openrouter','OpenRouter']],qwen:[['official','Qwen 官方']],
   magmarouter:[['official','MagmaRouter']],openrouter:[['official','OpenRouter']],
+};
+const legacyRouteIds = {
+  claude:{proxy3:'totokens',proxy1_base:'codeyu_base',proxy1_prime:'codeyu_prime',proxy1_max:'codeyu_max',proxy2:'coderplan'},
+  gemini:{proxy3:'totokens',proxy1:'codeyu',proxy2:'coderplan'},
+  gpt:{proxy3:'totokens',proxy1:'codeyu',proxy2:'coderplan'},
+  grok:{proxy2:'totokens',proxy1:'coderplan'},
+};
+const routeLabel = (provider,route) => {
+  const id=legacyRouteIds[provider]?.[route]||route;
+  return (pathCatalog[provider]||[]).find(item=>item[0]===id)?.[1]||route;
+};
+const legacyPathNames = {
+  claude:{'Proxy 3':'To-Tokens','Proxy 1':'Codeyu','Proxy 1 Base':'Codeyu Base','Proxy 1 Prime':'Codeyu Prime','Proxy 1 Max':'Codeyu Max','Proxy 2':'CoderPlan'},
+  gemini:{'Gemini Proxy 3':'To-Tokens','Gemini Proxy':'Codeyu','Gemini Proxy 2':'CoderPlan'},
+  gpt:{'GPT Proxy 3':'To-Tokens','GPT Proxy':'Codeyu','GPT Proxy 2':'CoderPlan'},
+  grok:{'Grok Proxy 2':'To-Tokens','Grok Proxy':'CoderPlan'},
+};
+const pathName = (provider,name) => legacyPathNames[provider]?.[name]||name;
+const historyPath = (sample,provider,name) => Object.entries(sample.providers?.[provider]?.paths||{})
+  .find(([candidate])=>pathName(provider,candidate)===pathName(provider,name))?.[1];
+const orderedRouteIds = provider => {
+  const order=state.config.path_policies[provider].order;
+  return [...order,...(pathCatalog[provider]||[]).map(([id])=>id).filter(id=>!order.includes(id))];
 };
 const descriptions = {
   health:'从真实运行环境检查连接、鉴权和模型可用性。',
@@ -86,7 +109,7 @@ function renderHealth() {
   if(calls){
     const labelsByProvider=Object.fromEntries((state.config?.providers||[]).map(p=>[p.key,p.label]));
     const entries=Object.entries(calls.providers||{}).flatMap(([provider,routes])=>Object.entries(routes||{}).map(([route,stats])=>({provider,route,...stats})));
-    html+=`<section class="panel call-stats"><div class="panel-header"><div><h2>各厂商最近 100 次通路调用 · 共 ${Number(calls.sample_size)||0} 次</h2><p>每家厂商单独统计最近 100 次；只发布厂商、代理/官方和计数，不包含模型输入、回复或密钥。</p></div><small>更新于 ${time(calls.generated_at_utc)}</small></div><div class="table-scroll"><table><thead><tr><th>厂商</th><th>代理 / 官方</th><th>调用</th><th>成功</th><th>失败</th></tr></thead><tbody>${entries.sort((a,b)=>b.calls-a.calls).map(item=>`<tr><td>${escape(labelsByProvider[item.provider]||item.provider)}</td><td>${escape((pathCatalog[item.provider]||[]).find(x=>x[0]===item.route)?.[1]||item.route)}</td><td>${Number(item.calls)||0}</td><td class="green">${Number(item.success)||0}</td><td class="${item.failure?'warn':''}">${Number(item.failure)||0}</td></tr>`).join('')||'<tr><td colspan="5">当前窗口暂无调用</td></tr>'}</tbody></table></div></section>`;
+    html+=`<section class="panel call-stats"><div class="panel-header"><div><h2>各厂商最近 100 次通路调用 · 共 ${Number(calls.sample_size)||0} 次</h2><p>每家厂商单独统计最近 100 次；只发布厂商、代理/官方和计数，不包含模型输入、回复或密钥。</p></div><small>更新于 ${time(calls.generated_at_utc)}</small></div><div class="table-scroll"><table><thead><tr><th>厂商</th><th>代理 / 官方</th><th>调用</th><th>成功</th><th>失败</th></tr></thead><tbody>${entries.sort((a,b)=>b.calls-a.calls).map(item=>`<tr><td>${escape(labelsByProvider[item.provider]||item.provider)}</td><td>${escape(routeLabel(item.provider,item.route))}</td><td>${Number(item.calls)||0}</td><td class="green">${Number(item.success)||0}</td><td class="${item.failure?'warn':''}">${Number(item.failure)||0}</td></tr>`).join('')||'<tr><td colspan="5">当前窗口暂无调用</td></tr>'}</tbody></table></div></section>`;
   }
   html+='<div class="section-heading"><div><h2>模型 × 通路</h2><p>非生成检查 · 只验证可达性、鉴权和模型支持，不代表真实生成质量</p></div><div class="legend"><span><i style="background:#64bea7"></i>可用</span><span><i style="background:#a88b52"></i>限流</span><span><i style="background:#a95c69"></i>不可用</span></div></div>';
   if (stale || mismatch) html+='<div class="hint">过期结果或与当前模型配置不一致的结果不会用于阻断运行时通路。可触发新探活后再检查。</div>';
@@ -97,7 +120,7 @@ function renderHealth() {
     html+=`<details class="provider-card" open><summary><span class="provider-logo">${escape(label.slice(0,1))}</span><span class="provider-name">${escape(label)}</span><span class="provider-meta"><span class="count">${item.models_ok ?? '–'} / ${item.models_total ?? '–'} 模型可用</span><span class="${item.enabled?'green':'red'}">${paths.filter(([,p])=>p.ok).length} / ${paths.length} 通路可用</span></span></summary><div class="table-scroll"><table><thead><tr><th>运行通路</th><th>当前状态</th><th>响应时间</th><th>最近 ${Math.min(result.history.length,32)} 次检查</th>${models.map(m=>`<th class="model-head" title="${escape(m)}">${escape(m)}</th>`).join('')}</tr></thead><tbody>`;
     for (const [name,path] of paths) {
       const samples=result.history.slice(-32);
-      html+=`<tr><td class="path-name">${escape(name)}</td><td>${badge(path)}</td><td class="latency">${path.latency_ms === null?'–':Math.round(path.latency_ms)+' ms'}</td><td><div class="history-strip">${samples.map(s=>`<span class="history-cell ${color(s.providers?.[provider]?.paths?.[name])}" title="${time(s.generated_at_utc)} · ${escape(verdicts[s.providers?.[provider]?.paths?.[name]?.verdict] || '无记录')}"></span>`).join('')}</div></td>${models.map(m=>`<td>${modelCell(path.models?.[m])}</td>`).join('')}</tr>`;
+      html+=`<tr><td class="path-name">${escape(pathName(provider,name))}</td><td>${badge(path)}</td><td class="latency">${path.latency_ms === null?'–':Math.round(path.latency_ms)+' ms'}</td><td><div class="history-strip">${samples.map(s=>{const old=historyPath(s,provider,name);return `<span class="history-cell ${color(old)}" title="${time(s.generated_at_utc)} · ${escape(verdicts[old?.verdict] || '无记录')}"></span>`;}).join('')}</div></td>${models.map(m=>`<td>${modelCell(path.models?.[m])}</td>`).join('')}</tr>`;
     }
     html+='</tbody></table></div></details>';
   }
@@ -138,15 +161,15 @@ function renderRouting() {
     `<div class="section-heading"><div><h2>厂商容灾顺序</h2><p>同一轮按以下顺序轮转；Lite 从第二轮开始。取消参与只影响容灾组。</p></div></div><div class="panel"><div class="provider-order">${state.config.providers.map((p,i)=>`<div class="chain-item"><span class="chain-index">${i+1}</span><code>${escape(p.label)}</code><label title="参与容灾"><input type="checkbox" data-provider-enabled="${i}" aria-label="${escape(p.label)} 参与容灾"${p.in_fallback_chain?' checked':''}${disabled}></label><button data-provider-move="${i}" data-direction="-1" aria-label="上移 ${escape(p.label)}"${i===0||!editable()?' disabled':''}>↑</button><button data-provider-move="${i}" data-direction="1" aria-label="下移 ${escape(p.label)}"${i===state.config.providers.length-1||!editable()?' disabled':''}>↓</button></div>`).join('')}</div></div>`;
   const routeCards=state.config.providers.map(provider=>{
     const policy=state.config.path_policies[provider.key];
-    const routeOrder=policy.order.length?policy.order:(pathCatalog[provider.key]||[]).map(([id])=>id);
+    const routeOrder=orderedRouteIds(provider.key);
     const routes=routeOrder.map((id,index)=>{
-      const label=(pathCatalog[provider.key]||[]).find(route=>route[0]===id)?.[1]||id;
+      const label=routeLabel(provider.key,id);
       const isDisabled=policy.disabled.includes(id);
-      return `<div class="chain-item${isDisabled?' route-disabled':''}"><span class="chain-index">${String(index+1).padStart(2,'0')}</span><code>${escape(label)}</code><label title="禁用此通路"><input type="checkbox" data-route-disabled="${id}" data-provider="${provider.key}" aria-label="禁用 ${escape(provider.label)} ${escape(label)}"${isDisabled?' checked':''}${disabled}></label><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="-1" aria-label="上移 ${escape(label)}"${index===0||!editable()?' disabled':''}>↑</button><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="1" aria-label="下移 ${escape(label)}"${index===routeOrder.length-1||!editable()?' disabled':''}>↓</button></div>`;
+      return `<div class="chain-item${isDisabled?' route-disabled':''}"><span class="chain-index">${String(index+1).padStart(2,'0')}</span><code>${escape(label)}</code><label class="route-enable" title="勾选表示启用"><input type="checkbox" data-route-enabled="${id}" data-provider="${provider.key}" aria-label="启用 ${escape(provider.label)} ${escape(label)}"${isDisabled?'':' checked'}${disabled}>启用</label><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="-1" aria-label="上移 ${escape(label)}"${index===0||!editable()?' disabled':''}>↑</button><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="1" aria-label="下移 ${escape(label)}"${index===routeOrder.length-1||!editable()?' disabled':''}>↓</button></div>`;
     }).join('');
     return `<article class="panel path-policy"><h3>${escape(provider.label)}</h3><div class="path-list">${routes}</div></article>`;
   }).join('');
-  $('routing').innerHTML+=`<div class="section-heading"><div><h2>厂商代理 / 官方通路</h2><p>可单独调整尝试顺序和禁用项；未配置密钥或探活判红的通路会自动跳过。</p></div></div><div class="path-policy-grid">${routeCards}</div>`;
+  $('routing').innerHTML+=`<div class="section-heading"><div><h2>厂商代理 / 官方通路</h2><p>勾选表示启用，取消勾选表示禁用；可单独调整尝试顺序。未配置密钥或探活判红的通路会自动跳过。</p></div></div><div class="path-policy-grid">${routeCards}</div>`;
   $('routing').querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{const a=chainFor(b.dataset.chain),i=Number(b.dataset.index);if(b.dataset.move==='remove')a.splice(i,1);else{const j=i+Number(b.dataset.move);[a[i],a[j]]=[a[j],a[i]];}renderRouting();updateDirty();});
   $('routing').querySelectorAll('[data-add-chain]').forEach(b=>{
     const select=[...$('routing').querySelectorAll('[data-chain-select]')].find(s=>s.dataset.chainSelect===b.dataset.addChain);
@@ -160,8 +183,8 @@ function renderRouting() {
   });
   $('routing').querySelectorAll('[data-provider-enabled]').forEach(b=>b.onchange=()=>{state.config.providers[Number(b.dataset.providerEnabled)].in_fallback_chain=b.checked;updateDirty();});
   $('routing').querySelectorAll('[data-provider-move]').forEach(b=>b.onclick=()=>{const a=state.config.providers,i=Number(b.dataset.providerMove),j=i+Number(b.dataset.direction);[a[i],a[j]]=[a[j],a[i]];renderRouting();updateDirty();});
-  $('routing').querySelectorAll('[data-route-move]').forEach(b=>b.onclick=()=>{const policy=state.config.path_policies[b.dataset.provider],i=Number(b.dataset.index),j=i+Number(b.dataset.direction);if(!policy.order.length)policy.order=(pathCatalog[b.dataset.provider]||[]).map(([id])=>id);[policy.order[i],policy.order[j]]=[policy.order[j],policy.order[i]];renderRouting();updateDirty();});
-  $('routing').querySelectorAll('[data-route-disabled]').forEach(b=>b.onchange=()=>{const policy=state.config.path_policies[b.dataset.provider],items=new Set(policy.disabled),id=b.dataset.routeDisabled;if(b.checked)items.add(id);else items.delete(id);policy.disabled=[...items];renderRouting();updateDirty();});
+  $('routing').querySelectorAll('[data-route-move]').forEach(b=>b.onclick=()=>{const policy=state.config.path_policies[b.dataset.provider],i=Number(b.dataset.index),j=i+Number(b.dataset.direction);policy.order=orderedRouteIds(b.dataset.provider);[policy.order[i],policy.order[j]]=[policy.order[j],policy.order[i]];renderRouting();updateDirty();});
+  $('routing').querySelectorAll('[data-route-enabled]').forEach(b=>b.onchange=()=>{const policy=state.config.path_policies[b.dataset.provider],items=new Set(policy.disabled),id=b.dataset.routeEnabled;if(b.checked)items.delete(id);else items.add(id);policy.disabled=[...items];renderRouting();updateDirty();});
 }
 function renderSettings() {
   if (!state.config) return;

@@ -56,7 +56,7 @@ def _target(models: list[str] | None = None, **overrides) -> dict:
     models = list(models or ["claude-haiku-4-5", "claude-opus-5-5"])
     target = {
         "provider": "claude",
-        "name": "Proxy 1 Base",
+        "name": "Codeyu Base",
         "base_url": "https://proxy.example/v1",
         "api_key": "sk-ant-0123456789abcdef",
         "protocol": "anthropic",
@@ -230,14 +230,14 @@ class CollectTargetsTest(unittest.TestCase):
                 mod,
                 "build_claude_proxy_configs_for_model",
                 lambda model_id: [
-                    {"name": "Proxy 1 Base", "base_url": "https://p1.example/v1", "api_key": "sk-p1"},
+                    {"name": "Codeyu Base", "base_url": "https://p1.example/v1", "api_key": "sk-p1"},
                 ],
             ),
             mock.patch.object(
                 mod,
                 "build_gemini_paths",
                 lambda api_key, proxies: [
-                    {"name": "Gemini Proxy", "base_url": "https://g.example", "api_key": "sk-g", "protocol": "gemini"},
+                    {"name": "Codeyu", "base_url": "https://g.example", "api_key": "sk-g", "protocol": "gemini"},
                     {
                         "name": "OpenRouter",
                         "base_url": "https://openrouter.ai/api/v1",
@@ -325,7 +325,7 @@ class CollectTargetsTest(unittest.TestCase):
             self.assertEqual(len(target["models"]), len(set(target["models"])))
 
     def test_claude_proxy_has_7_models(self):
-        target = self._by("claude", "Proxy 1 Base")
+        target = self._by("claude", "Codeyu Base")
         self.assertEqual(len(target["models"]), 7)
         self.assertIn("claude-haiku-4-5-20251001", target["models"])
 
@@ -625,7 +625,7 @@ class OutputsSchemaTest(unittest.TestCase):
         self.assertEqual(provider["models_total"], 7)
         self.assertEqual(provider["models_ok"], 2)
 
-        path = provider["paths"]["Proxy 1 Base"]
+        path = provider["paths"]["Codeyu Base"]
         for key in ("models_total", "models_ok", "models", "model_check_method", "key_masked"):
             self.assertIn(key, path)
         self.assertEqual(path["models_total"], 2)
@@ -638,7 +638,7 @@ class OutputsSchemaTest(unittest.TestCase):
 
         on_disk = json.loads((self.tmp / "provider_health.json").read_text(encoding="utf-8"))
         self.assertEqual(on_disk["schema"], 4)
-        self.assertEqual(on_disk["providers"]["claude"]["paths"]["Proxy 1 Base"]["models_ok"], 2)
+        self.assertEqual(on_disk["providers"]["claude"]["paths"]["Codeyu Base"]["models_ok"], 2)
 
     def test_markdown_has_all_model_matrix(self):
         report = self.tmp / "latest.md"
@@ -669,7 +669,7 @@ class OutputsSchemaTest(unittest.TestCase):
                 "providers",
             },
         )
-        path_entry = entry["paths"]["claude/Proxy 1 Base"]
+        path_entry = entry["paths"]["claude/Codeyu Base"]
         self.assertEqual(
             set(path_entry), {"severity", "ok", "verdict", "latency_ms", "models_ok", "models_total"}
         )
@@ -703,7 +703,7 @@ class OutputsSchemaTest(unittest.TestCase):
         provider = payload["providers"]["claude"]
         self.assertEqual(provider["models_total"], 7)
         self.assertEqual(provider["models_ok"], 0, "warn 不计入 provider 模型覆盖")
-        path = provider["paths"]["Proxy 1 Base"]
+        path = provider["paths"]["Codeyu Base"]
         self.assertEqual(path["models_total"], 2)
         self.assertEqual(path["models_ok"], 0, "warn 不计入路径模型覆盖")
         self.assertIs(path["ok"], True, "warn 通路仍照常调用（gate 语义不变）")
@@ -715,7 +715,7 @@ class OutputsSchemaTest(unittest.TestCase):
 
         history = mod.build_history_entry(self.context, payload)
         self.assertEqual(history["providers"]["claude"]["models_ok"], 0)
-        self.assertEqual(history["paths"]["claude/Proxy 1 Base"]["models_ok"], 0)
+        self.assertEqual(history["paths"]["claude/Codeyu Base"]["models_ok"], 0)
         on_disk = json.loads(json_path.read_text(encoding="utf-8"))
         self.assertEqual(on_disk["providers"]["claude"]["models_ok"], 0)
 
@@ -733,11 +733,11 @@ class OutputsSchemaTest(unittest.TestCase):
         report_path = self.tmp / "ban.md"
         payload = mod.write_outputs(json_path, report_path, self.context, [item])
 
-        path = payload["providers"]["claude"]["paths"]["Proxy 1 Base"]
+        path = payload["providers"]["claude"]["paths"]["Codeyu Base"]
         self.assertIs(path["ok"], False, "全部模型 model_not_found → 通路红（外层 ban）")
         self.assertEqual(path["severity"], "red")
         self.assertEqual(path["models_ok"], 0)
-        self.assertEqual(payload["summary"]["red"], ["claude/Proxy 1 Base"])
+        self.assertEqual(payload["summary"]["red"], ["claude/Codeyu Base"])
         text = report_path.read_text(encoding="utf-8")
         self.assertIn("❌ 红（外层 ban 掉）", text)
         self.assertIn("模型级 ban", text)
@@ -842,7 +842,7 @@ class CliTest(unittest.TestCase):
             payload = json.loads(json_path.read_text(encoding="utf-8"))
             self.assertEqual(payload["schema"], 4)
             self.assertEqual(payload["deployment"], "tenshi")
-            self.assertEqual(payload["providers"]["claude"]["paths"]["Proxy 1 Base"]["models_ok"], 1)
+            self.assertEqual(payload["providers"]["claude"]["paths"]["Codeyu Base"]["models_ok"], 1)
             history_lines = history_path.read_text(encoding="utf-8").splitlines()
             self.assertEqual(len(history_lines), 1)
             self.assertEqual(json.loads(history_lines[0])["deployment"], "tenshi")

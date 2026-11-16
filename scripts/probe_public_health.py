@@ -110,13 +110,23 @@ def sanitize(raw, instance, run_id, config_bytes):
 def sanitize_call_history(path: Path | None) -> dict:
     """Publish only the last-100 provider/path counters; no prompt, model or output."""
     allowed = {
-        "claude": {"proxy3", "proxy1_base", "proxy1_prime", "proxy1_max", "proxy2", "openrouter", "official"},
-        "gemini": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
-        "gpt": {"proxy3", "proxy1", "proxy2", "openrouter", "official"},
-        "grok": {"proxy2", "proxy1", "openrouter", "official"},
+        "claude": {
+            "totokens",
+            "codeyu_base",
+            "codeyu_prime",
+            "codeyu_max",
+            "coderplan",
+            "openrouter",
+            "official",
+        },
+        "gemini": {"totokens", "codeyu", "coderplan", "openrouter", "official"},
+        "gpt": {"totokens", "codeyu", "coderplan", "openrouter", "official"},
+        "grok": {"codeyu", "totokens", "coderplan", "openrouter", "official"},
         "deepseek": {"official", "fireworks_pro", "openrouter"},
-        "glm": {"official", "openrouter"}, "qwen": {"official"},
-        "magmarouter": {"official"}, "openrouter": {"official"},
+        "glm": {"official", "openrouter"},
+        "qwen": {"official"},
+        "magmarouter": {"official"},
+        "openrouter": {"official"},
     }
     try:
         rows = json.loads(path.read_text(encoding="utf-8")) if path and path.is_file() else []
@@ -127,6 +137,18 @@ def sanitize_call_history(path: Path | None) -> dict:
     # The private runtime retains a 100-attempt window per provider. Apply the
     # same bound here for older files before producing public aggregate counts.
     per_provider = {}
+    legacy = {
+        "claude": {
+            "proxy3": "totokens",
+            "proxy1_base": "codeyu_base",
+            "proxy1_prime": "codeyu_prime",
+            "proxy1_max": "codeyu_max",
+            "proxy2": "coderplan",
+        },
+        "gemini": {"proxy3": "totokens", "proxy1": "codeyu", "proxy2": "coderplan"},
+        "gpt": {"proxy3": "totokens", "proxy1": "codeyu", "proxy2": "coderplan"},
+        "grok": {"proxy2": "totokens", "proxy1": "coderplan"},
+    }
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -139,9 +161,16 @@ def sanitize_call_history(path: Path | None) -> dict:
     accepted = 0
     for row in rows:
         provider, route, outcome = row.get("provider"), row.get("route"), row.get("outcome")
-        if provider not in allowed or route not in allowed[provider] or outcome not in ("success", "failure"):
+        route = legacy.get(provider, {}).get(route, route)
+        if (
+            provider not in allowed
+            or route not in allowed[provider]
+            or outcome not in ("success", "failure")
+        ):
             continue
-        stats = counts.setdefault(provider, {}).setdefault(route, {"calls": 0, "success": 0, "failure": 0})
+        stats = counts.setdefault(provider, {}).setdefault(
+            route, {"calls": 0, "success": 0, "failure": 0}
+        )
         stats["calls"] += 1
         stats[outcome] += 1
         accepted += 1

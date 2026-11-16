@@ -128,7 +128,7 @@ def _payload() -> dict:
                 "paths": dict(
                     [
                         _path(
-                            "Proxy 1 Base",
+                            "Codeyu Base",
                             "claude-haiku-4-5",
                             "green",
                             "ok",
@@ -140,7 +140,7 @@ def _payload() -> dict:
                             _checks(),
                         ),
                         _path(
-                            "Proxy 2",
+                            "CoderPlan",
                             "claude-haiku-4-5",
                             "warn",
                             "model_not_found",
@@ -182,11 +182,11 @@ def _payload() -> dict:
                 "paths": dict(
                     [
                         _path(
-                            "Gemini Proxy|旧",
+                            "Codeyu|旧",
                             "gemini-3.5-flash-lite",
                             "not_configured",
                             "not_configured",
-                            "未配置 GEMINI_PROXY_KEY / GEMINI_PROXY_BASE_URL",
+                            "未配置 GEMINI_CODEYU_API_KEY / GEMINI_CODEYU_BASE_URL",
                             {},
                             {},
                             key_masked="",
@@ -241,7 +241,7 @@ def _history_record(index: int, claude_severity: str, deepseek_severity: str) ->
             "claude": {
                 "enabled": claude_severity != "red",
                 "paths": {
-                    "Proxy 1 Base": {
+                    "Codeyu Base": {
                         "ok": claude_severity != "red",
                         "severity": claude_severity,
                         "verdict": "ok" if claude_severity != "red" else "auth_denied",
@@ -332,8 +332,8 @@ class DashboardTest(unittest.TestCase):
         self.assertIn("当前矩阵：通路 × 模型", html_text)
         self.assertIn("claude-sonnet-4-6", html_text)
         self.assertIn("deepseek-reasoner", html_text)
-        self.assertIn("Proxy 1 Base", html_text)
-        self.assertIn("Gemini Proxy|旧", html_text)
+        self.assertIn("Codeyu Base", html_text)
+        self.assertIn("Codeyu|旧", html_text)
 
 
         self.assertIn("逐通路细节", html_text)
@@ -393,7 +393,7 @@ class DashboardTest(unittest.TestCase):
         _, md_text = self.render(_payload(), [])
 
         self.assertIn("deepseek\\|坏名字", md_text)
-        self.assertIn("Gemini Proxy\\|旧", md_text)
+        self.assertIn("Codeyu\\|旧", md_text)
         for line in md_text.splitlines():
             if line.startswith("|"):
                 self.assertTrue(line.rstrip().endswith("|"), f"markdown 表格行未闭合：{line}")
@@ -449,7 +449,7 @@ class DashboardTest(unittest.TestCase):
             "run_id": "40700999999",
             "probe_method": "official_non_call",
             "paths": {
-                "claude/Proxy 1 Base": {"ok": True, "severity": "green", "verdict": "ok"},
+                "claude/Codeyu Base": {"ok": True, "severity": "green", "verdict": "ok"},
                 "claude/Official": {"ok": False, "severity": "red", "verdict": "auth_denied"},
                 "deepseek/Official": {
                     "ok": True,
@@ -467,7 +467,7 @@ class DashboardTest(unittest.TestCase):
         html_text, md_text = self.render(_payload(), [json.dumps(record, ensure_ascii=False)])
 
         self.assertIn("<svg", html_text)
-        self.assertIn("Proxy 1 Base", html_text)
+        self.assertIn("Codeyu Base", html_text)
         self.assertIn("deepseek", md_text)
         self.assertIn("❌", md_text)
         self.assertIn("⚠️", md_text)
@@ -538,7 +538,7 @@ class DashboardTest(unittest.TestCase):
     def test_checks_use_verdict_text_field(self) -> None:
 
         payload = _payload()
-        payload["providers"]["claude"]["paths"]["Proxy 1 Base"]["checks"]["network"] = {
+        payload["providers"]["claude"]["paths"]["Codeyu Base"]["checks"]["network"] = {
             "ok": True,
             "verdict": "ok",
             "severity": "green",
@@ -568,7 +568,7 @@ class DashboardTest(unittest.TestCase):
                         "generated_at_utc": f"2026-10-28T1{i}:00:00+00:00",
                         "generated_at_bj": f"2026-10-28 1{i}:00:00",
                         "environment": "容器",
-                        "paths": {"claude/Proxy 1 Base": {"ok": severity != "red", "severity": severity, "verdict": "ok"}},
+                        "paths": {"claude/Codeyu Base": {"ok": severity != "red", "severity": severity, "verdict": "ok"}},
                         "providers": {"claude": {"ok": 1, "total": 1}},
                     },
                     ensure_ascii=False,

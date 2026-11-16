@@ -39,7 +39,7 @@ if SRC not in sys.path:
     sys.path.insert(0, SRC)
 
 
-for _k in ("GEMINI_OFFICIAL_KEY", "CLAUDE_PROXY_KEY", "OPENROUTER_API_KEY"):
+for _k in ("GEMINI_OFFICIAL_KEY", "CLAUDE_CODEYU_BASE_API_KEY", "OPENROUTER_API_KEY"):
     os.environ.setdefault(_k, "dummy-test-key")
 
 NOTE_FUNCS = (

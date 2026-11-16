@@ -50,26 +50,25 @@ jobs:
       cancel-in-progress: false
     env:
       CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-      CLAUDE_PROXY_BASE_URL: ${{ secrets.CLAUDE_PROXY_BASE_URL }}
-      CLAUDE_PROXY_KEY: ${{ secrets.CLAUDE_PROXY_KEY }}
-      CLAUDE_PROXY_KEY_2: ${{ secrets.CLAUDE_PROXY_KEY_2 }}
-      CLAUDE_PROXY_KEY_BASE: ${{ secrets.CLAUDE_PROXY_KEY_BASE }}
-      CLAUDE_PROXY_KEY_MAX: ${{ secrets.CLAUDE_PROXY_KEY_MAX }}
-      CLAUDE_PROXY_KEY_PRIME: ${{ secrets.CLAUDE_PROXY_KEY_PRIME }}
+      CLAUDE_CODEYU_BASE_API_KEY: ${{ secrets.CLAUDE_CODEYU_BASE_API_KEY }}
+      CLAUDE_CODERPLAN_API_KEY: ${{ secrets.CLAUDE_CODERPLAN_API_KEY }}
+      CLAUDE_CODEYU_MAX_API_KEY: ${{ secrets.CLAUDE_CODEYU_MAX_API_KEY }}
+      CLAUDE_CODEYU_PRIME_API_KEY: ${{ secrets.CLAUDE_CODEYU_PRIME_API_KEY }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_PROXY2_KEY: ${{ secrets.GEMINI_PROXY2_KEY }}
-      GEMINI_PROXY_KEY: ${{ secrets.GEMINI_PROXY_KEY }}
+      GEMINI_CODERPLAN_API_KEY: ${{ secrets.GEMINI_CODERPLAN_API_KEY }}
+      GEMINI_CODEYU_API_KEY: ${{ secrets.GEMINI_CODEYU_API_KEY }}
       GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
       GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
-      GPT_PROXY2_KEY: ${{ secrets.GPT_PROXY2_KEY }}
-      GPT_PROXY_KEY: ${{ secrets.GPT_PROXY_KEY }}
+      GPT_CODERPLAN_API_KEY: ${{ secrets.GPT_CODERPLAN_API_KEY }}
+      GPT_CODEYU_API_KEY: ${{ secrets.GPT_CODEYU_API_KEY }}
+      GROK_CODEYU_API_KEY: ${{ secrets.GROK_CODEYU_API_KEY }}
       GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
-      GROK_PROXY_KEY: ${{ secrets.GROK_PROXY_KEY }}
-      CLAUDE_PROXY_KEY_3: ${{ secrets.CLAUDE_PROXY_KEY_3 }}
-      GEMINI_PROXY3_KEY: ${{ secrets.GEMINI_PROXY3_KEY }}
-      GPT_PROXY3_KEY: ${{ secrets.GPT_PROXY3_KEY }}
-      GROK_PROXY2_KEY: ${{ secrets.GROK_PROXY2_KEY }}
+      GROK_CODERPLAN_API_KEY: ${{ secrets.GROK_CODERPLAN_API_KEY }}
+      CLAUDE_TOTOKENS_API_KEY: ${{ secrets.CLAUDE_TOTOKENS_API_KEY }}
+      GEMINI_TOTOKENS_API_KEY: ${{ secrets.GEMINI_TOTOKENS_API_KEY }}
+      GPT_TOTOKENS_API_KEY: ${{ secrets.GPT_TOTOKENS_API_KEY }}
+      GROK_TOTOKENS_API_KEY: ${{ secrets.GROK_TOTOKENS_API_KEY }}
       MAGMAROUTER_API_KEY: ${{ secrets.MAGMAROUTER_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}

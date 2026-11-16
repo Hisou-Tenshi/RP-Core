@@ -76,7 +76,7 @@ class ProviderHealthGateTest(unittest.TestCase):
                 "claude": {
                     "enabled": True,
                     "paths": {
-                        "Proxy 1 Base": {"ok": True, "verdict": "ok"},
+                        "Codeyu Base": {"ok": True, "verdict": "ok"},
                         "Official": {"ok": False, "verdict": "auth_denied"},
                     },
                 },
@@ -90,10 +90,10 @@ class ProviderHealthGateTest(unittest.TestCase):
 
     def test_green_red_and_unknown(self):
         self._healthy()
-        self.assertIs(provider_health.path_state("claude", "Proxy 1 Base"), True)
+        self.assertIs(provider_health.path_state("claude", "Codeyu Base"), True)
         self.assertIs(provider_health.path_state("claude", "Official"), False)
 
-        self.assertIsNone(provider_health.path_state("claude", "Proxy 2"))
+        self.assertIsNone(provider_health.path_state("claude", "CoderPlan"))
         self.assertIsNone(provider_health.path_state("grok", "Official"))
 
     def test_provider_enabled_reflects_category(self):
@@ -105,9 +105,9 @@ class ProviderHealthGateTest(unittest.TestCase):
 
     def test_filter_paths_drops_red(self):
         self._healthy()
-        paths = [{"name": "Proxy 1 Base"}, {"name": "Official"}, {"name": "Proxy 2"}]
+        paths = [{"name": "Codeyu Base"}, {"name": "Official"}, {"name": "CoderPlan"}]
         kept = provider_health.filter_paths("claude", paths)
-        self.assertEqual([p["name"] for p in kept], ["Proxy 1 Base", "Proxy 2"])
+        self.assertEqual([p["name"] for p in kept], ["Codeyu Base", "CoderPlan"])
 
     def test_filter_paths_can_empty_the_list(self):
         self._healthy()
@@ -116,7 +116,7 @@ class ProviderHealthGateTest(unittest.TestCase):
     def test_key_or_blank_blanks_red_only(self):
         self._healthy()
         self.assertEqual(provider_health.key_or_blank("claude", "Official", "sk-real"), "")
-        self.assertEqual(provider_health.key_or_blank("claude", "Proxy 1 Base", "sk-real"), "sk-real")
+        self.assertEqual(provider_health.key_or_blank("claude", "Codeyu Base", "sk-real"), "sk-real")
         self.assertEqual(provider_health.key_or_blank("claude", "没探过", "sk-real"), "sk-real")
 
 
@@ -150,7 +150,7 @@ class ProviderHealthGateTest(unittest.TestCase):
         text = provider_health.describe()
         self.assertIn("claude", text)
         self.assertIn("Official", text)
-        self.assertIn("Proxy 1 Base", text)
+        self.assertIn("Codeyu Base", text)
 
     def test_describe_without_data(self):
         provider_health.reset_cache()
@@ -187,7 +187,7 @@ class ProviderHealthModelLevelTest(unittest.TestCase):
                 "claude": {
                     "enabled": True,
                     "paths": {
-                        "Proxy 1 Base": {
+                        "Codeyu Base": {
                             "ok": True,
                             "verdict": "ok",
                             "models": {
@@ -201,7 +201,7 @@ class ProviderHealthModelLevelTest(unittest.TestCase):
                             },
                         },
 
-                        "Proxy 2": {"ok": True, "verdict": "ok"},
+                        "CoderPlan": {"ok": True, "verdict": "ok"},
                     },
                 },
             },
@@ -211,41 +211,41 @@ class ProviderHealthModelLevelTest(unittest.TestCase):
 
     def test_model_path_state_three_states(self):
         self._with_models()
-        self.assertIs(provider_health.model_path_state("claude", "Proxy 1 Base", "claude-sonnet-5-5"), False)
-        self.assertIs(provider_health.model_path_state("claude", "Proxy 1 Base", "claude-opus-5"), True)
+        self.assertIs(provider_health.model_path_state("claude", "Codeyu Base", "claude-sonnet-5-5"), False)
+        self.assertIs(provider_health.model_path_state("claude", "Codeyu Base", "claude-opus-5"), True)
 
-        self.assertIsNone(provider_health.model_path_state("claude", "Proxy 1 Base", "claude-haiku-5-5"))
+        self.assertIsNone(provider_health.model_path_state("claude", "Codeyu Base", "claude-haiku-5-5"))
 
-        self.assertIsNone(provider_health.model_path_state("claude", "Proxy 1 Base", "claude-opus-5-5"))
-        self.assertIsNone(provider_health.model_path_state("claude", "Proxy 2", "claude-sonnet-5-5"))
-        self.assertIsNone(provider_health.model_path_state("claude", "Proxy 2", None))
+        self.assertIsNone(provider_health.model_path_state("claude", "Codeyu Base", "claude-opus-5-5"))
+        self.assertIsNone(provider_health.model_path_state("claude", "CoderPlan", "claude-sonnet-5-5"))
+        self.assertIsNone(provider_health.model_path_state("claude", "CoderPlan", None))
 
     def test_filter_paths_with_model_drops_only_banned_combo(self):
         self._with_models()
-        paths = [{"name": "Proxy 1 Base"}, {"name": "Proxy 2"}]
+        paths = [{"name": "Codeyu Base"}, {"name": "CoderPlan"}]
         kept = provider_health.filter_paths("claude", paths, model="claude-sonnet-5-5")
-        self.assertEqual([p["name"] for p in kept], ["Proxy 2"])
+        self.assertEqual([p["name"] for p in kept], ["CoderPlan"])
 
         kept_opus = provider_health.filter_paths("claude", [dict(p) for p in paths], model="claude-opus-5")
-        self.assertEqual([p["name"] for p in kept_opus], ["Proxy 1 Base", "Proxy 2"])
+        self.assertEqual([p["name"] for p in kept_opus], ["Codeyu Base", "CoderPlan"])
 
     def test_filter_paths_without_model_keeps_banned_model_paths(self):
         self._with_models()
-        paths = [{"name": "Proxy 1 Base"}, {"name": "Proxy 2"}]
+        paths = [{"name": "Codeyu Base"}, {"name": "CoderPlan"}]
         kept = provider_health.filter_paths("claude", paths)
-        self.assertEqual([p["name"] for p in kept], ["Proxy 1 Base", "Proxy 2"])
+        self.assertEqual([p["name"] for p in kept], ["Codeyu Base", "CoderPlan"])
 
     def test_model_level_stale_and_missing_are_fail_open(self):
         self._with_models(age_hours=provider_health.MAX_AGE_HOURS + 1)
-        self.assertIsNone(provider_health.model_path_state("claude", "Proxy 1 Base", "claude-sonnet-5-5"))
+        self.assertIsNone(provider_health.model_path_state("claude", "Codeyu Base", "claude-sonnet-5-5"))
         self.assertEqual(
-            [p["name"] for p in provider_health.filter_paths("claude", [{"name": "Proxy 1 Base"}], model="claude-sonnet-5-5")],
-            ["Proxy 1 Base"],
+            [p["name"] for p in provider_health.filter_paths("claude", [{"name": "Codeyu Base"}], model="claude-sonnet-5-5")],
+            ["Codeyu Base"],
         )
         provider_health.reset_cache()
         self.path.unlink()
         provider_health.reset_cache()
-        self.assertIsNone(provider_health.model_path_state("claude", "Proxy 1 Base", "claude-sonnet-5-5"))
+        self.assertIsNone(provider_health.model_path_state("claude", "Codeyu Base", "claude-sonnet-5-5"))
 
 
 class ProviderHealthWiringTest(unittest.TestCase):

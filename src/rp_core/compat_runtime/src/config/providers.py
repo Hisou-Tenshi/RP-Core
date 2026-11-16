@@ -1,28 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import os
@@ -32,7 +10,6 @@ from dataclasses import dataclass
 from config.env_boot import PROJECT_ROOT
 
 __all__ = [
-
     "GEMINI_API_KEY",
     "CLAUDE_API_KEY",
     "GROK_API_KEY",
@@ -55,38 +32,38 @@ __all__ = [
     "FIREWORKS_DEEPSEEK_V4_FLASH_MODEL",
     "CLAUDE_OFFICIAL_BASE_URL",
     "GEMINI_OFFICIAL_BASE_URL",
-
-    "CLAUDE_PROXY_BASE_URL",
-    "CLAUDE_PROXY_KEY_BASE",
-    "CLAUDE_PROXY_KEY_PRIME",
-    "CLAUDE_PROXY_KEY_MAX",
-    "CLAUDE_PROXY_BASE_URL_2",
-    "CLAUDE_PROXY_KEY_2",
-    "CLAUDE_PROXY1_TIERS",
-    "CLAUDE_PROXY2",
+    "CLAUDE_CODEYU_BASE_URL",
+    "CLAUDE_CODEYU_BASE_API_KEY",
+    "CLAUDE_CODEYU_PRIME_API_KEY",
+    "CLAUDE_CODEYU_MAX_API_KEY",
+    "CLAUDE_CODERPLAN_BASE_URL",
+    "CLAUDE_CODERPLAN_API_KEY",
+    "CLAUDE_CODEYU_TIERS",
+    "CLAUDE_CODERPLAN",
     "CLAUDE_PROXIES",
-
-    "GEMINI_PROXY_BASE_URL",
-    "GEMINI_PROXY_KEY",
-    "GEMINI_PROXY",
-    "GEMINI_PROXY2_BASE_URL",
-    "GEMINI_PROXY2_KEY",
-    "GEMINI_PROXY2",
+    "GEMINI_CODEYU_BASE_URL",
+    "GEMINI_CODEYU_API_KEY",
+    "GEMINI_CODEYU",
+    "GEMINI_CODERPLAN_BASE_URL",
+    "GEMINI_CODERPLAN_API_KEY",
+    "GEMINI_CODERPLAN",
     "GEMINI_OPENROUTER",
     "GEMINI_PROXIES",
-    "GPT_PROXY_BASE_URL",
-    "GPT_PROXY_KEY",
-    "GPT_PROXY",
-    "GPT_PROXY2_BASE_URL",
-    "GPT_PROXY2_KEY",
-    "GPT_PROXY2",
+    "GPT_CODEYU_BASE_URL",
+    "GPT_CODEYU_API_KEY",
+    "GPT_CODEYU",
+    "GPT_CODERPLAN_BASE_URL",
+    "GPT_CODERPLAN_API_KEY",
+    "GPT_CODERPLAN",
     "GPT_PROXIES",
-    "GROK_PROXY_BASE_URL",
-    "GROK_PROXY_KEY",
-    "GROK_PROXY",
+    "GROK_CODEYU_BASE_URL",
+    "GROK_CODEYU_API_KEY",
+    "GROK_CODEYU",
+    "GROK_CODERPLAN_BASE_URL",
+    "GROK_CODERPLAN_API_KEY",
+    "GROK_CODERPLAN",
     "GROK_PROXIES",
     "DEEPSEEK_PROXIES",
-
     "ProviderPathPolicy",
     "PROVIDER_PATH_POLICIES",
     "PROVIDER_PROXIES",
@@ -108,19 +85,17 @@ def _env(*names: str, default: str | None = None) -> str | None:
     return default
 
 
-
-
-
-
-
-CLAUDE_OFFICIAL_BASE_URL = _env("CLAUDE_OFFICIAL_BASE_URL", "CLAUDE_BASE_URL", default="https://api.anthropic.com")
+CLAUDE_OFFICIAL_BASE_URL = _env(
+    "CLAUDE_OFFICIAL_BASE_URL", "CLAUDE_BASE_URL", default="https://api.anthropic.com"
+)
 GEMINI_OFFICIAL_BASE_URL = _env(
-    "GEMINI_OFFICIAL_BASE_URL", "GEMINI_BASE_URL", default="https://generativelanguage.googleapis.com"
+    "GEMINI_OFFICIAL_BASE_URL",
+    "GEMINI_BASE_URL",
+    default="https://generativelanguage.googleapis.com",
 )
 
 
-
-CODERPLAN_DEFAULT_BASE_URL = _env("CODERPLAN_PROXY_BASE_URL", default="https://api.coderplan.ai")
+CODERPLAN_DEFAULT_BASE_URL = "https://api.coderplan.ai"
 
 
 def _ensure_openai_v1(url: str | None) -> str | None:
@@ -132,18 +107,13 @@ def _ensure_openai_v1(url: str | None) -> str | None:
     探活拼 ``{base}/models`` 同样 404,还会被 fail-open 记成「没结论」。
     这里只看字符串(不发网络请求):已含 ``/v1`` 的原样返回,否则末尾拼 ``/v1``。
 
-    只用于 GPT 代理1 / GPT 代理2 / Grok 这几条 OpenAI 兼容代理。Claude 代理2 / Gemini 代理2
+    只用于 GPT / Grok 的 OpenAI 兼容代理。Claude / Gemini 的 CoderPlan 通路
     虽然同为 coderplan 域名,但协议客户端自己会带 ``/v1`` / ``/v1beta``,不能套这条规则。
     """
     if not url:
         return url
     base = url.rstrip("/")
     return base if "/v1" in base else base + "/v1"
-
-
-
-
-
 
 
 GEMINI_API_KEY = _env("GEMINI_API_KEY")
@@ -158,9 +128,6 @@ GROK_BASE_URL = _env("GROK_BASE_URL", default="https://api.x.ai/v1")
 
 DEEPSEEK_API_KEY = _env("DEEPSEEK_API_KEY")
 DEEPSEEK_BASE_URL = _env("DEEPSEEK_BASE_URL", default="https://api.deepseek.com")
-
-
-
 
 
 FIREWORKS_API_KEY = _env("FIREWORKS_API_KEY")
@@ -182,9 +149,7 @@ GLM_BASE_URL = _env("GLM_BASE_URL", default="https://open.bigmodel.cn/api/paas/v
 
 
 QWEN_API_KEY = _env("QWEN_API_KEY", "QWEN_KEY")
-QWEN_BASE_URL = _env(
-    "QWEN_BASE_URL", default="https://maas.qianwenaiapi.com/compatible-mode/v1"
-)
+QWEN_BASE_URL = _env("QWEN_BASE_URL", default="https://maas.qianwenaiapi.com/compatible-mode/v1")
 
 
 MAGMAROUTER_API_KEY = _env("MAGMAROUTER_API_KEY")
@@ -195,124 +160,123 @@ OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = _env("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
 
 
+CLAUDE_CODEYU_BASE_URL = _env("CLAUDE_CODEYU_BASE_URL")
+CLAUDE_CODEYU_BASE_API_KEY = _env("CLAUDE_CODEYU_BASE_API_KEY")
+CLAUDE_CODEYU_PRIME_API_KEY = _env("CLAUDE_CODEYU_PRIME_API_KEY")
+CLAUDE_CODEYU_MAX_API_KEY = _env("CLAUDE_CODEYU_MAX_API_KEY")
 
 
+CLAUDE_CODERPLAN_BASE_URL = _env("CLAUDE_CODERPLAN_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL)
+CLAUDE_CODERPLAN_API_KEY = _env("CLAUDE_CODERPLAN_API_KEY")
 
-
-CLAUDE_PROXY_BASE_URL = _env("CLAUDE_PROXY_BASE_URL")
-CLAUDE_PROXY_KEY_BASE = _env("CLAUDE_PROXY_KEY_BASE", "CLAUDE_PROXY_KEY")
-CLAUDE_PROXY_KEY_PRIME = _env("CLAUDE_PROXY_KEY_PRIME")
-CLAUDE_PROXY_KEY_MAX = _env("CLAUDE_PROXY_KEY_MAX")
-
-
-CLAUDE_PROXY_BASE_URL_2 = _env(
-    "CLAUDE_PROXY_BASE_URL_2", default=CODERPLAN_DEFAULT_BASE_URL
+# To-Tokens is first in the fallback order; route labels use the upstream site.
+CLAUDE_TOTOKENS_BASE_URL = _env("CLAUDE_TOTOKENS_BASE_URL", default="https://drc.totokens.cc")
+CLAUDE_TOTOKENS_API_KEY = _env("CLAUDE_TOTOKENS_API_KEY")
+CLAUDE_TOTOKENS = (
+    {
+        "name": "To-Tokens",
+        "api_key": CLAUDE_TOTOKENS_API_KEY,
+        "route_id": "totokens",
+        "base_url": CLAUDE_TOTOKENS_BASE_URL,
+    }
+    if CLAUDE_TOTOKENS_API_KEY and CLAUDE_TOTOKENS_BASE_URL
+    else None
 )
-CLAUDE_PROXY_KEY_2 = _env("CLAUDE_PROXY_KEY_2")
 
-# Numbering follows creation order; this newer route is tried before older proxies.
-CLAUDE_PROXY_BASE_URL_3 = _env("CLAUDE_PROXY_BASE_URL_3", default="https://drc.totokens.cc")
-CLAUDE_PROXY_KEY_3 = _env("CLAUDE_PROXY_KEY_3")
-CLAUDE_PROXY3 = ({"name": "Proxy 3", "api_key": CLAUDE_PROXY_KEY_3,
-                  "route_id": "proxy3", "base_url": CLAUDE_PROXY_BASE_URL_3}
-                 if CLAUDE_PROXY_KEY_3 and CLAUDE_PROXY_BASE_URL_3 else None)
-
-CLAUDE_PROXY1_TIERS: dict[str, dict] = {}
-if CLAUDE_PROXY_BASE_URL:
-    if CLAUDE_PROXY_KEY_BASE:
-        CLAUDE_PROXY1_TIERS["base"] = {
-            "name": "Proxy 1 Base",
-            "route_id": "proxy1_base",
-            "api_key": CLAUDE_PROXY_KEY_BASE,
-            "base_url": CLAUDE_PROXY_BASE_URL,
+CLAUDE_CODEYU_TIERS: dict[str, dict] = {}
+if CLAUDE_CODEYU_BASE_URL:
+    if CLAUDE_CODEYU_BASE_API_KEY:
+        CLAUDE_CODEYU_TIERS["base"] = {
+            "name": "Codeyu Base",
+            "route_id": "codeyu_base",
+            "api_key": CLAUDE_CODEYU_BASE_API_KEY,
+            "base_url": CLAUDE_CODEYU_BASE_URL,
         }
-    if CLAUDE_PROXY_KEY_PRIME:
-        CLAUDE_PROXY1_TIERS["prime"] = {
-            "name": "Proxy 1 Prime",
-            "route_id": "proxy1_prime",
-            "api_key": CLAUDE_PROXY_KEY_PRIME,
-            "base_url": CLAUDE_PROXY_BASE_URL,
+    if CLAUDE_CODEYU_PRIME_API_KEY:
+        CLAUDE_CODEYU_TIERS["prime"] = {
+            "name": "Codeyu Prime",
+            "route_id": "codeyu_prime",
+            "api_key": CLAUDE_CODEYU_PRIME_API_KEY,
+            "base_url": CLAUDE_CODEYU_BASE_URL,
         }
-    if CLAUDE_PROXY_KEY_MAX:
-        CLAUDE_PROXY1_TIERS["max"] = {
-            "name": "Proxy 1 Max",
-            "route_id": "proxy1_max",
-            "api_key": CLAUDE_PROXY_KEY_MAX,
-            "base_url": CLAUDE_PROXY_BASE_URL,
+    if CLAUDE_CODEYU_MAX_API_KEY:
+        CLAUDE_CODEYU_TIERS["max"] = {
+            "name": "Codeyu Max",
+            "route_id": "codeyu_max",
+            "api_key": CLAUDE_CODEYU_MAX_API_KEY,
+            "base_url": CLAUDE_CODEYU_BASE_URL,
         }
 
-CLAUDE_PROXY2: dict | None = None
-if CLAUDE_PROXY_KEY_2 and CLAUDE_PROXY_BASE_URL_2:
-    CLAUDE_PROXY2 = {
-        "name": "Proxy 2",
-        "route_id": "proxy2",
-        "api_key": CLAUDE_PROXY_KEY_2,
-        "base_url": CLAUDE_PROXY_BASE_URL_2,
+CLAUDE_CODERPLAN: dict | None = None
+if CLAUDE_CODERPLAN_API_KEY and CLAUDE_CODERPLAN_BASE_URL:
+    CLAUDE_CODERPLAN = {
+        "name": "CoderPlan",
+        "route_id": "coderplan",
+        "api_key": CLAUDE_CODERPLAN_API_KEY,
+        "base_url": CLAUDE_CODERPLAN_BASE_URL,
     }
 
 
 _PROXY_CONFIG_WARNINGS: list[str] = []
-if CLAUDE_PROXY_BASE_URL and not any(
-    (CLAUDE_PROXY_KEY_BASE, CLAUDE_PROXY_KEY_PRIME, CLAUDE_PROXY_KEY_MAX)
+if CLAUDE_CODEYU_BASE_URL and not any(
+    (CLAUDE_CODEYU_BASE_API_KEY, CLAUDE_CODEYU_PRIME_API_KEY, CLAUDE_CODEYU_MAX_API_KEY)
 ):
     _PROXY_CONFIG_WARNINGS.append(
-        "CLAUDE_PROXY_BASE_URL 已设置但没有任何 Proxy 1 档位 key：Proxy 1 被静默禁用。"
+        "CLAUDE_CODEYU_BASE_URL 已设置但没有任何 Codeyu 档位 key：Codeyu 被静默禁用。"
     )
 
 
 CLAUDE_PROXIES: list[dict] = []
-if CLAUDE_PROXY3 is not None:
-    CLAUDE_PROXIES.append(dict(CLAUDE_PROXY3))
+if CLAUDE_TOTOKENS is not None:
+    CLAUDE_PROXIES.append(dict(CLAUDE_TOTOKENS))
 for _tier in ("base", "prime", "max"):
-    if _tier in CLAUDE_PROXY1_TIERS:
+    if _tier in CLAUDE_CODEYU_TIERS:
         CLAUDE_PROXIES.append(
             {
-                "name": "Proxy 1",
-                "route_id": f"proxy1_{_tier}",
-                "api_key": CLAUDE_PROXY1_TIERS[_tier]["api_key"],
-                "base_url": CLAUDE_PROXY1_TIERS[_tier]["base_url"],
+                "name": "Codeyu",
+                "route_id": f"codeyu_{_tier}",
+                "api_key": CLAUDE_CODEYU_TIERS[_tier]["api_key"],
+                "base_url": CLAUDE_CODEYU_TIERS[_tier]["base_url"],
             }
         )
         break
-if CLAUDE_PROXY2 is not None:
-    CLAUDE_PROXIES.append(dict(CLAUDE_PROXY2))
+if CLAUDE_CODERPLAN is not None:
+    CLAUDE_PROXIES.append(dict(CLAUDE_CODERPLAN))
 
 
-
-
-
-
-
-
-GEMINI_PROXY_BASE_URL = _env("GEMINI_PROXY_BASE_URL", default="https://codeyu.shop")
-GEMINI_PROXY_KEY = _env("GEMINI_PROXY_KEY") or GEMINI_API_KEY
-GEMINI_PROXY: dict | None = None
-if GEMINI_PROXY_BASE_URL and GEMINI_PROXY_KEY:
-    GEMINI_PROXY = {
-        "name": "Gemini Proxy",
-        "route_id": "proxy1",
-        "api_key": GEMINI_PROXY_KEY,
-        "base_url": GEMINI_PROXY_BASE_URL,
+GEMINI_CODEYU_BASE_URL = _env("GEMINI_CODEYU_BASE_URL", default="https://codeyu.shop")
+GEMINI_CODEYU_API_KEY = _env("GEMINI_CODEYU_API_KEY")
+GEMINI_CODEYU: dict | None = None
+if GEMINI_CODEYU_BASE_URL and GEMINI_CODEYU_API_KEY:
+    GEMINI_CODEYU = {
+        "name": "Codeyu",
+        "route_id": "codeyu",
+        "api_key": GEMINI_CODEYU_API_KEY,
+        "base_url": GEMINI_CODEYU_BASE_URL,
     }
 
 
-
-GEMINI_PROXY2_BASE_URL = _env(
-    "GEMINI_PROXY2_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL
+GEMINI_CODERPLAN_BASE_URL = _env("GEMINI_CODERPLAN_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL)
+GEMINI_CODERPLAN_API_KEY = _env("GEMINI_CODERPLAN_API_KEY")
+GEMINI_TOTOKENS_BASE_URL = _env("GEMINI_TOTOKENS_BASE_URL", default="https://drc.totokens.cc")
+GEMINI_TOTOKENS_API_KEY = _env("GEMINI_TOTOKENS_API_KEY")
+GEMINI_TOTOKENS = (
+    {
+        "name": "To-Tokens",
+        "api_key": GEMINI_TOTOKENS_API_KEY,
+        "route_id": "totokens",
+        "base_url": GEMINI_TOTOKENS_BASE_URL,
+    }
+    if GEMINI_TOTOKENS_API_KEY and GEMINI_TOTOKENS_BASE_URL
+    else None
 )
-GEMINI_PROXY2_KEY = _env("GEMINI_PROXY2_KEY")
-GEMINI_PROXY3_BASE_URL = _env("GEMINI_PROXY3_BASE_URL", default="https://drc.totokens.cc")
-GEMINI_PROXY3_KEY = _env("GEMINI_PROXY3_KEY")
-GEMINI_PROXY3 = ({"name": "Gemini Proxy 3", "api_key": GEMINI_PROXY3_KEY,
-                  "route_id": "proxy3", "base_url": GEMINI_PROXY3_BASE_URL}
-                 if GEMINI_PROXY3_KEY and GEMINI_PROXY3_BASE_URL else None)
-GEMINI_PROXY2: dict | None = None
-if GEMINI_PROXY2_KEY and GEMINI_PROXY2_BASE_URL:
-    GEMINI_PROXY2 = {
-        "name": "Gemini Proxy 2",
-        "route_id": "proxy2",
-        "api_key": GEMINI_PROXY2_KEY,
-        "base_url": GEMINI_PROXY2_BASE_URL,
+GEMINI_CODERPLAN: dict | None = None
+if GEMINI_CODERPLAN_API_KEY and GEMINI_CODERPLAN_BASE_URL:
+    GEMINI_CODERPLAN = {
+        "name": "CoderPlan",
+        "route_id": "coderplan",
+        "api_key": GEMINI_CODERPLAN_API_KEY,
+        "base_url": GEMINI_CODERPLAN_BASE_URL,
     }
 
 
@@ -329,108 +293,127 @@ if OPENROUTER_API_KEY and OPENROUTER_BASE_URL:
 
 
 GEMINI_PROXIES: list[dict] = []
-if GEMINI_PROXY3 is not None:
-    GEMINI_PROXIES.append(dict(GEMINI_PROXY3))
-if GEMINI_PROXY is not None:
-    GEMINI_PROXIES.append(dict(GEMINI_PROXY))
-if GEMINI_PROXY2 is not None:
-    GEMINI_PROXIES.append(dict(GEMINI_PROXY2))
+if GEMINI_TOTOKENS is not None:
+    GEMINI_PROXIES.append(dict(GEMINI_TOTOKENS))
+if GEMINI_CODEYU is not None:
+    GEMINI_PROXIES.append(dict(GEMINI_CODEYU))
+if GEMINI_CODERPLAN is not None:
+    GEMINI_PROXIES.append(dict(GEMINI_CODERPLAN))
 
-if GEMINI_PROXY2_BASE_URL and not GEMINI_PROXY2_KEY:
-
-    if GEMINI_PROXY2_BASE_URL != CODERPLAN_DEFAULT_BASE_URL:
+if GEMINI_CODERPLAN_BASE_URL and not GEMINI_CODERPLAN_API_KEY:
+    if GEMINI_CODERPLAN_BASE_URL != CODERPLAN_DEFAULT_BASE_URL:
         _PROXY_CONFIG_WARNINGS.append(
-            "GEMINI_PROXY2_BASE_URL 已设置但 GEMINI_PROXY2_KEY 缺失：Gemini 第二代理被禁用。"
+            "GEMINI_CODERPLAN_BASE_URL 已设置但 GEMINI_CODERPLAN_API_KEY 缺失：Gemini CoderPlan 被禁用。"
         )
 
 
-
-
-
-
-
-
-
-
-
-GPT_PROXY_BASE_URL = _ensure_openai_v1(
-    _env("GPT_PROXY_BASE_URL", default="https://codeyu.shop/v1")
+GPT_CODEYU_BASE_URL = _ensure_openai_v1(
+    _env("GPT_CODEYU_BASE_URL", default="https://codeyu.shop/v1")
 )
-GPT_PROXY_KEY = _env("GPT_PROXY_KEY")
-GPT_PROXY: dict | None = None
-if GPT_PROXY_KEY and GPT_PROXY_BASE_URL:
-    GPT_PROXY = {
-        "name": "GPT Proxy",
-        "route_id": "proxy1",
-        "api_key": GPT_PROXY_KEY,
-        "base_url": GPT_PROXY_BASE_URL,
+GPT_CODEYU_API_KEY = _env("GPT_CODEYU_API_KEY")
+GPT_CODEYU: dict | None = None
+if GPT_CODEYU_API_KEY and GPT_CODEYU_BASE_URL:
+    GPT_CODEYU = {
+        "name": "Codeyu",
+        "route_id": "codeyu",
+        "api_key": GPT_CODEYU_API_KEY,
+        "base_url": GPT_CODEYU_BASE_URL,
     }
 
 
-
-GPT_PROXY2_BASE_URL = _ensure_openai_v1(
-    _env("GPT_PROXY2_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL)
+GPT_CODERPLAN_BASE_URL = _ensure_openai_v1(
+    _env("GPT_CODERPLAN_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL)
 )
-GPT_PROXY2_KEY = _env("GPT_PROXY2_KEY")
-GPT_PROXY3_BASE_URL = _ensure_openai_v1(_env("GPT_PROXY3_BASE_URL", default="https://drc.totokens.cc/v1"))
-GPT_PROXY3_KEY = _env("GPT_PROXY3_KEY")
-GPT_PROXY3_PROTOCOL = _env("GPT_PROXY3_PROTOCOL", default="responses")
-GPT_PROXY3 = ({"name": "GPT Proxy 3", "api_key": GPT_PROXY3_KEY,
-               "route_id": "proxy3", "base_url": GPT_PROXY3_BASE_URL, "protocol": GPT_PROXY3_PROTOCOL}
-              if GPT_PROXY3_KEY and GPT_PROXY3_BASE_URL else None)
-GPT_PROXY2: dict | None = None
-if GPT_PROXY2_KEY and GPT_PROXY2_BASE_URL:
-    GPT_PROXY2 = {
-        "name": "GPT Proxy 2",
-        "route_id": "proxy2",
-        "api_key": GPT_PROXY2_KEY,
-        "base_url": GPT_PROXY2_BASE_URL,
+GPT_CODERPLAN_API_KEY = _env("GPT_CODERPLAN_API_KEY")
+GPT_TOTOKENS_BASE_URL = _ensure_openai_v1(
+    _env("GPT_TOTOKENS_BASE_URL", default="https://drc.totokens.cc/v1")
+)
+GPT_TOTOKENS_API_KEY = _env("GPT_TOTOKENS_API_KEY")
+GPT_TOTOKENS_PROTOCOL = _env("GPT_TOTOKENS_PROTOCOL", default="responses")
+GPT_TOTOKENS = (
+    {
+        "name": "To-Tokens",
+        "api_key": GPT_TOTOKENS_API_KEY,
+        "route_id": "totokens",
+        "base_url": GPT_TOTOKENS_BASE_URL,
+        "protocol": GPT_TOTOKENS_PROTOCOL,
+    }
+    if GPT_TOTOKENS_API_KEY and GPT_TOTOKENS_BASE_URL
+    else None
+)
+GPT_CODERPLAN: dict | None = None
+if GPT_CODERPLAN_API_KEY and GPT_CODERPLAN_BASE_URL:
+    GPT_CODERPLAN = {
+        "name": "CoderPlan",
+        "route_id": "coderplan",
+        "api_key": GPT_CODERPLAN_API_KEY,
+        "base_url": GPT_CODERPLAN_BASE_URL,
     }
 
 
 GPT_PROXIES: list[dict] = []
-if GPT_PROXY3 is not None:
-    GPT_PROXIES.append(dict(GPT_PROXY3))
-if GPT_PROXY is not None:
-    GPT_PROXIES.append(dict(GPT_PROXY))
-if GPT_PROXY2 is not None:
-    GPT_PROXIES.append(dict(GPT_PROXY2))
+if GPT_TOTOKENS is not None:
+    GPT_PROXIES.append(dict(GPT_TOTOKENS))
+if GPT_CODEYU is not None:
+    GPT_PROXIES.append(dict(GPT_CODEYU))
+if GPT_CODERPLAN is not None:
+    GPT_PROXIES.append(dict(GPT_CODERPLAN))
 
-if GPT_PROXY2_BASE_URL and not GPT_PROXY2_KEY:
-
-    if GPT_PROXY2_BASE_URL != _ensure_openai_v1(CODERPLAN_DEFAULT_BASE_URL):
+if GPT_CODERPLAN_BASE_URL and not GPT_CODERPLAN_API_KEY:
+    if GPT_CODERPLAN_BASE_URL != _ensure_openai_v1(CODERPLAN_DEFAULT_BASE_URL):
         _PROXY_CONFIG_WARNINGS.append(
-            "GPT_PROXY2_BASE_URL 已设置但 GPT_PROXY2_KEY 缺失:GPT 第二代理被禁用。"
+            "GPT_CODERPLAN_BASE_URL 已设置但 GPT_CODERPLAN_API_KEY 缺失:GPT CoderPlan 被禁用。"
         )
 
 
-GROK_PROXY_BASE_URL = _ensure_openai_v1(
-    _env("GROK_PROXY_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL)
+GROK_CODEYU_BASE_URL = _ensure_openai_v1(
+    _env("GROK_CODEYU_BASE_URL", default="https://codeyu.shop/v1")
 )
-GROK_PROXY_KEY = _env("GROK_PROXY_KEY")
-GROK_PROXY: dict | None = None
-if GROK_PROXY_KEY and GROK_PROXY_BASE_URL:
-    GROK_PROXY = {
-        "name": "Grok Proxy",
-        "route_id": "proxy1",
-        "api_key": GROK_PROXY_KEY,
-        "base_url": GROK_PROXY_BASE_URL,
+GROK_CODEYU_API_KEY = _env("GROK_CODEYU_API_KEY")
+GROK_CODEYU: dict | None = None
+if GROK_CODEYU_API_KEY and GROK_CODEYU_BASE_URL:
+    GROK_CODEYU = {
+        "name": "Codeyu",
+        "route_id": "codeyu",
+        "api_key": GROK_CODEYU_API_KEY,
+        "base_url": GROK_CODEYU_BASE_URL,
     }
-GROK_PROXIES: list[dict] = [dict(GROK_PROXY)] if GROK_PROXY is not None else []
-GROK_PROXY2_BASE_URL = _ensure_openai_v1(_env("GROK_PROXY2_BASE_URL", default="https://drc.totokens.cc/v1"))
-GROK_PROXY2_KEY = _env("GROK_PROXY2_KEY")
-GROK_PROXY2_PROTOCOL = _env("GROK_PROXY2_PROTOCOL", default="responses")
-GROK_PROXY2 = ({"name": "Grok Proxy 2", "api_key": GROK_PROXY2_KEY,
-                "route_id": "proxy2", "base_url": GROK_PROXY2_BASE_URL, "protocol": GROK_PROXY2_PROTOCOL}
-               if GROK_PROXY2_KEY and GROK_PROXY2_BASE_URL else None)
-if GROK_PROXY2 is not None:
-    GROK_PROXIES.insert(0, dict(GROK_PROXY2))
 
-
-
-
-
-
+GROK_CODERPLAN_BASE_URL = _ensure_openai_v1(
+    _env("GROK_CODERPLAN_BASE_URL", default=CODERPLAN_DEFAULT_BASE_URL)
+)
+GROK_CODERPLAN_API_KEY = _env("GROK_CODERPLAN_API_KEY")
+GROK_CODERPLAN: dict | None = None
+if GROK_CODERPLAN_API_KEY and GROK_CODERPLAN_BASE_URL:
+    GROK_CODERPLAN = {
+        "name": "CoderPlan",
+        "route_id": "coderplan",
+        "api_key": GROK_CODERPLAN_API_KEY,
+        "base_url": GROK_CODERPLAN_BASE_URL,
+    }
+GROK_PROXIES: list[dict] = []
+GROK_TOTOKENS_BASE_URL = _ensure_openai_v1(
+    _env("GROK_TOTOKENS_BASE_URL", default="https://drc.totokens.cc/v1")
+)
+GROK_TOTOKENS_API_KEY = _env("GROK_TOTOKENS_API_KEY")
+GROK_TOTOKENS_PROTOCOL = _env("GROK_TOTOKENS_PROTOCOL", default="responses")
+GROK_TOTOKENS = (
+    {
+        "name": "To-Tokens",
+        "api_key": GROK_TOTOKENS_API_KEY,
+        "route_id": "totokens",
+        "base_url": GROK_TOTOKENS_BASE_URL,
+        "protocol": GROK_TOTOKENS_PROTOCOL,
+    }
+    if GROK_TOTOKENS_API_KEY and GROK_TOTOKENS_BASE_URL
+    else None
+)
+if GROK_TOTOKENS is not None:
+    GROK_PROXIES.append(dict(GROK_TOTOKENS))
+if GROK_CODERPLAN is not None:
+    GROK_PROXIES.append(dict(GROK_CODERPLAN))
+if GROK_CODEYU is not None:
+    GROK_PROXIES.insert(0, dict(GROK_CODEYU))
 
 
 DEEPSEEK_PROXIES: list[dict] = []
@@ -443,21 +426,6 @@ if FIREWORKS_API_KEY and FIREWORKS_BASE_URL:
             "base_url": FIREWORKS_BASE_URL,
         }
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @dataclass(frozen=True)
@@ -493,7 +461,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "anthropic/",
         True,
-        "代理3 → 代理1 三档 → 代理2 → OpenRouter → 官方(官方仅 sonnet 系列)",
+        "To-Tokens → Codeyu 三档 → CoderPlan → OpenRouter → 官方(官方仅 sonnet 系列)",
     ),
     "gemini": ProviderPathPolicy(
         "gemini",
@@ -501,7 +469,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "google/",
         True,
-        "Gemini 代理3 → Gemini 代理1 → Gemini 代理2 → OpenRouter → 官方",
+        "To-Tokens → Codeyu → CoderPlan → OpenRouter → 官方",
     ),
     "grok": ProviderPathPolicy(
         "grok",
@@ -509,7 +477,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "x-ai/",
         True,
-        "Grok 代理2 → Grok 代理1 → OpenRouter → 官方",
+        "Codeyu → To-Tokens → CoderPlan → OpenRouter → 官方",
     ),
     "gpt": ProviderPathPolicy(
         "gpt",
@@ -517,7 +485,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "OpenAI",
         "openai/",
         True,
-        "GPT 代理3 → 代理1(codeyu.shop/v1)→ 代理2(coderplan/v1)→ OpenRouter → 官方",
+        "To-Tokens → Codeyu → CoderPlan→ OpenRouter → 官方",
     ),
     "deepseek": ProviderPathPolicy(
         "deepseek",
@@ -567,16 +535,25 @@ PROVIDER_PATH_ORDER: dict[str, tuple[str, ...]] = {
 }
 
 PROVIDER_ROUTE_CATALOG = {
-    "claude": ("proxy3", "proxy1_base", "proxy1_prime", "proxy1_max", "proxy2", "openrouter", "official"),
-    "gemini": ("proxy3", "proxy1", "proxy2", "openrouter", "official"),
-    "gpt": ("proxy3", "proxy1", "proxy2", "openrouter", "official"),
-    "grok": ("proxy2", "proxy1", "openrouter", "official"),
+    "claude": (
+        "totokens",
+        "codeyu_base",
+        "codeyu_prime",
+        "codeyu_max",
+        "coderplan",
+        "openrouter",
+        "official",
+    ),
+    "gemini": ("totokens", "codeyu", "coderplan", "openrouter", "official"),
+    "gpt": ("totokens", "codeyu", "coderplan", "openrouter", "official"),
+    "grok": ("codeyu", "totokens", "coderplan", "openrouter", "official"),
     "deepseek": ("official", "fireworks_pro", "openrouter"),
     "glm": ("official", "openrouter"),
     "qwen": ("official",),
     "magmarouter": ("official",),
     "openrouter": ("official",),
 }
+
 
 def _load_provider_route_policies():
     try:
@@ -595,6 +572,7 @@ def _load_provider_route_policies():
             disabled = []
         result[provider] = {"order": tuple(order), "disabled": frozenset(disabled)}
     return result
+
 
 PROVIDER_ROUTE_POLICIES = _load_provider_route_policies()
 
@@ -622,7 +600,6 @@ def proxy_config_warnings() -> list[str]:
     return list(_PROXY_CONFIG_WARNINGS)
 
 
-
 if _PROXY_CONFIG_WARNINGS:
     import logging as _logging
     import sys as _sys
@@ -632,64 +609,284 @@ if _PROXY_CONFIG_WARNINGS:
         print(f"[proxy-config] WARNING: {_w}", file=_sys.stderr, flush=True)
 
 
-
-
-
-
-
-
-
 PROXY_ENV_SPECS: list[dict] = [
-
-    {"provider": "claude", "proxy": "Proxy 1 Base", "role": "url", "env": "CLAUDE_PROXY_BASE_URL", "default": ""},
-    {"provider": "claude", "proxy": "Proxy 1 Base", "role": "key", "env": "CLAUDE_PROXY_KEY_BASE", "default": "", "fallback_env": "CLAUDE_PROXY_KEY"},
-    {"provider": "claude", "proxy": "Proxy 1 Prime", "role": "key", "env": "CLAUDE_PROXY_KEY_PRIME", "default": ""},
-    {"provider": "claude", "proxy": "Proxy 1 Max", "role": "key", "env": "CLAUDE_PROXY_KEY_MAX", "default": ""},
-
-    {"provider": "claude", "proxy": "Proxy 2", "role": "url", "env": "CLAUDE_PROXY_BASE_URL_2", "default": "https://api.coderplan.ai"},
-    {"provider": "claude", "proxy": "Proxy 2", "role": "key", "env": "CLAUDE_PROXY_KEY_2", "default": ""},
-
-    {"provider": "gemini", "proxy": "Gemini Proxy", "role": "url", "env": "GEMINI_PROXY_BASE_URL", "default": "https://codeyu.shop"},
-    {"provider": "gemini", "proxy": "Gemini Proxy", "role": "key", "env": "GEMINI_PROXY_KEY", "default": "(fallback: GEMINI_API_KEY)"},
-    {"provider": "gemini", "proxy": "Gemini Proxy 2", "role": "url", "env": "GEMINI_PROXY2_BASE_URL", "default": "https://api.coderplan.ai"},
-    {"provider": "gemini", "proxy": "Gemini Proxy 2", "role": "key", "env": "GEMINI_PROXY2_KEY", "default": ""},
-
-    {"provider": "gpt", "proxy": "GPT Proxy", "role": "url", "env": "GPT_PROXY_BASE_URL", "default": "https://codeyu.shop/v1"},
-    {"provider": "gpt", "proxy": "GPT Proxy", "role": "key", "env": "GPT_PROXY_KEY", "default": ""},
-    {"provider": "gpt", "proxy": "GPT Proxy 2", "role": "url", "env": "GPT_PROXY2_BASE_URL", "default": "https://api.coderplan.ai/v1"},
-    {"provider": "gpt", "proxy": "GPT Proxy 2", "role": "key", "env": "GPT_PROXY2_KEY", "default": ""},
-
-    {"provider": "grok", "proxy": "Grok Proxy", "role": "url", "env": "GROK_PROXY_BASE_URL", "default": "https://api.coderplan.ai/v1"},
-    {"provider": "grok", "proxy": "Grok Proxy", "role": "key", "env": "GROK_PROXY_KEY", "default": ""},
-
-    {"provider": "deepseek", "proxy": "Fireworks DeepSeek Pro", "role": "url", "env": "FIREWORKS_BASE_URL", "default": ""},
-    {"provider": "deepseek", "proxy": "Fireworks DeepSeek Pro", "role": "key", "env": "FIREWORKS_API_KEY", "default": ""},
-
-    {"provider": "claude", "proxy": "Official", "role": "url", "env": "CLAUDE_OFFICIAL_BASE_URL", "default": "https://api.anthropic.com"},
-    {"provider": "gemini", "proxy": "Official", "role": "url", "env": "GEMINI_OFFICIAL_BASE_URL", "default": "https://generativelanguage.googleapis.com"},
-    {"provider": "gpt", "proxy": "OpenAI", "role": "url", "env": "GPT_BASE_URL", "default": "https://api.openai.com/v1"},
-    {"provider": "grok", "proxy": "Official", "role": "url", "env": "GROK_BASE_URL", "default": "https://api.x.ai/v1"},
-    {"provider": "deepseek", "proxy": "Official", "role": "url", "env": "DEEPSEEK_BASE_URL", "default": "https://api.deepseek.com"},
-    {"provider": "glm", "proxy": "Official", "role": "url", "env": "GLM_BASE_URL", "default": "https://open.bigmodel.cn/api/paas/v4"},
-    {"provider": "qwen", "proxy": "Official", "role": "url", "env": "QWEN_BASE_URL", "default": "https://maas.qianwenaiapi.com/compatible-mode/v1"},
-    {"provider": "magmarouter", "proxy": "MagmaRouter", "role": "url", "env": "MAGMAROUTER_BASE_URL", "default": "https://api.magmarouter.com/v1"},
-    {"provider": "openrouter", "proxy": "OpenRouter", "role": "url", "env": "OPENROUTER_BASE_URL", "default": "https://openrouter.ai/api/v1"},
+    {
+        "provider": "claude",
+        "proxy": "Codeyu Base",
+        "role": "url",
+        "env": "CLAUDE_CODEYU_BASE_URL",
+        "default": "",
+    },
+    {
+        "provider": "claude",
+        "proxy": "Codeyu Base",
+        "role": "key",
+        "env": "CLAUDE_CODEYU_BASE_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "claude",
+        "proxy": "Codeyu Prime",
+        "role": "key",
+        "env": "CLAUDE_CODEYU_PRIME_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "claude",
+        "proxy": "Codeyu Max",
+        "role": "key",
+        "env": "CLAUDE_CODEYU_MAX_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "claude",
+        "proxy": "CoderPlan",
+        "role": "url",
+        "env": "CLAUDE_CODERPLAN_BASE_URL",
+        "default": "https://api.coderplan.ai",
+    },
+    {
+        "provider": "claude",
+        "proxy": "CoderPlan",
+        "role": "key",
+        "env": "CLAUDE_CODERPLAN_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "Codeyu",
+        "role": "url",
+        "env": "GEMINI_CODEYU_BASE_URL",
+        "default": "https://codeyu.shop",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "Codeyu",
+        "role": "key",
+        "env": "GEMINI_CODEYU_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "CoderPlan",
+        "role": "url",
+        "env": "GEMINI_CODERPLAN_BASE_URL",
+        "default": "https://api.coderplan.ai",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "CoderPlan",
+        "role": "key",
+        "env": "GEMINI_CODERPLAN_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "Codeyu",
+        "role": "url",
+        "env": "GPT_CODEYU_BASE_URL",
+        "default": "https://codeyu.shop/v1",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "Codeyu",
+        "role": "key",
+        "env": "GPT_CODEYU_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "CoderPlan",
+        "role": "url",
+        "env": "GPT_CODERPLAN_BASE_URL",
+        "default": "https://api.coderplan.ai/v1",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "CoderPlan",
+        "role": "key",
+        "env": "GPT_CODERPLAN_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "grok",
+        "proxy": "Codeyu",
+        "role": "url",
+        "env": "GROK_CODEYU_BASE_URL",
+        "default": "https://codeyu.shop/v1",
+    },
+    {
+        "provider": "grok",
+        "proxy": "Codeyu",
+        "role": "key",
+        "env": "GROK_CODEYU_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "grok",
+        "proxy": "CoderPlan",
+        "role": "url",
+        "env": "GROK_CODERPLAN_BASE_URL",
+        "default": "https://api.coderplan.ai/v1",
+    },
+    {
+        "provider": "grok",
+        "proxy": "CoderPlan",
+        "role": "key",
+        "env": "GROK_CODERPLAN_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "deepseek",
+        "proxy": "Fireworks DeepSeek Pro",
+        "role": "url",
+        "env": "FIREWORKS_BASE_URL",
+        "default": "",
+    },
+    {
+        "provider": "deepseek",
+        "proxy": "Fireworks DeepSeek Pro",
+        "role": "key",
+        "env": "FIREWORKS_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "claude",
+        "proxy": "Official",
+        "role": "url",
+        "env": "CLAUDE_OFFICIAL_BASE_URL",
+        "default": "https://api.anthropic.com",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "Official",
+        "role": "url",
+        "env": "GEMINI_OFFICIAL_BASE_URL",
+        "default": "https://generativelanguage.googleapis.com",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "OpenAI",
+        "role": "url",
+        "env": "GPT_BASE_URL",
+        "default": "https://api.openai.com/v1",
+    },
+    {
+        "provider": "grok",
+        "proxy": "Official",
+        "role": "url",
+        "env": "GROK_BASE_URL",
+        "default": "https://api.x.ai/v1",
+    },
+    {
+        "provider": "deepseek",
+        "proxy": "Official",
+        "role": "url",
+        "env": "DEEPSEEK_BASE_URL",
+        "default": "https://api.deepseek.com",
+    },
+    {
+        "provider": "glm",
+        "proxy": "Official",
+        "role": "url",
+        "env": "GLM_BASE_URL",
+        "default": "https://open.bigmodel.cn/api/paas/v4",
+    },
+    {
+        "provider": "qwen",
+        "proxy": "Official",
+        "role": "url",
+        "env": "QWEN_BASE_URL",
+        "default": "https://maas.qianwenaiapi.com/compatible-mode/v1",
+    },
+    {
+        "provider": "magmarouter",
+        "proxy": "MagmaRouter",
+        "role": "url",
+        "env": "MAGMAROUTER_BASE_URL",
+        "default": "https://api.magmarouter.com/v1",
+    },
+    {
+        "provider": "openrouter",
+        "proxy": "OpenRouter",
+        "role": "url",
+        "env": "OPENROUTER_BASE_URL",
+        "default": "https://openrouter.ai/api/v1",
+    },
 ]
 
 __all__ += ["_PROXY_CONFIG_WARNINGS"]
 __all__ += [
-    "CLAUDE_PROXY_BASE_URL_3", "CLAUDE_PROXY_KEY_3", "CLAUDE_PROXY3",
-    "GEMINI_PROXY3_BASE_URL", "GEMINI_PROXY3_KEY", "GEMINI_PROXY3",
-    "GPT_PROXY3_BASE_URL", "GPT_PROXY3_KEY", "GPT_PROXY3_PROTOCOL", "GPT_PROXY3",
-    "GROK_PROXY2_BASE_URL", "GROK_PROXY2_KEY", "GROK_PROXY2_PROTOCOL", "GROK_PROXY2",
+    "CLAUDE_TOTOKENS_BASE_URL",
+    "CLAUDE_TOTOKENS_API_KEY",
+    "CLAUDE_TOTOKENS",
+    "GEMINI_TOTOKENS_BASE_URL",
+    "GEMINI_TOTOKENS_API_KEY",
+    "GEMINI_TOTOKENS",
+    "GPT_TOTOKENS_BASE_URL",
+    "GPT_TOTOKENS_API_KEY",
+    "GPT_TOTOKENS_PROTOCOL",
+    "GPT_TOTOKENS",
+    "GROK_TOTOKENS_BASE_URL",
+    "GROK_TOTOKENS_API_KEY",
+    "GROK_TOTOKENS_PROTOCOL",
+    "GROK_TOTOKENS",
 ]
 PROXY_ENV_SPECS += [
-    {"provider": "claude", "proxy": "Proxy 3", "role": "url", "env": "CLAUDE_PROXY_BASE_URL_3", "default": "https://drc.totokens.cc"},
-    {"provider": "claude", "proxy": "Proxy 3", "role": "key", "env": "CLAUDE_PROXY_KEY_3", "default": ""},
-    {"provider": "gemini", "proxy": "Gemini Proxy 3", "role": "url", "env": "GEMINI_PROXY3_BASE_URL", "default": "https://drc.totokens.cc"},
-    {"provider": "gemini", "proxy": "Gemini Proxy 3", "role": "key", "env": "GEMINI_PROXY3_KEY", "default": ""},
-    {"provider": "gpt", "proxy": "GPT Proxy 3", "role": "url", "env": "GPT_PROXY3_BASE_URL", "default": "https://drc.totokens.cc/v1"},
-    {"provider": "gpt", "proxy": "GPT Proxy 3", "role": "key", "env": "GPT_PROXY3_KEY", "default": ""},
-    {"provider": "grok", "proxy": "Grok Proxy 2", "role": "url", "env": "GROK_PROXY2_BASE_URL", "default": "https://drc.totokens.cc/v1"},
-    {"provider": "grok", "proxy": "Grok Proxy 2", "role": "key", "env": "GROK_PROXY2_KEY", "default": ""},
+    {
+        "provider": "claude",
+        "proxy": "To-Tokens",
+        "role": "url",
+        "env": "CLAUDE_TOTOKENS_BASE_URL",
+        "default": "https://drc.totokens.cc",
+    },
+    {
+        "provider": "claude",
+        "proxy": "To-Tokens",
+        "role": "key",
+        "env": "CLAUDE_TOTOKENS_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "To-Tokens",
+        "role": "url",
+        "env": "GEMINI_TOTOKENS_BASE_URL",
+        "default": "https://drc.totokens.cc",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "To-Tokens",
+        "role": "key",
+        "env": "GEMINI_TOTOKENS_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "To-Tokens",
+        "role": "url",
+        "env": "GPT_TOTOKENS_BASE_URL",
+        "default": "https://drc.totokens.cc/v1",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "To-Tokens",
+        "role": "key",
+        "env": "GPT_TOTOKENS_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "grok",
+        "proxy": "To-Tokens",
+        "role": "url",
+        "env": "GROK_TOTOKENS_BASE_URL",
+        "default": "https://drc.totokens.cc/v1",
+    },
+    {
+        "provider": "grok",
+        "proxy": "To-Tokens",
+        "role": "key",
+        "env": "GROK_TOTOKENS_API_KEY",
+        "default": "",
+    },
 ]
