@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-16T09:20:54+00:00",
+  "generated_at_utc": "2026-11-16T09:34:32+00:00",
   "window_per_provider": 100,
-  "sample_size": 10,
+  "sample_size": 16,
   "providers": {
     "claude": {
       "codeyu_base": {
@@ -13,6 +13,11 @@
       "codeyu_prime": {
         "calls": 2,
         "success": 2,
+        "failure": 0
+      },
+      "totokens": {
+        "calls": 4,
+        "success": 4,
         "failure": 0
       }
     },
@@ -25,8 +30,8 @@
     },
     "gpt": {
       "totokens": {
-        "calls": 2,
-        "success": 2,
+        "calls": 4,
+        "success": 4,
         "failure": 0
       }
     }
