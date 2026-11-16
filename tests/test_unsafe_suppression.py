@@ -94,13 +94,23 @@ def compat(tmp_path_factory):
     patch.setenv("ADMIN_ID", "1")
     sys.path.insert(0, str(COMPAT_SRC))
     try:
+        try:
+            perception_layer = importlib.import_module("perception_layer")
+            tenshi_reply = importlib.import_module("tenshi_reply")
+            reply_two_stage = importlib.import_module("reply_two_stage")
+            tenshi_config = importlib.import_module("tenshi_config")
+            telegram_tenshi_logger = importlib.import_module("telegram_tenshi_logger")
+        except ImportError as exc:
+            # CI 的 test job 只装 dev extra；只有 full-runtime job 装了 full extra，
+            # 这些端到端用例才有 telegram / google-genai 等可选依赖可跑。
+            pytest.skip(f"compat runtime optional dependency missing: {exc}")
         modules = SimpleNamespace(
             root=root,
-            perception_layer=importlib.import_module("perception_layer"),
-            tenshi_reply=importlib.import_module("tenshi_reply"),
-            reply_two_stage=importlib.import_module("reply_two_stage"),
-            tenshi_config=importlib.import_module("tenshi_config"),
-            telegram_tenshi_logger=importlib.import_module("telegram_tenshi_logger"),
+            perception_layer=perception_layer,
+            tenshi_reply=tenshi_reply,
+            reply_two_stage=reply_two_stage,
+            tenshi_config=tenshi_config,
+            telegram_tenshi_logger=telegram_tenshi_logger,
         )
         yield modules
     finally:
