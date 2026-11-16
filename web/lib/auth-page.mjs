@@ -18,7 +18,7 @@ const hints = {
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
-export function renderAuthError({error = '', issue = null, facts = {}} = {}) {
+export function renderAuthError({error = '', issue = null, facts = {}, current = false} = {}) {
   const code = String(error || 'Configuration');
   // Configuration is Auth.js's catch-all; when we captured the real failure, explain that
   // one instead of repeating "something unspecified went wrong".
@@ -75,7 +75,7 @@ a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
     <p>${escape(first)}</p>
     ${second ? `<p>${escape(second)}</p>` : ''}
     ${cause ? `<div class="diag">诊断${when ? `（记录于 ${escape(when)}）` : ''}：${escape(cause)}${detail ? ` — ${escape(detail)}` : ''}</div>` : ''}
-    ${issue ? `<p class="note">这是服务器最近一次记录的登录失败；如果几分钟前你没有重新登录，它可能来自别人的会话。</p>` : ''}
+    ${issue ? `<p class="note">${current ? '这是本次登录尝试失败的原因。' : '这是服务器最近两分钟内记录的登录失败；如果你刚刚没有重新登录，它可能来自其他会话。'}</p>` : ''}
     <h2>GitHub OAuth App 回调地址</h2>
     <p><code>${escape(callbackUrl)}</code></p>
     <h2>当前环境</h2>

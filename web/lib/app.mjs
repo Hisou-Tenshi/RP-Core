@@ -36,7 +36,7 @@ export async function handle(request, {env = process.env, fetcher = fetch, getSe
         const target = new URL(location, origin);
         if (target.origin === origin && target.pathname === '/api/auth/error') {
           return new Response(renderAuthError({error: target.searchParams.get('error') || 'Configuration',
-            issue: lastAuthIssue(120_000), facts: authFacts(env)}),
+            issue: lastAuthIssue(120_000), facts: authFacts(env), current: true}),
             {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Vary': 'Cookie'}});
         }
       }
