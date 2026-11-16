@@ -419,10 +419,10 @@
   "path_policies": {
     "claude": {
       "order": [
+        "totokens",
         "codeyu_base",
         "codeyu_prime",
         "codeyu_max",
-        "totokens",
         "coderplan",
         "openrouter",
         "official"
