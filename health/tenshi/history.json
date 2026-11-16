@@ -3260,5 +3260,251 @@
         }
       }
     }
+  },
+  {
+    "generated_at_utc": "2026-11-16T14:58:26+00:00",
+    "config_sha256": "0adcbc9b7ed9d37f10d39d57d8ab3f47816e481ed95c40624028fb95be9da6ea",
+    "run_id": "43891275172",
+    "providers": {
+      "claude": {
+        "paths": {
+          "To-Tokens": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 245.0,
+            "models_total": 7,
+            "models_ok": 7
+          },
+          "Codeyu Base": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 208.7,
+            "models_total": 7,
+            "models_ok": 5
+          },
+          "Codeyu Prime": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 254.4,
+            "models_total": 7,
+            "models_ok": 7
+          },
+          "Codeyu Max": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 177.0,
+            "models_total": 7,
+            "models_ok": 7
+          },
+          "CoderPlan": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 759.9,
+            "models_total": 7,
+            "models_ok": 6
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 223.2,
+            "models_total": 7,
+            "models_ok": 6
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 149.0,
+            "models_total": 7,
+            "models_ok": 7
+          }
+        }
+      },
+      "gemini": {
+        "paths": {
+          "To-Tokens": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 204.7,
+            "models_total": 6,
+            "models_ok": 6
+          },
+          "Codeyu": {
+            "ok": false,
+            "verdict": "auth_denied",
+            "latency_ms": 221.4,
+            "models_total": 6,
+            "models_ok": 0
+          },
+          "CoderPlan": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 755.8,
+            "models_total": 6,
+            "models_ok": 2
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 88.2,
+            "models_total": 6,
+            "models_ok": 6
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 184.1,
+            "models_total": 6,
+            "models_ok": 6
+          }
+        }
+      },
+      "grok": {
+        "paths": {
+          "Codeyu": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 204.4,
+            "models_total": 2,
+            "models_ok": 1
+          },
+          "To-Tokens": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 217.5,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "CoderPlan": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 759.8,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 37.2,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 65.2,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "deepseek": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 356.6,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 34.6,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "magmarouter": {
+        "paths": {
+          "MagmaRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 629.6,
+            "models_total": 6,
+            "models_ok": 5
+          }
+        }
+      },
+      "gpt": {
+        "paths": {
+          "To-Tokens": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 239.1,
+            "models_total": 1,
+            "models_ok": 1
+          },
+          "Codeyu": {
+            "ok": false,
+            "verdict": "model_not_found",
+            "latency_ms": 209.8,
+            "models_total": 1,
+            "models_ok": 0
+          },
+          "CoderPlan": {
+            "ok": false,
+            "verdict": "model_not_found",
+            "latency_ms": 793.6,
+            "models_total": 1,
+            "models_ok": 0
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 31.7,
+            "models_total": 1,
+            "models_ok": 1
+          },
+          "OpenAI": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 943.6,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      },
+      "glm": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 276.9,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 34.4,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "qwen": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 1188.0,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      },
+      "openrouter": {
+        "paths": {
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "latency_ms": 32.1,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      }
+    }
   }
 ]
