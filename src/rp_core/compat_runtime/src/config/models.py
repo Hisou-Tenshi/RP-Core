@@ -624,7 +624,7 @@ TASK_MODEL_PRIMARY: dict[str, str] = {
 
     "dialog_max": CLAUDE_PRO_MODELS[0],
     "dialog_high": GEMINI_PRO_MODELS[0],
-    "dialog_medium": CLAUDE_FLASH_MODELS[0],
+    "dialog_medium": DIALOG_TIER_MEDIUM_MODELS[0],
 
 
     "image_description": GEMINI_IMAGE_MODELS[0],

@@ -386,7 +386,7 @@
       "gemini-4-carbon"
     ],
     "medium": [
-      "claude-sonnet-5-5"
+      "gemini-3.8-flash"
     ],
     "low": []
   },
