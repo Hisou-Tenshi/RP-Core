@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-17T08:00:58+00:00",
+  "generated_at_utc": "2026-11-17T21:00:26+00:00",
   "window_per_provider": 100,
-  "sample_size": 122,
+  "sample_size": 161,
   "providers": {
     "claude": {
       "codeyu_base": {
@@ -16,42 +16,42 @@
         "failure": 0
       },
       "totokens": {
-        "calls": 26,
-        "success": 26,
+        "calls": 32,
+        "success": 32,
         "failure": 0
       }
     },
     "gemini": {
       "totokens": {
-        "calls": 18,
-        "success": 15,
-        "failure": 3
+        "calls": 36,
+        "success": 32,
+        "failure": 4
       },
       "coderplan": {
-        "calls": 3,
+        "calls": 4,
         "success": 0,
-        "failure": 3
+        "failure": 4
       },
       "official": {
-        "calls": 3,
+        "calls": 4,
         "success": 0,
-        "failure": 3
+        "failure": 4
       },
       "openrouter": {
-        "calls": 3,
-        "success": 3,
+        "calls": 4,
+        "success": 4,
         "failure": 0
       }
     },
     "gpt": {
       "totokens": {
-        "calls": 26,
-        "success": 25,
-        "failure": 1
+        "calls": 36,
+        "success": 33,
+        "failure": 3
       },
       "openrouter": {
-        "calls": 1,
-        "success": 1,
+        "calls": 3,
+        "success": 3,
         "failure": 0
       }
     }
