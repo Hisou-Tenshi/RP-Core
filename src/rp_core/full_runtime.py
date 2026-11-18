@@ -367,7 +367,7 @@ def sanitize_logs(root: Path, env: dict):
 
 
 def run_full(
-    root: Path, task: str, *, payload: dict | None = None, shadow: bool = False, timeout: int = 1200
+    root: Path, task: str, *, payload: dict | None = None, shadow: bool = False, timeout: int = 1500
 ):
     root = root.resolve()
     validate_layout(root)
