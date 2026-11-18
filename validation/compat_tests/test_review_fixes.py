@@ -305,6 +305,56 @@ class ReviewRegressions(unittest.TestCase):
                     user_query="synthetic", budget=None, reply_text="synthetic"
                 )
 
+    def test_gpt_lite_review_flags_martian_text_and_asks_for_a_fix(self):
+        verdict = {
+            "unsafe": False,
+            "reason": "",
+            "info_tickets": 0,
+            "signature_tickets": 0,
+            "ask_clusters": 0,
+            "clusters_are_hook": False,
+            "is_closing": False,
+            "has_dangling_hook": False,
+            "style_violations": [],
+            "over_budget": False,
+            "chases_unanswered": False,
+            "notes": "martian",
+            "martian": True,
+            "martian_fix": "呜哇？擦干头发再说。",
+        }
+        with mock.patch.object(tr, "_plain_text_call", return_value=json.dumps(verdict)) as call:
+            result = tr.review_outgoing_reply(
+                user_query="synthetic", budget=None, reply_text="呜哇？莋脕沒擦干 旳那奌氺分"
+            )
+        self.assertTrue(result["martian"])
+        self.assertEqual(result["martian_fix"], "呜哇？擦干头发再说。")
+        self.assertEqual(call.call_args.kwargs["reasoning_effort"], "xhigh")
+        prompt = call.call_args.args[3][0]["content"]
+        self.assertIn("martian_fix", prompt)
+        self.assertIn("火星文", prompt)
+
+    def test_gpt_lite_review_still_accepts_verdicts_without_martian_fields(self):
+        verdict = {
+            "unsafe": False,
+            "reason": "",
+            "info_tickets": 0,
+            "signature_tickets": 0,
+            "ask_clusters": 0,
+            "clusters_are_hook": False,
+            "is_closing": False,
+            "has_dangling_hook": False,
+            "style_violations": [],
+            "over_budget": False,
+            "chases_unanswered": False,
+            "notes": "ok",
+        }
+        with mock.patch.object(tr, "_plain_text_call", return_value=json.dumps(verdict)):
+            result = tr.review_outgoing_reply(
+                user_query="synthetic", budget=None, reply_text="synthetic safe"
+            )
+        self.assertFalse(result["martian"])
+        self.assertEqual(result["martian_fix"], "")
+
     def test_perception_unsafe_candidate_retries_once_with_flash_only(self):
         import perception_layer
 

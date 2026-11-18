@@ -334,7 +334,7 @@ def call_openrouter_vision(
         raise
 
 
-def call_gpt(model_name, system_prompt, messages, llm_path=None):
+def call_gpt(model_name, system_prompt, messages, llm_path=None, reasoning_effort=None):
     """通过 OpenAI 官方/兼容层调用 GPT（对话分级 / NSFW 前置路由等 JSON 任务）。
 
     使用 GPT_REASONING_EFFORT（默认 xhigh，GPT-5.2+ 支持）。
@@ -359,7 +359,7 @@ def call_gpt(model_name, system_prompt, messages, llm_path=None):
             {
                 "model": model_name,
                 "messages": api_messages,
-                "reasoning_effort": getattr(tenshi_config, "GPT_REASONING_EFFORT", "xhigh"),
+                "reasoning_effort": reasoning_effort or getattr(tenshi_config, "GPT_REASONING_EFFORT", "xhigh"),
                 "stream": False,
             },
             label="GPT",

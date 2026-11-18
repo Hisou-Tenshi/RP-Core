@@ -229,7 +229,7 @@
       "functions": 35,
       "unchanged_functions": 35,
       "changed_functions": [],
-      "reviewed_sha256": "ed6a8794af9acad11968aa0c63ba5e07bc5f2602fe26dc2537fa599f08b413b8"
+      "reviewed_sha256": "a22317263d2a53af2a87a27446953234f1fc7dab05cff32c3e12cfa7e70a0113"
     },
     {
       "path": "src/image_utils.py",
@@ -472,7 +472,7 @@
         "read_config_file",
         "_main_impl"
       ],
-      "reviewed_sha256": "21a9ddad28805c1bd858a242a8a1eed7ec51d5df5938a93923f86ea0bcefa9b2"
+      "reviewed_sha256": "4e362732cbda468003a1249cf602778e77091946b9ba4c90e117e8f072210b59"
     },
     {
       "path": "src/tenshi_skills.py",
