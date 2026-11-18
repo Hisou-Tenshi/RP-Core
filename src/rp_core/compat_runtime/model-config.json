@@ -112,6 +112,17 @@
       "order": null
     },
     {
+      "id": "claude-fable-5-1",
+      "provider": "claude",
+      "tier": "max",
+      "generation": 5.1,
+      "slug": "",
+      "note": "仅注册，暂不进主链",
+      "in_chain": false,
+      "vision": false,
+      "order": null
+    },
+    {
       "id": "claude-sonnet-5-5",
       "provider": "claude",
       "tier": "flash",
@@ -169,7 +180,7 @@
     {
       "id": "gemini-4-argon",
       "provider": "gemini",
-      "tier": "pro",
+      "tier": "max",
       "generation": 4,
       "slug": "google/gemini-4-argon",
       "note": "Gemini 4 Argon",
@@ -180,7 +191,7 @@
     {
       "id": "gemini-4-carbon",
       "provider": "gemini",
-      "tier": "pro",
+      "tier": "max",
       "generation": 4.1,
       "slug": "google/gemini-4-carbon",
       "note": "C > Ar",
@@ -200,14 +211,14 @@
       "order": null
     },
     {
-      "id": "gemini-3.7-flash",
+      "id": "gemini-4-hydrogen",
       "provider": "gemini",
       "tier": "flash",
-      "generation": 3.7,
-      "slug": "google/gemini-3.7-flash",
-      "note": "",
-      "in_chain": true,
-      "vision": true,
+      "generation": 4,
+      "slug": "",
+      "note": "仅注册，暂不安排在链内调用",
+      "in_chain": false,
+      "vision": false,
       "order": null
     },
     {
@@ -216,17 +227,6 @@
       "tier": "lite",
       "generation": 3.5,
       "slug": "google/gemini-3.5-flash-lite",
-      "note": "",
-      "in_chain": true,
-      "vision": false,
-      "order": null
-    },
-    {
-      "id": "gemini-3.1-flash-lite",
-      "provider": "gemini",
-      "tier": "lite",
-      "generation": 3.1,
-      "slug": "google/gemini-3.1-flash-lite",
       "note": "",
       "in_chain": true,
       "vision": false,
@@ -356,7 +356,7 @@
     {
       "id": "gpt-6.2-astra",
       "provider": "gpt",
-      "tier": "pro",
+      "tier": "max",
       "generation": 6.2,
       "slug": "",
       "note": "仅注册，暂不安排调用",
@@ -378,7 +378,7 @@
     {
       "id": "gpt-6.1-terra",
       "provider": "gpt",
-      "tier": "pro",
+      "tier": "flash",
       "generation": 6.1,
       "slug": "",
       "note": "仅注册，暂不安排调用",

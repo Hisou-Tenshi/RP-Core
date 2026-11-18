@@ -28,13 +28,12 @@ MODELS_PATH = os.path.join(SRC, "config", "models.py")
 
 
 _PROVIDER_LIST_CASES = {
-    "CLAUDE_PRO_MODELS": ("claude", "pro"),
+    "CLAUDE_PRO_MODELS": ("claude", ("max", "pro")),
     "CLAUDE_FLASH_MODELS": ("claude", "flash"),
     "CLAUDE_LITE_MODELS": ("claude", "lite"),
     "DEEPSEEK_PRO_MODELS": ("deepseek", "pro"),
     "DEEPSEEK_FLASH_MODELS": ("deepseek", "flash"),
-    "GEMINI_PRO_MODELS": ("gemini", "pro"),
-    "GEMINI_FLASH_MODELS": ("gemini", "flash"),
+    "GEMINI_PRO_MODELS": ("gemini", ("max", "pro")),
     "GEMINI_LITE_MODELS": ("gemini", "lite"),
     "MAGMAROUTER_MODELS": ("magmarouter", None),
     "OPENROUTER_MODELS": ("openrouter", None),

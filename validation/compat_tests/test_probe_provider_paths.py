@@ -154,8 +154,8 @@ class ProviderModelRegistryTest(unittest.TestCase):
 
     def test_provider_model_ids_cover_every_registered_model(self):
         expected = {
-            "claude": 7,
-            "gemini": 6,
+            "claude": 8,
+            "gemini": 4,
             "deepseek": 2,
             "gpt": 1,
             "glm": 2,
@@ -174,7 +174,8 @@ class ProviderModelRegistryTest(unittest.TestCase):
         self.assertIn("claude-haiku-4-5", models)
         self.assertIn("claude-haiku-4-5-20251001", models)
 
-        self.assertEqual(models[:2], list(_load_tenshi_config().CLAUDE_PRO_MODELS))
+        expected_pro = list(_load_tenshi_config().CLAUDE_PRO_MODELS)
+        self.assertEqual(models[: len(expected_pro)], expected_pro)
 
     def test_path_model_id_openrouter_slug(self):
         tenant = _load_tenshi_config()
@@ -208,7 +209,7 @@ class ProviderModelRegistryTest(unittest.TestCase):
         before = target["model"]
         mod._with_all_models(target)
         self.assertEqual(target["model"], before)
-        self.assertEqual(len(target["models"]), 6)
+        self.assertEqual(len(target["models"]), 4)
         self.assertEqual(set(target["path_models"]), set(target["models"]))
         self.assertEqual(target["path_models"]["gemini-3.5-flash-lite"], "gemini-3.5-flash-lite")
 
@@ -324,10 +325,11 @@ class CollectTargetsTest(unittest.TestCase):
             self.assertEqual(set(target["path_models"]), set(target["models"]))
             self.assertEqual(len(target["models"]), len(set(target["models"])))
 
-    def test_claude_proxy_has_7_models(self):
+    def test_claude_proxy_has_8_models(self):
         target = self._by("claude", "Codeyu Base")
-        self.assertEqual(len(target["models"]), 7)
+        self.assertEqual(len(target["models"]), 8)
         self.assertIn("claude-haiku-4-5-20251001", target["models"])
+        self.assertIn("claude-fable-5-1", target["models"])
 
     def test_gemini_openrouter_uses_google_slugs(self):
         target = self._by("gemini", "OpenRouter")
@@ -450,7 +452,7 @@ class ProbeModelsTest(unittest.TestCase):
         item = _probe(_target(self.MODELS), _ok_model_list([]), _count)
         self.assertTrue(all(entry["severity"] == "warn" for entry in item["models"].values()))
         self.assertEqual(item["models_total"], 2)
-        self.assertEqual(item["models_ok"], 0, "7 个模型里 4 个 404 时不能显示 7/7")
+        self.assertEqual(item["models_ok"], 0, "只有 2 个模型登记在这条通路上时不能显示 7/7")
         self.assertIs(item["ok"], True, "通路级 gate 语义不变：warn 仍照常调用")
 
     def test_all_unknown_is_fail_open(self):
@@ -619,10 +621,10 @@ class OutputsSchemaTest(unittest.TestCase):
         self.assertEqual(payload["deployment"], "tenshi")
         self.assertEqual(payload["deployment_label"], "Tenshi 备用运行时（Tenshi secrets）")
 
-        self.assertEqual(payload["coverage"], {"claude": 7})
+        self.assertEqual(payload["coverage"], {"claude": 8})
 
         provider = payload["providers"]["claude"]
-        self.assertEqual(provider["models_total"], 7)
+        self.assertEqual(provider["models_total"], 8)
         self.assertEqual(provider["models_ok"], 2)
 
         path = provider["paths"]["Codeyu Base"]
@@ -673,7 +675,7 @@ class OutputsSchemaTest(unittest.TestCase):
         self.assertEqual(
             set(path_entry), {"severity", "ok", "verdict", "latency_ms", "models_ok", "models_total"}
         )
-        self.assertEqual(entry["providers"]["claude"], {"ok": 1, "total": 1, "models_ok": 2, "models_total": 7})
+        self.assertEqual(entry["providers"]["claude"], {"ok": 1, "total": 1, "models_ok": 2, "models_total": 8})
 
         history = self.tmp / "history.jsonl"
         history.write_text("\n".join(json.dumps({"run": i}) for i in range(400)) + "\n", encoding="utf-8")
@@ -701,7 +703,7 @@ class OutputsSchemaTest(unittest.TestCase):
         payload = mod.write_outputs(json_path, report_path, self.context, [item])
 
         provider = payload["providers"]["claude"]
-        self.assertEqual(provider["models_total"], 7)
+        self.assertEqual(provider["models_total"], 8)
         self.assertEqual(provider["models_ok"], 0, "warn 不计入 provider 模型覆盖")
         path = provider["paths"]["Codeyu Base"]
         self.assertEqual(path["models_total"], 2)

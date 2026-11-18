@@ -44,8 +44,9 @@ def validate_config(value):
     }
     for provider, tiers in required.items():
         for tier in tiers:
+            group = None if tier is None else ({"max", "pro"} if tier == "pro" else {tier})
             if not any(
-                m["provider"] == provider and (tier is None or m["tier"] == tier)
+                m["provider"] == provider and (group is None or m["tier"] in group)
                 for m in value["models"]
             ):
                 raise ValueError(f"Required runtime pool is empty: {provider}/{tier}.")

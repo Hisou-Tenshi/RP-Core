@@ -76,6 +76,7 @@ __all__ = [
     "GEMINI_FLASH_MODELS",
     "GEMINI_LITE_MODELS",
     "GEMINI_IMAGE_MODELS",
+    "GEMINI_ALL_MODELS",
     "MAGMAROUTER_MODELS",
     "OPENROUTER_MODELS",
     "GROK_MODELS",
@@ -176,8 +177,8 @@ __all__ = [
 
 
 
-MODEL_TIER_RANK: dict[str, int] = {"pro": 0, "flash": 1, "lite": 2}
-MODEL_TIER_LABELS: dict[str, str] = {"pro": "Pro", "flash": "Flash", "lite": "Lite"}
+MODEL_TIER_RANK: dict[str, int] = {"max": 0, "pro": 1, "flash": 2, "lite": 3}
+MODEL_TIER_LABELS: dict[str, str] = {"max": "Max", "pro": "Pro", "flash": "Flash", "lite": "Lite"}
 
 
 @dataclass(frozen=True)
@@ -289,17 +290,18 @@ def _provider_list_sort_key(spec: ModelSpec) -> tuple[int, int, float, int, str]
 
 def provider_models(
     provider: str,
-    tier: str | None = None,
+    tier: str | tuple[str, ...] | None = None,
     *,
     vision: bool | None = None,
 ) -> list[str]:
     """某厂商的模型列表(新 → 旧;厂商内 order 优先,其次代际/等级)。
 
-    tier / vision 为筛选条件;不传 = 该厂商全部模型。
+    tier / vision 为筛选条件;不传 = 该厂商全部模型。tier 传元组 = 同时取多档。
     """
     specs = [spec for spec in MODELS if spec.provider == provider]
     if tier is not None:
-        specs = [spec for spec in specs if spec.tier == tier]
+        tiers = (tier,) if isinstance(tier, str) else tuple(tier)
+        specs = [spec for spec in specs if spec.tier in tiers]
     if vision is not None:
         specs = [spec for spec in specs if spec.vision is vision]
     specs.sort(key=_provider_list_sort_key)
@@ -307,7 +309,7 @@ def provider_models(
 
 
 
-CLAUDE_PRO_MODELS = provider_models("claude", "pro")
+CLAUDE_PRO_MODELS = provider_models("claude", ("max", "pro"))
 CLAUDE_FLASH_MODELS = provider_models("claude", "flash")
 CLAUDE_LITE_MODELS = provider_models("claude", "lite")
 
@@ -315,10 +317,11 @@ DEEPSEEK_PRO_MODELS = provider_models("deepseek", "pro")
 DEEPSEEK_FLASH_MODELS = provider_models("deepseek", "flash")
 
 
-GEMINI_PRO_MODELS = provider_models("gemini", "pro")
-GEMINI_FLASH_MODELS = provider_models("gemini", "flash")
+GEMINI_PRO_MODELS = provider_models("gemini", ("max", "pro"))
+GEMINI_FLASH_MODELS = [m for m in provider_models("gemini", "flash") if MODEL_REGISTRY[m].in_chain]
 GEMINI_LITE_MODELS = provider_models("gemini", "lite")
 GEMINI_IMAGE_MODELS = provider_models("gemini", vision=True)
+GEMINI_ALL_MODELS = provider_models("gemini")
 
 MAGMAROUTER_MODELS = provider_models("magmarouter")
 OPENROUTER_MODELS = provider_models("openrouter")

@@ -124,7 +124,7 @@ test('selecting is not an addition; explicit add inserts once and resets to blan
 
 test('renaming a model preserves route references through intermediate edits and saves a valid catalog',async()=>{
   const catalog=structuredClone(config);
-  const index=catalog.models.findIndex(m=>m.provider==='gemini'&&m.tier==='pro');
+  const index=catalog.models.findIndex(m=>m.provider==='gemini'&&m.tier==='max');
   const oldId=catalog.models[index].id;
   catalog.dialog_tiers.high=[oldId];
   const {dom,writes}=await page({catalog});
@@ -283,4 +283,16 @@ test('dragging a provider reorders the fallback chain and saves it',async()=>{
     await document.querySelector('#save').onclick();
     assert.equal(writes[0].config.providers[2].key,config.providers[0].key);
   }finally{dom.window.close();}
+});
+
+test('the model registry renders one table per provider in provider order',async()=>{
+  const {dom}=await page();
+  try{
+    const {document}=dom.window;
+    assert.equal(document.querySelector('#provider-filter'),null);
+    const titles=[...document.querySelectorAll('#models .model-group-title')].map(node=>node.textContent.replace(/\d+$/,'').trim());
+    assert.deepEqual(titles,config.providers.map(p=>p.label));
+    const tables=document.querySelectorAll('#models table.model-table');
+    assert.equal(tables.length,config.providers.length);
+  } finally {dom.window.close();}
 });

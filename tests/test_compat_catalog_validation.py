@@ -44,12 +44,12 @@ def test_renamed_model_and_explicit_tier_are_not_tied_to_historical_names(tmp_pa
     current = json.loads((CODE / "model-config.json").read_text())
     customized = copy.deepcopy(current)
     target = next(
-        m for m in customized["models"] if m["provider"] == "gemini" and m["tier"] == "pro"
+        m for m in customized["models"] if m["provider"] == "gemini" and m["tier"] == "max"
     )
     previous = target["id"]
     target.update(
-        id="gemini-configurable-pro-fixture",
-        slug="google/gemini-configurable-pro-fixture",
+        id="gemini-configurable-max-fixture",
+        slug="google/gemini-configurable-max-fixture",
         generation=99.1,
     )
     for chain in [

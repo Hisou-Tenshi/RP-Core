@@ -39,11 +39,13 @@ export function validateConfig(value) {
   }
   const refs = [...value.low_tier_pool, ...value.summary_models, ...Object.values(value.dialog_tiers).flat()];
   if (refs.some(m => !ids.has(m))) errors.push('路由链引用了未注册模型');
+  const tierGroup = tier => tier === 'pro' ? ['max','pro'] : [tier];
   const required = {claude: ['pro','flash','lite'], gemini: ['pro','flash','lite'], deepseek: ['pro','flash'],
     gpt: [null], glm: ['pro','flash'], magmarouter: [null], openrouter: [null], grok: [null]};
   for (const [provider, tiers] of Object.entries(required)) {
     for (const tier of tiers) {
-      if (!value.models.some(m => m.provider === provider && (tier === null || m.tier === tier))) {
+      const group = tier === null ? null : tierGroup(tier);
+      if (!value.models.some(m => m.provider === provider && (group === null || group.includes(m.tier)))) {
         errors.push(`运行时必需的 ${provider}/${tier || '全部'} 模型池不能为空`);
       }
     }

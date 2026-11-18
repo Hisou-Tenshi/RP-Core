@@ -115,6 +115,7 @@
           },
           "tier": {
             "enum": [
+              "max",
               "pro",
               "flash",
               "lite"

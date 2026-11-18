@@ -32,6 +32,11 @@ The web schema copy is checked in CI. Run `cd web && npm run build` after changi
 the canonical schema, then commit both copies. New protocol/client families still
 require a reviewed public-code change; adding a model ID cannot invent a client.
 
+The model registry page renders one table per provider in provider order instead of
+one combined table, so each vendor's tier ladder is visible at a glance. Within the
+same generation the tier order is Max → Pro → Flash → Lite; an explicit `order` still
+wins over both. Search applies across every table.
+
 Routing add controls start with an empty “请选择…” choice and an “添加模型” label.
 Selecting a candidate does not modify the configured chain; click “添加” to insert
 it. After insertion, the control returns to its empty state.
