@@ -879,6 +879,27 @@ def _style_guard_perception_text(text: str, *, call_rewrite) -> str:
         return text
 
 
+def _apply_martian_review_fix(review: dict | None, body: str) -> str:
+    """终审说正文含火星文时，用它的字形还原稿替换；没有可用修正稿则拒发。"""
+    if not isinstance(review, dict) or not review.get("martian"):
+        return body
+    from reply_streaming import strip_choice_layer_markup
+
+    fixed = strip_choice_layer_markup(str(review.get("martian_fix") or "")).strip()
+    fixed = reactions.strip_markers(fixed).strip()
+    if not fixed:
+        logger.warning("[martian] 感知层终审判定正文含火星文但没有可用的修正稿，本次不外发。")
+        raise reply_two_stage.UnsafeResponseError("martian_unfixed")
+    unsafe_reason = reply_two_stage.unsafe_response_reason(fixed)
+    if unsafe_reason:
+        raise reply_two_stage.UnsafeResponseError(unsafe_reason)
+    logger.info(
+        "[martian] 感知层终审判定正文含火星文，已按修正稿改写后外发"
+        f"（原文 {len(body)} 字，修正 {len(fixed)} 字）。"
+    )
+    return fixed
+
+
 def _suppress_unsafe_perception(
     error: "reply_two_stage.UnsafeResponseError",
     *,
@@ -1373,11 +1394,14 @@ async def _run_perception_impl(
         unsafe_reason = reply_two_stage.unsafe_response_reason(body_for_review)
         if unsafe_reason:
             raise reply_two_stage.UnsafeResponseError(unsafe_reason)
-        review_outgoing_reply(
+        review = review_outgoing_reply(
             user_query=perception_prompt,
             budget=None,
             reply_text=body_for_review,
         )
+        fixed_body = _apply_martian_review_fix(review, body_for_review)
+        if fixed_body != body_for_review:
+            response_body_cleaned = fixed_body
     except reply_two_stage.UnsafeResponseError as error:
         # 审查说「不发」（含审查 API 不可用）：绝不外发，也不重试同一段内容。
         return _suppress_unsafe_perception(
