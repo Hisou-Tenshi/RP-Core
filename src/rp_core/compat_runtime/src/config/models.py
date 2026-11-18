@@ -652,7 +652,7 @@ TASK_MODEL_PRIMARY: dict[str, str] = {
     "nsfw": MAGMAROUTER_MODELS[0],
     "nsfw_rewrite": MAGMAROUTER_MODELS[0],
 
-    "perception": CLAUDE_FLASH_MODELS[0],
+    "perception": DIALOG_TIER_LOW_MODELS[0],
 
     "summary": CLAUDE_SUMMARY_MODEL,
     "scoring": DEEPSEEK_FLASH_MODELS[0],
@@ -706,7 +706,7 @@ def task_model_chain(task: str) -> list[str]:
     if key in ("nsfw",):
         return dedupe_models(MAGMAROUTER_MODELS, OPENROUTER_MODELS, GROK_MODELS)
     if key == "perception":
-        return dialog_chain_from_tier("medium")
+        return dialog_chain_from_tier("low")
     return [task_model_primary(key)]
 
 

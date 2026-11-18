@@ -156,6 +156,8 @@ class DerivedViewsTest(unittest.TestCase):
         self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_medium"], m.DIALOG_TIER_MEDIUM_MODELS[0])
         self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_low"], m.DIALOG_TIER_LOW_MODELS[0])
         self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_minimal"], m.DIALOG_TIER_MINIMAL_MODELS[0])
+        self.assertEqual(m.TASK_MODEL_PRIMARY["perception"], m.DIALOG_TIER_LOW_MODELS[0])
+        self.assertEqual(m.task_model_chain("perception"), m.dialog_chain_from_tier("low"))
 
 
 class AddOneRowPropagationTest(unittest.TestCase):

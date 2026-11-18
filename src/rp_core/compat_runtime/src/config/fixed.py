@@ -722,16 +722,72 @@ risk_kind: "real_distress" | "sensitive_plot" | ""
 - real_distress: genuine self-negation, sustained depression, self-harm hints, blurring RP and real venting.
 - sensitive_plot: in-story extreme pressure, trauma triggers or ethical grey zones likely to cause a stiff refusal.
 
-Anchors — same characters and scene, only cognitive load changes (use these centres):
-- plain thanks and eating: subtext=1, persona=1, narrative=1, staging=1, tactical=0, risk_flag=false -> 10, minimal
-- long scenery but a plain shy offer: subtext=2, persona=3, narrative=2, staging=3, tactical=0 -> 24, low
-- ordinary relationship check ("do you tire of me?"): subtext=5, persona=6, narrative=5, staging=5, tactical=2 -> 51, medium
-- short line hiding fear and pushing the other away ("leave me, they came for you"): subtext=9, persona=8, narrative=8, staging=7, tactical=4 -> 78, high
-- multi-party crisis with a curse breaking loose: subtext=10, persona=10, narrative=10, staging=9, tactical=8 -> 96, max
+### 核心评估原则
+你的评分必须基于【作为角色生成下一轮回复所需的认知工作量】，而非【用户输入文本的表面长度或辞藻华丽度】。
+- 即使输入很长、描写很丰富，如果只需要角色顺着人设给出常规、浅层的反应，各维度应给低分。
+- 即使输入只有寥寥数字，如果暗含激烈的情感转折、深层潜台词或极易崩人设（OOC）的困境，相关维度必须给高分。
 
-Calibration rule: score the cognitive load needed for the next reply, NOT the length or flourish
-of the input. A long description that only needs a routine reply stays low; three words that hide
-relationship rupture or an OOC trap must score high.
+### 固定测试基准背景
+- 待扮演角色（AI）：比那名居天子（居高临下、骄纵任性的天人，表面说话带刺、唯我独尊，实则笨拙地照顾着唯一的挚友紫苑，绝不轻易直白表露温柔）。
+- 互动对象（用户）：依神紫苑（自卑阴郁的贫穷神，习惯道歉与退缩，害怕自己的厄运连累天子）。
+- 当前场景：傍晚雨后的破旧神社屋檐下，两人坐在一起分食一块烤红薯。
+
+#### 锚点示例 1（极低认知负载：简单顺应）
+【用户输入】：
+紫苑小声道了谢，双手接过那半块热乎乎的红薯，低头小口啃了起来：“唔……好甜。”
+【维度评估】：
+- subtext: 1（无潜台词，纯粹的进食反馈）
+- persona_pressure: 1（天子舒适区，随口哼一声即可）
+- narrative_span: 1（仅针对眼前动作反应）
+- staging_craft: 1（一句话加一个得意的小动作即可完成）
+- tactical_logic: 0
+- risk_flag: false
+
+#### 锚点示例 2（长输入但低认知负载：切勿被输入字数误导）
+【用户输入】：
+屋檐上的雨滴顺着破损的青瓦滑落，在积水里砸出一圈圈细小的涟漪。紫苑抱着膝盖缩在角落里，看着手里那半块冒着热气的红薯，金黄色的薯肉散发着焦香。她咽了咽口水，像是怕弄脏天子大人的衣角一样往旁边挪了半寸，把烤得最焦甜的那一头掰下来，双手捧着递过去，小声说道：“天、天子大人，这一块最甜，还是您吃吧……我吃边上带皮的就行。”
+【维度评估】：
+- subtext: 2（尽管环境与动作描写很长，但意图极其直白，就是紫苑日常的自卑与讨好）
+- persona_pressure: 3（只需天子给出标准的“嫌弃她磨蹭并强行塞回去”的日常傲娇反应，人设无压力）
+- narrative_span: 2（无复杂前文依赖，属于静态日常切片）
+- staging_craft: 3（配合气氛做简单动作互动即可）
+- tactical_logic: 0
+- risk_flag: false
+
+#### 锚点示例 3（常规剧情与人设拿捏：中等认知负载）
+【用户输入】：
+紫苑吃完最后一口红薯，看着外面渐渐黑下来的雨幕，声音低了下去：“今天来之前，妹妹又把我攒的零钱拿走了，去村子里捡菜叶的时候还被老板拿盐泼了出来……天子大人，像我这样只会带来不幸的瘟神，待在您身边久了，您真的不会觉得厌烦吗？”
+【维度评估】：
+- subtext: 5（紫苑在寻求安全感确认；天子需要在“不能像普通温柔角色那样直白说软话”的前提下，传达“我不会赶你走”的底色）
+- persona_pressure: 6（中等偏上压力，必须用天子特有的狂妄逻辑——例如“本天人的强运才不怕你这点晦气”来包裹安慰，直接温柔安慰会严重OOC）
+- narrative_span: 5（涉及紫苑的过往遭遇与两人的长期关系定位）
+- staging_craft: 5（需要通过动作与傲慢语调的反差来体现关心）
+- tactical_logic: 2
+- risk_flag: false
+
+#### 锚点示例 4（极短输入但高认知负载：重度潜台词与心理防线）
+【用户输入】：
+紫苑捏紧了手里的红薯皮，突然往后退到雨幕里，声音轻得像要散开：“……天界刚才降下雷光了。他们是来抓你回去的吧。你走吧，别管我了。”
+【维度评估】：
+- subtext: 9（字数极少但潜台词极重：紫苑用主动疏远掩饰害怕连累对方的恐惧；天子则面临被戳穿处境的微弱动摇，以及绝不在紫苑面前露怯的逞强）
+- persona_pressure: 8（高危人设区：天子既不能表现得像个无脑莽夫，也不能显得软弱动摇，必须在高傲外壳下表现出“哪怕跟整个天界翻脸也要把紫苑拽回来”的霸道张力）
+- narrative_span: 8（触发“天界追责”与“两人羁绊考验”的关键剧情转折点）
+- staging_craft: 7（需要将雨幕、雷光、把人拽回屋檐下的动作张力与台词节奏紧密结合）
+- tactical_logic: 4
+- risk_flag: false
+
+#### 锚点示例 5（极限认知负载：多线冲突、核心创伤与硬设定博弈）
+【用户输入】：
+天界使者的金色结界已经封死了神社四周，勒令天子立刻交出扰乱地上气运的疫病神，否则就削去比那名居一族的天籍。紫苑周身的厄运黑气因为极度恐慌开始失控暴走，她哭着甩开天子的手往结界上撞去，嘶声喊道：“放我出去自首啊！你接近我本来就只是天人无聊时的消遣而已吧？现在玩腻了正好把我丢掉啊！”
+【维度评估】：
+- subtext: 10（紫苑通过自我贬低到极致的激将法试图逼天子放弃自己；天子被触及“真心被质疑”的逆鳞，愤怒、心疼与骄傲同时爆发）
+- persona_pressure: 10（极限人设考验：必须在维持天子狂妄本色的同时，完成最深层的情感剖白，台词分寸差一点就会变成套路化说教或崩坏）
+- narrative_span: 10（回收两人相识以来的核心矛盾“天人的消遣 vs 真正的羁绊”，并决定后续大剧情走向）
+- staging_craft: 9（需同时调度天界使者的威压、紫苑暴走的厄运黑气、以及天子拔剑破局的正面动作场面）
+- tactical_logic: 8（需在设定逻辑内合理化解“削去天籍”的外部胁迫与“厄运暴走”的内部危机）
+- risk_flag: false
+
+按合成公式计算，示例 1~5 的总分分别是 10、24、51、78、96，分别落在 Minimal、Low、Medium、High、Max 五档中心。
 
 Output STRICT JSON only (no markdown, no extra text):
 {

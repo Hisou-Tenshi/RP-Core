@@ -1235,7 +1235,7 @@ async def _run_perception_impl(
     )
     try:
         chain_result = invoke_dialog_model_chain(
-            grade_tier="medium",
+            grade_tier="low",
             system_prompt=system_prompt,
             messages_payload=messages_payload,
             model_chain=retry_model_chain,
@@ -1302,7 +1302,7 @@ async def _run_perception_impl(
         typed_text, typed_no_send, typing_model = "", True, ""
     else:
       typed_text, typed_no_send, typing_model = run_typing_stage(
-        model_chain=retry_model_chain or _build_dialog_model_chain("medium"),
+        model_chain=retry_model_chain or _build_dialog_model_chain("low"),
         typing_system=reply_two_stage.build_typing_system(
             tenshi_config.PERSONA_CARD,
             bond_block=typing_bond,
@@ -1364,7 +1364,7 @@ async def _run_perception_impl(
             {"role": "user", "content": prompt},
         ]
         out = invoke_dialog_model_chain(
-            grade_tier="medium",
+            grade_tier="low",
             system_prompt=system_prompt,
             messages_payload=payload,
             model_chain=retry_model_chain,
