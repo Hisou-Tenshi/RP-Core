@@ -463,6 +463,3 @@ DEFERRED_PILOT_STATS = os.getenv("DEFERRED_PILOT_STATS") or os.path.join(
 
 STYLE_GUARD_ENABLED = (os.getenv("STYLE_GUARD_ENABLED") or "1").strip() not in ("0", "false", "no")
 STYLE_GUARD_MAX_REWRITES = int(os.getenv("STYLE_GUARD_MAX_REWRITES") or 1)
-
-MARTIAN_GUARD_ENABLED = (os.getenv("MARTIAN_GUARD_ENABLED") or "1").strip() not in ("0", "false", "no")
-MARTIAN_REPAIR_MAX_ATTEMPTS = int(os.getenv("MARTIAN_REPAIR_MAX_ATTEMPTS") or 2)
