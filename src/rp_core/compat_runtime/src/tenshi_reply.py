@@ -6350,6 +6350,7 @@ _CHOICE_STYLE_LABELS = {
     "bold": "加粗（**…**）",
     "stage_direction": "单星号包起来的动作/舞台说明（*…*）",
     "hongtong": "红瞳/瞳孔一类写自己脸和眼神的镜头",
+    "martian": "火星文：把常用字换成形近的繁体、异体、部件字，或在汉字之间插空格",
 
     "chasing": "回捞旧账：把以前没被答的索取再追一遍（本轮不许催缴/复述未答问题）",
 }
@@ -6451,6 +6452,10 @@ def choice_heuristic_issues(body: str, budget: dict | None = None) -> tuple[list
             int(_choice_flag("SOLICITATION_CLUSTER_MAX", 1)),
         )
         style = reply_budget.detect_style_violations(body or "") if _choice_flag("STYLE_GUARD_ENABLED", True) else []
+        if _choice_flag("MARTIAN_GUARD_ENABLED", True):
+            _martian = reply_budget.detect_martian_text(body or "")
+            if _martian.get("hit") and "martian" not in style:
+                style.append("martian")
         return list(over), list(style)
     except Exception as e:
         logger.warning(f"[choice] 启发式计数失败（跳过）：{format_exception_inline(e)}")
@@ -6528,6 +6533,132 @@ def rewrite_choice_text(*, call_rewrite, violations_text: str, original_text: st
     except Exception as e:
         logger.warning(f"[choice] 重写调用失败，放行原文：{format_exception_inline(e)}")
         return ""
+
+
+_MARTIAN_REPAIR_SYSTEM = "你是中文校对，只做字形还原，不改内容，不解释。"
+_MARTIAN_REPAIR_LEADING_LABEL_RE = re.compile(
+    r"^(?:```[A-Za-z0-9_-]*\s*|"
+    r"(?:以下是|下面是|修正后|修正版|还原后|还原后的文字|修改后的文字)[^\n]{0,8}[：:]\s*)"
+)
+
+
+def _clean_martian_repair_output(text: str) -> str:
+    """修复模型可能加回标题/栅栏/规划行；剥掉后再过一遍统一清洗。"""
+    cleaned = _strip_rewrite_markup(text or "")
+    for _ in range(2):
+        cleaned = _MARTIAN_REPAIR_LEADING_LABEL_RE.sub("", cleaned.strip(), count=1).strip()
+    if cleaned.startswith("`") and cleaned.endswith("`"):
+        cleaned = cleaned.strip("`").strip()
+    return cleaned
+
+
+def _martian_clean_model_candidates(
+    model_chain, *, exclude_model_ids=(), avoid_providers=(), limit: int = 2
+) -> list[tuple[str, str]]:
+    """从主链里挑「没出过这段火星文」的模型，返回 [(provider, model_id)]。
+
+    同 provider 的坏模型整体排到后面（同一侧的字形漂移往往一坏一窝）；
+    grok 与本轮已熔断的 provider 一概不用。
+    """
+    avoid = set(avoid_providers or ())
+    first: list[tuple[str, str]] = []
+    second: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for item in model_chain or []:
+        model_id = str(item or "").strip()
+        if not model_id or model_id in exclude_model_ids or model_id in seen:
+            continue
+        seen.add(model_id)
+        try:
+            provider = _provider_from_model_id(model_id)
+        except Exception:
+            continue
+        if provider == "grok" or _provider_is_dead_this_round(provider):
+            continue
+        (second if provider in avoid else first).append((provider, model_id))
+    return (first + second)[: max(1, int(limit or 1))]
+
+
+def repair_martian_text(
+    *,
+    text: str,
+    model_chain,
+    exclude_model_ids=(),
+    avoid_providers=(),
+) -> tuple[str, dict]:
+    """检测并换干净模型还原火星文；返回 (可用文本, 诊断)。
+
+    文本干净 → 原样返回；命中且还原成功 → 返回还原稿；还原失败/没有干净模型 →
+    返回空串，由调用方撤回草案（见调用处的日志与 raise）。
+    """
+    info = reply_budget.detect_martian_text(text or "")
+    diag = {
+        "detected": bool(info.get("hit")),
+        "level": info.get("level", ""),
+        "count": info.get("count", 0),
+        "ratio": info.get("ratio", 0.0),
+        "spaced": info.get("spaced", 0),
+        "samples": info.get("samples", ""),
+        "repaired": False,
+        "still": False,
+        "attempts": 0,
+        "provider": "",
+        "model_id": "",
+        "candidates": [],
+    }
+    if not diag["detected"]:
+        return text, diag
+    tpl = getattr(tenshi_config, "MARTIAN_REPAIR_PROMPT_TEMPLATE", "") or ""
+    if not tpl:
+        logger.error("[martian] 缺少修复提示词模板，撤回草案。")
+        diag["still"] = True
+        return "", diag
+    prompt = tpl.format(original_text=text or "")
+    candidates = _martian_clean_model_candidates(
+        model_chain,
+        exclude_model_ids=exclude_model_ids,
+        avoid_providers=avoid_providers,
+        limit=int(_choice_flag("MARTIAN_REPAIR_MAX_ATTEMPTS", 2)),
+    )
+    diag["candidates"] = [m for _p, m in candidates]
+    for provider, model_id in candidates:
+        if reply_deadline_exceeded():
+            logger.warning("[martian] 整轮预算已用尽，放弃换模型还原。")
+            break
+        diag["attempts"] += 1
+        try:
+            raw = _plain_text_call(
+                provider,
+                model_id,
+                _MARTIAN_REPAIR_SYSTEM,
+                [{"role": "user", "content": prompt}],
+                max_sec=45.0,
+            )
+        except Exception as e:
+            logger.warning(
+                f"[martian] {provider}/{model_id} 还原调用失败：{format_exception_inline(e)}"
+            )
+            continue
+        cleaned = _clean_martian_repair_output(raw or "")
+        if not cleaned:
+            logger.warning(f"[martian] {provider}/{model_id} 还原结果为空，换下一个。")
+            continue
+        again = reply_budget.detect_martian_text(cleaned)
+        if again.get("hit"):
+            logger.warning(
+                f"[martian] {provider}/{model_id} 还原后仍是火星文"
+                f"（count={again.get('count')} ratio={again.get('ratio')}），换下一个。"
+            )
+            continue
+        diag.update({"repaired": True, "provider": provider, "model_id": model_id})
+        logger.warning(
+            f"[martian] 已由 {provider}/{model_id} 还原"
+            f"（原 level={diag['level']} count={diag['count']} "
+            f"ratio={diag['ratio']} spaced={diag['spaced']}）。"
+        )
+        return cleaned, diag
+    diag["still"] = True
+    return "", diag
 
 
 def apply_choice_guard(
@@ -7588,6 +7719,7 @@ def _main_impl(*, force_gemini_flash: bool = False):
     inner_text = ""
     typing_model = ""
     reply_no_send = False
+    martian_guards: list[dict] = []
     if two_step:
         _inner_proto = reply_two_stage.inner_protocol(perception=False)
         claude_system = reply_two_stage.append_to_system(claude_system, _inner_proto)
@@ -7859,6 +7991,22 @@ def _main_impl(*, force_gemini_flash: bool = False):
         if has_tool_call_markup(_inner_clean):
             _inner_clean = sanitize_model_text(_inner_clean)
         inner_text = reply_two_stage.clean_inner(_strip_leading_log_timestamp_prefix(_inner_clean or ""))
+        if inner_text and _choice_flag("MARTIAN_GUARD_ENABLED", True):
+            _inner_fixed, _inner_diag = repair_martian_text(
+                text=inner_text,
+                model_chain=model_chain,
+                exclude_model_ids={m for m in (last_success_model_id,) if m},
+                avoid_providers={_provider_from_model_id(last_success_model_id)} if last_success_model_id else set(),
+            )
+            if _inner_diag.get("detected"):
+                martian_guards.append({"stage": "inner", **_inner_diag})
+                if _inner_fixed:
+                    inner_text = _inner_fixed
+                else:
+                    logger.warning(
+                        f"[martian] 内心命中火星文且还原失败（{_inner_diag}），本步弃用这段内心。"
+                    )
+                    inner_text = ""
         if _inner_think:
             final_thinking = _append_model_thinking(final_thinking or "", _inner_think)
         logger.info(f"[inner] len={len(inner_text)}：{inner_text[:300]!r}")
@@ -8037,6 +8185,44 @@ def _main_impl(*, force_gemini_flash: bool = False):
             if isinstance(e, reply_two_stage.UnsafeResponseError):
                 raise
             logger.warning(f"[choice] 选择层后处理异常，放行当前正文：{format_exception_inline(e)}")
+
+    def _martian_guard_text(_text: str, _stage: str, _corrupt_models=()) -> str:
+        try:
+            _fixed, _diag = repair_martian_text(
+                text=_text,
+                model_chain=model_chain,
+                exclude_model_ids={str(m) for m in _corrupt_models if m},
+                avoid_providers={_provider_from_model_id(str(m)) for m in _corrupt_models if m},
+            )
+        except Exception as e:
+            logger.warning(
+                f"[martian] 护栏异常（{_stage}），按原文本继续：{format_exception_inline(e)}"
+            )
+            return _text
+        if not _diag.get("detected"):
+            return _text
+        martian_guards.append({"stage": _stage, **_diag})
+        if _fixed:
+            logger.warning(f"[martian] {_stage} 已撤回并还原，继续。")
+            return _fixed
+        logger.critical(
+            f"[martian] {_stage} 撤回：换模型还原失败（diag={_diag}），整轮不发，登记重试。"
+        )
+        _clear_streamer_text(streamer)
+        _schedule_failed_reply_retry(reason=f"火星文护栏：{_stage} 重写后仍脏")
+        raise Exception(f"Martian-text guard rejected the reply at {_stage}.")
+
+    if (
+        _choice_flag("MARTIAN_GUARD_ENABLED", True)
+        and not reply_no_send
+        and isinstance(final_response, str)
+        and final_response.strip()
+    ):
+        final_response = _martian_guard_text(
+            final_response,
+            "choice",
+            {last_success_model_id} if choice_rewritten else {typing_model or last_success_model_id},
+        )
     if not reply_no_send:
         reason = reply_two_stage.unsafe_response_reason(final_response)
         if reason:
@@ -8053,6 +8239,7 @@ def _main_impl(*, force_gemini_flash: bool = False):
             "choice_style": choice_guard.get("style", []),
             "choice_still_over": choice_guard.get("still_over", False),
             "evaluator_verdict": choice_guard.get("verdict"),
+            "martian_guards": list(martian_guards),
         })
 
 

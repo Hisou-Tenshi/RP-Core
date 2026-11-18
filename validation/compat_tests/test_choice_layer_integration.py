@@ -443,5 +443,84 @@ class StrongHistoryModeTest(_Base):
             self.assertEqual(json.load(f), data)
 
 
+# 2026-11-18 事故：形近字替换（火星文）——「打」写成「扌」、汉字间插空格。
+MARTIAN_TEXT = "莋脕沒擦干 旳那奌氺分，这絵儿正顺着妳 頭皮往裏钻呢吧？"
+MARTIAN_CLEAN = "做晚没擦干的那点水分，这会儿正顺着你头皮往里钻呢吧？"
+
+
+class MartianGuardTest(_Base):
+    """火星文：选择层识别 → 撤回重写；还原不出来 → 整轮不发。"""
+
+    def test_choice_heuristic_flags_martian(self):
+        over, style = tenshi_reply.choice_heuristic_issues(MARTIAN_TEXT, None)
+        self.assertEqual(over, [])
+        self.assertIn("martian", style)
+
+    def test_apply_choice_guard_rewrites_martian(self):
+        calls = []
+
+        def rewriter(prompt):
+            calls.append(prompt)
+            return MARTIAN_CLEAN
+
+        g = tenshi_reply.apply_choice_guard(
+            body=MARTIAN_TEXT, budget=None, user_query="q",
+            call_evaluator=lambda p: "not json", call_rewrite=rewriter,
+        )
+        self.assertEqual(len(calls), 1)
+        self.assertIn("火星文", calls[0])
+        self.assertTrue(g["rewritten"])
+        self.assertFalse(g["still_over"])
+        self.assertEqual(g["text"], MARTIAN_CLEAN)
+
+    def test_repair_skips_corrupt_model(self):
+        seen = []
+        providers = {"gemini-x": "gemini", "claude-x": "claude"}
+
+        def fake_call(provider, model_id, system, messages, max_sec=None):
+            seen.append(model_id)
+            return MARTIAN_CLEAN
+
+        with mock.patch.object(
+            tenshi_reply, "_provider_from_model_id", lambda mid: providers.get(mid, "claude")
+        ), mock.patch.object(tenshi_reply, "_plain_text_call", fake_call):
+            fixed, diag = tenshi_reply.repair_martian_text(
+                text=MARTIAN_TEXT,
+                model_chain=["gemini-x", "claude-x"],
+                exclude_model_ids={"gemini-x"},
+                avoid_providers={"gemini"},
+            )
+        self.assertEqual(seen, ["claude-x"])
+        self.assertTrue(diag["repaired"])
+        self.assertFalse(diag["still"])
+        self.assertEqual(fixed, MARTIAN_CLEAN)
+
+    def test_repair_without_candidates_fixes_nothing(self):
+        providers = {"gemini-x": "gemini"}
+        with mock.patch.object(
+            tenshi_reply, "_provider_from_model_id", lambda mid: providers.get(mid, "claude")
+        ), mock.patch.object(
+            tenshi_reply, "_plain_text_call", side_effect=AssertionError("不该调用")
+        ):
+            fixed, diag = tenshi_reply.repair_martian_text(
+                text=MARTIAN_TEXT,
+                model_chain=["gemini-x"],
+                exclude_model_ids={"gemini-x"},
+            )
+        self.assertEqual(fixed, "")
+        self.assertTrue(diag["still"])
+
+    def test_repair_rejects_still_martian_rewrite(self):
+        with mock.patch.object(
+            tenshi_reply, "_provider_from_model_id", lambda mid: "claude"
+        ), mock.patch.object(tenshi_reply, "_plain_text_call", lambda *a, **k: MARTIAN_TEXT):
+            fixed, diag = tenshi_reply.repair_martian_text(
+                text=MARTIAN_TEXT, model_chain=["claude-x"],
+            )
+        self.assertEqual(fixed, "")
+        self.assertTrue(diag["still"])
+        self.assertGreaterEqual(diag["attempts"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

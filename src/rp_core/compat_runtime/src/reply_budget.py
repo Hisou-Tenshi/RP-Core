@@ -19,6 +19,95 @@ HONGTONG_PATTERNS = (
     re.compile(r"(?:红色|猩红|赤红)的眼(?:睛|眸).{0,6}(?:眯|盯|危险|一沉|微)"),
 )
 
+
+
+
+
+
+_CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+
+
+_CJK_GAP_RE = re.compile(
+    r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff][ \u3000]+"
+    r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]"
+)
+
+
+_MARTIAN_CONFUSABLES = frozenset("茬莪丕扌缇寰舛")
+_MARTIAN_SOFT_COUNT = 4
+_MARTIAN_SOFT_RATIO = 0.05
+_MARTIAN_SOFT_GAPS = 3
+
+_MARTIAN_HARD_COUNT = 6
+_MARTIAN_HARD_RATIO = 0.12
+_MARTIAN_HARD_COUNT2 = 8
+_MARTIAN_HARD_RATIO2 = 0.04
+_MARTIAN_HARD_GAPS = 6
+
+
+def _is_common_simplified_char(ch):
+    """该汉字能否用 GB2312 编码（≈ 常用简体字集）；异常按常见字处理。"""
+    try:
+        ch.encode("gb2312")
+        return True
+    except UnicodeEncodeError:
+        return False
+    except Exception:
+        return True
+
+
+def detect_martian_text(text):
+    """检测形近字/繁体/异体替换（「火星文」）与汉字间空格。
+
+    返回 ``{"hit", "level", "count", "ratio", "spaced", "samples"}``：
+
+    - ``count``：非 GB2312 常用简体的汉字数 + 形近替代字（茬/莪/丕…）出现数；
+    - ``ratio``：``count`` / 全文汉字数；
+    - ``spaced``：汉字之间插空格的处数；
+    - ``level``：``"hard"``（必须撤回重写）、``"soft"``（值得重写）、``""``。
+
+    任何异常 → ``hit=False``（纯函数软失败，绝不阻断回复）。
+    """
+    empty = {
+        "hit": False,
+        "level": "",
+        "count": 0,
+        "ratio": 0.0,
+        "spaced": 0,
+        "samples": "",
+    }
+    try:
+        if not isinstance(text, str) or not text:
+            return empty
+        cjk = _CJK_RE.findall(text)
+        if not cjk:
+            return empty
+        suspicious = [ch for ch in cjk if not _is_common_simplified_char(ch)]
+        confusables = [ch for ch in cjk if ch in _MARTIAN_CONFUSABLES]
+        count = len(suspicious) + len(confusables)
+        ratio = count / float(len(cjk))
+        spaced = len(_CJK_GAP_RE.findall(text))
+        soft = (
+            count >= _MARTIAN_SOFT_COUNT and ratio >= _MARTIAN_SOFT_RATIO
+        ) or spaced >= _MARTIAN_SOFT_GAPS
+        hard = (
+            (count >= _MARTIAN_HARD_COUNT and ratio >= _MARTIAN_HARD_RATIO)
+            or (count >= _MARTIAN_HARD_COUNT2 and ratio >= _MARTIAN_HARD_RATIO2)
+            or spaced >= _MARTIAN_HARD_GAPS
+        )
+        level = "hard" if hard else ("soft" if soft else "")
+        return {
+            "hit": bool(level),
+            "level": level,
+            "count": count,
+            "ratio": round(ratio, 4),
+            "spaced": spaced,
+            "samples": "".join(dict.fromkeys(suspicious + confusables))[:24],
+        }
+    except Exception:
+        return empty
+
+
 _TAG_RE = re.compile(r"<\s*/?\s*(?:budget|reply)\s*>", re.IGNORECASE)
 _BUDGET_RE = re.compile(r"<\s*budget\s*>(.*?)<\s*/\s*budget\s*>", re.I | re.S)
 _REPLY_RE = re.compile(r"<\s*reply\s*>(.*?)<\s*/\s*reply\s*>", re.I | re.S)
