@@ -768,7 +768,7 @@ def _invoke_pre_dialog_routing_llm(provider: str, system_prompt: str, user_promp
 
     if provider == "gemini":
 
-        from tenshi_reply import call_gemini
+        from tenshi_reply import _openrouter_model_id, call_gemini
         from llm_routing import build_gemini_paths
         import provider_health
 
@@ -781,12 +781,11 @@ def _invoke_pre_dialog_routing_llm(provider: str, system_prompt: str, user_promp
         for path in paths:
             try:
                 if path.get("openrouter") or path.get("protocol") == "openai":
-                    slug = (
-                        tenshi_config.openrouter_fallback_slug(model_name)
-                        or f"{path.get('vendor_prefix', '')}{model_name}"
-                    )
                     response, _ = call_openrouter(
-                        slug, system_prompt, messages, llm_path=path
+                        _openrouter_model_id(model_name, path),
+                        system_prompt,
+                        messages,
+                        llm_path=path,
                     )
                     return response
                 response, _, _ = call_gemini(

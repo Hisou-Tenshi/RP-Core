@@ -5357,7 +5357,12 @@ def _is_openrouter_path(path: dict) -> bool:
 
 
 def _openrouter_model_id(model_id: str, path: dict) -> str:
-    """OpenRouter 通路上实际要发的模型名：优先集中映射的 slug，其次 vendor_prefix+原生 id。"""
+    """OpenAI 兼容通路上实际要发的模型名：优先集中映射的 slug，其次 vendor_prefix+原生 id。
+
+    ``native_model_ids`` 的通路（如 Dragon 的 Gemini）不做 slug 映射，直接用原生 id。
+    """
+    if path.get("native_model_ids"):
+        return f"{path.get('vendor_prefix', '')}{model_id}"
     slug = tenshi_config.openrouter_fallback_slug(model_id)
     if slug:
         return slug

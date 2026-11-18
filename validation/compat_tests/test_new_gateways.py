@@ -107,3 +107,37 @@ class NewGatewayTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DragonGeminiProtocolTest(unittest.TestCase):
+    """Dragon 的 Gemini 只支持 OpenAI 协议，且模型名要用原生 id（不加 google/ 前缀）。"""
+
+    def test_dragon_gemini_proxy_uses_openai_protocol(self):
+        with mock.patch.dict(os.environ, {"GEMINI_DRAGON_API_KEY": "kg"}, clear=False):
+            mod = importlib.reload(providers)
+            try:
+                dragon = next(x for x in mod.GEMINI_PROXIES if x["name"] == "Dragon")
+            finally:
+                importlib.reload(providers)
+        self.assertEqual(dragon.get("protocol"), "openai")
+        self.assertTrue(dragon.get("native_model_ids"))
+
+    def test_dragon_gemini_model_id_skips_openrouter_slug(self):
+        import tenshi_reply as tr
+
+        path = {
+            "name": "Dragon",
+            "api_key": "k",
+            "base_url": "https://newapi.dragon3api.com",
+            "protocol": "openai",
+            "native_model_ids": True,
+        }
+        self.assertEqual(tr._openrouter_model_id("gemini-4-argon", path), "gemini-4-argon")
+
+    def test_openrouter_paths_still_use_the_slug(self):
+        import tenshi_reply as tr
+
+        path = {"name": "OpenRouter", "openrouter": True, "vendor_prefix": "google/"}
+        self.assertEqual(
+            tr._openrouter_model_id("gemini-4-argon", path), "google/gemini-4-argon"
+        )

@@ -316,6 +316,10 @@ if GEMINI_DRAGON_API_KEY and GEMINI_DRAGON_BASE_URL:
         "route_id": "dragon",
         "api_key": GEMINI_DRAGON_API_KEY,
         "base_url": GEMINI_DRAGON_BASE_URL,
+        # Dragon 的 Gemini 只开 OpenAI 兼容协议：走 chat.completions，
+        # 模型名用原生 id（不加 google/ 前缀）。
+        "protocol": "openai",
+        "native_model_ids": True,
     }
 
 
