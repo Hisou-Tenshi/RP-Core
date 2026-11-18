@@ -217,6 +217,29 @@ if CLAUDE_CODERPLAN_API_KEY and CLAUDE_CODERPLAN_BASE_URL:
     }
 
 
+CLAUDE_77_BASE_URL = _env("CLAUDE_77_BASE_URL", default="https://api.a77ai.cn")
+CLAUDE_77_API_KEY = _env("CLAUDE_77_API_KEY")
+CLAUDE_77: dict | None = None
+if CLAUDE_77_API_KEY and CLAUDE_77_BASE_URL:
+    CLAUDE_77 = {
+        "name": "77",
+        "route_id": "77",
+        "api_key": CLAUDE_77_API_KEY,
+        "base_url": CLAUDE_77_BASE_URL,
+    }
+
+CLAUDE_DRAGON_BASE_URL = _env("CLAUDE_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+CLAUDE_DRAGON_API_KEY = _env("CLAUDE_DRAGON_API_KEY")
+CLAUDE_DRAGON: dict | None = None
+if CLAUDE_DRAGON_API_KEY and CLAUDE_DRAGON_BASE_URL:
+    CLAUDE_DRAGON = {
+        "name": "Dragon",
+        "route_id": "dragon",
+        "api_key": CLAUDE_DRAGON_API_KEY,
+        "base_url": CLAUDE_DRAGON_BASE_URL,
+    }
+
+
 _PROXY_CONFIG_WARNINGS: list[str] = []
 if CLAUDE_CODEYU_BASE_URL and not any(
     (CLAUDE_CODEYU_BASE_API_KEY, CLAUDE_CODEYU_PRIME_API_KEY, CLAUDE_CODEYU_MAX_API_KEY)
@@ -242,6 +265,10 @@ for _tier in ("base", "prime", "max"):
         break
 if CLAUDE_CODERPLAN is not None:
     CLAUDE_PROXIES.append(dict(CLAUDE_CODERPLAN))
+if CLAUDE_77 is not None:
+    CLAUDE_PROXIES.append(dict(CLAUDE_77))
+if CLAUDE_DRAGON is not None:
+    CLAUDE_PROXIES.append(dict(CLAUDE_DRAGON))
 
 
 GEMINI_CODEYU_BASE_URL = _env("GEMINI_CODEYU_BASE_URL", default="https://codeyu.shop")
@@ -280,6 +307,18 @@ if GEMINI_CODERPLAN_API_KEY and GEMINI_CODERPLAN_BASE_URL:
     }
 
 
+GEMINI_DRAGON_BASE_URL = _env("GEMINI_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+GEMINI_DRAGON_API_KEY = _env("GEMINI_DRAGON_API_KEY")
+GEMINI_DRAGON: dict | None = None
+if GEMINI_DRAGON_API_KEY and GEMINI_DRAGON_BASE_URL:
+    GEMINI_DRAGON = {
+        "name": "Dragon",
+        "route_id": "dragon",
+        "api_key": GEMINI_DRAGON_API_KEY,
+        "base_url": GEMINI_DRAGON_BASE_URL,
+    }
+
+
 GEMINI_OPENROUTER: dict | None = None
 if OPENROUTER_API_KEY and OPENROUTER_BASE_URL:
     GEMINI_OPENROUTER = {
@@ -299,6 +338,8 @@ if GEMINI_CODEYU is not None:
     GEMINI_PROXIES.append(dict(GEMINI_CODEYU))
 if GEMINI_CODERPLAN is not None:
     GEMINI_PROXIES.append(dict(GEMINI_CODERPLAN))
+if GEMINI_DRAGON is not None:
+    GEMINI_PROXIES.append(dict(GEMINI_DRAGON))
 
 if GEMINI_CODERPLAN_BASE_URL and not GEMINI_CODERPLAN_API_KEY:
     if GEMINI_CODERPLAN_BASE_URL != CODERPLAN_DEFAULT_BASE_URL:
@@ -351,6 +392,31 @@ if GPT_CODERPLAN_API_KEY and GPT_CODERPLAN_BASE_URL:
     }
 
 
+GPT_77_BASE_URL = _ensure_openai_v1(_env("GPT_77_BASE_URL", default="https://api.a77ai.cn"))
+GPT_77_API_KEY = _env("GPT_77_API_KEY")
+GPT_77: dict | None = None
+if GPT_77_API_KEY and GPT_77_BASE_URL:
+    GPT_77 = {
+        "name": "77",
+        "route_id": "77",
+        "api_key": GPT_77_API_KEY,
+        "base_url": GPT_77_BASE_URL,
+    }
+
+GPT_DRAGON_BASE_URL = _ensure_openai_v1(
+    _env("GPT_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+)
+GPT_DRAGON_API_KEY = _env("GPT_DRAGON_API_KEY")
+GPT_DRAGON: dict | None = None
+if GPT_DRAGON_API_KEY and GPT_DRAGON_BASE_URL:
+    GPT_DRAGON = {
+        "name": "Dragon",
+        "route_id": "dragon",
+        "api_key": GPT_DRAGON_API_KEY,
+        "base_url": GPT_DRAGON_BASE_URL,
+    }
+
+
 GPT_PROXIES: list[dict] = []
 if GPT_TOTOKENS is not None:
     GPT_PROXIES.append(dict(GPT_TOTOKENS))
@@ -358,6 +424,10 @@ if GPT_CODEYU is not None:
     GPT_PROXIES.append(dict(GPT_CODEYU))
 if GPT_CODERPLAN is not None:
     GPT_PROXIES.append(dict(GPT_CODERPLAN))
+if GPT_77 is not None:
+    GPT_PROXIES.append(dict(GPT_77))
+if GPT_DRAGON is not None:
+    GPT_PROXIES.append(dict(GPT_DRAGON))
 
 if GPT_CODERPLAN_BASE_URL and not GPT_CODERPLAN_API_KEY:
     if GPT_CODERPLAN_BASE_URL != _ensure_openai_v1(CODERPLAN_DEFAULT_BASE_URL):
@@ -391,6 +461,18 @@ if GROK_CODERPLAN_API_KEY and GROK_CODERPLAN_BASE_URL:
         "api_key": GROK_CODERPLAN_API_KEY,
         "base_url": GROK_CODERPLAN_BASE_URL,
     }
+GROK_DRAGON_BASE_URL = _ensure_openai_v1(
+    _env("GROK_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+)
+GROK_DRAGON_API_KEY = _env("GROK_DRAGON_API_KEY")
+GROK_DRAGON: dict | None = None
+if GROK_DRAGON_API_KEY and GROK_DRAGON_BASE_URL:
+    GROK_DRAGON = {
+        "name": "Dragon",
+        "route_id": "dragon",
+        "api_key": GROK_DRAGON_API_KEY,
+        "base_url": GROK_DRAGON_BASE_URL,
+    }
 GROK_PROXIES: list[dict] = []
 GROK_TOTOKENS_BASE_URL = _ensure_openai_v1(
     _env("GROK_TOTOKENS_BASE_URL", default="https://drc.totokens.cc/v1")
@@ -414,6 +496,8 @@ if GROK_CODERPLAN is not None:
     GROK_PROXIES.append(dict(GROK_CODERPLAN))
 if GROK_CODEYU is not None:
     GROK_PROXIES.insert(0, dict(GROK_CODEYU))
+if GROK_DRAGON is not None:
+    GROK_PROXIES.append(dict(GROK_DRAGON))
 
 
 DEEPSEEK_PROXIES: list[dict] = []
@@ -541,12 +625,14 @@ PROVIDER_ROUTE_CATALOG = {
         "codeyu_prime",
         "codeyu_max",
         "coderplan",
+        "77",
+        "dragon",
         "openrouter",
         "official",
     ),
-    "gemini": ("totokens", "codeyu", "coderplan", "openrouter", "official"),
-    "gpt": ("totokens", "codeyu", "coderplan", "openrouter", "official"),
-    "grok": ("codeyu", "totokens", "coderplan", "openrouter", "official"),
+    "gemini": ("totokens", "codeyu", "coderplan", "dragon", "openrouter", "official"),
+    "gpt": ("totokens", "codeyu", "coderplan", "77", "dragon", "openrouter", "official"),
+    "grok": ("codeyu", "totokens", "coderplan", "dragon", "openrouter", "official"),
     "deepseek": ("official", "fireworks_pro", "openrouter"),
     "glm": ("official", "openrouter"),
     "qwen": ("official",),
@@ -889,4 +975,116 @@ PROXY_ENV_SPECS += [
         "env": "GROK_TOTOKENS_API_KEY",
         "default": "",
     },
+]
+
+
+# 77 / Dragon 是后加的两家 OpenAI 兼容网关：Claude 走 anthropic 协议，
+# 其余 provider 走 OpenAI 兼容协议（GPT/Grok 的 base_url 由 _ensure_openai_v1 补 /v1）。
+PROXY_ENV_SPECS += [
+    {
+        "provider": "claude",
+        "proxy": "77",
+        "role": "url",
+        "env": "CLAUDE_77_BASE_URL",
+        "default": "https://api.a77ai.cn",
+    },
+    {
+        "provider": "claude",
+        "proxy": "77",
+        "role": "key",
+        "env": "CLAUDE_77_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "77",
+        "role": "url",
+        "env": "GPT_77_BASE_URL",
+        "default": "https://api.a77ai.cn/v1",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "77",
+        "role": "key",
+        "env": "GPT_77_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "claude",
+        "proxy": "Dragon",
+        "role": "url",
+        "env": "CLAUDE_DRAGON_BASE_URL",
+        "default": "https://newapi.dragon3api.com",
+    },
+    {
+        "provider": "claude",
+        "proxy": "Dragon",
+        "role": "key",
+        "env": "CLAUDE_DRAGON_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "Dragon",
+        "role": "url",
+        "env": "GEMINI_DRAGON_BASE_URL",
+        "default": "https://newapi.dragon3api.com",
+    },
+    {
+        "provider": "gemini",
+        "proxy": "Dragon",
+        "role": "key",
+        "env": "GEMINI_DRAGON_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "Dragon",
+        "role": "url",
+        "env": "GPT_DRAGON_BASE_URL",
+        "default": "https://newapi.dragon3api.com/v1",
+    },
+    {
+        "provider": "gpt",
+        "proxy": "Dragon",
+        "role": "key",
+        "env": "GPT_DRAGON_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "grok",
+        "proxy": "Dragon",
+        "role": "url",
+        "env": "GROK_DRAGON_BASE_URL",
+        "default": "https://newapi.dragon3api.com/v1",
+    },
+    {
+        "provider": "grok",
+        "proxy": "Dragon",
+        "role": "key",
+        "env": "GROK_DRAGON_API_KEY",
+        "default": "",
+    },
+]
+
+
+__all__ += [
+    "CLAUDE_77_BASE_URL",
+    "CLAUDE_77_API_KEY",
+    "CLAUDE_77",
+    "CLAUDE_DRAGON_BASE_URL",
+    "CLAUDE_DRAGON_API_KEY",
+    "CLAUDE_DRAGON",
+    "GPT_77_BASE_URL",
+    "GPT_77_API_KEY",
+    "GPT_77",
+    "GPT_DRAGON_BASE_URL",
+    "GPT_DRAGON_API_KEY",
+    "GPT_DRAGON",
+    "GEMINI_DRAGON_BASE_URL",
+    "GEMINI_DRAGON_API_KEY",
+    "GEMINI_DRAGON",
+    "GROK_DRAGON_BASE_URL",
+    "GROK_DRAGON_API_KEY",
+    "GROK_DRAGON",
 ]

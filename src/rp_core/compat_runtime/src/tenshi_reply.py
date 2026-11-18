@@ -2476,7 +2476,7 @@ def _pre_dialog_routing_providers() -> list:
     present: list = []
     provider_to_model = {
         "gpt": lambda: tenshi_config.gpt_flash_primary(),
-        "claude": lambda: str(getattr(tenshi_config, "AUX_REVIEW_FALLBACK_MODEL", "claude-haiku-5-5")),
+        "claude": lambda: tenshi_config.claude_lite_primary(),
         "gemini": lambda: tenshi_config.gemini_lite_primary(),
         "grok": lambda: tenshi_config.grok_primary(),
         "magmarouter": lambda: tenshi_config.magmarouter_primary(),
@@ -3758,7 +3758,7 @@ def _is_claude_proxy_dead_this_round(proxy_name: str) -> bool:
     return False
 
 
-def call_claude(model_name, system_prompt, messages, tools=None, stream_callback=None, note_write_ids_collector=None):
+def call_claude(model_name, system_prompt, messages, tools=None, stream_callback=None, note_write_ids_collector=None, effort=None):
     proxy_clients: list[tuple[Any, dict]] = []
     skipped_proxies: list[str] = []
 
@@ -3970,6 +3970,7 @@ def call_claude(model_name, system_prompt, messages, tools=None, stream_callback
                     tools,
                     stream_callback,
                     note_write_ids_collector,
+                    effort=effort,
                 )
         except Exception as e:
             provider_call_stats.record("claude", attempt_path, success=False)
@@ -4017,14 +4018,18 @@ def call_claude(model_name, system_prompt, messages, tools=None, stream_callback
     logger.error(f"All Claude attempts failed. {format_errors(failures)}")
     raise last_error
 
-def _call_claude_impl(client, model_name, system_prompt, claude_messages, tools, stream_callback, note_write_ids_collector=None):
+def _call_claude_impl(client, model_name, system_prompt, claude_messages, tools, stream_callback, note_write_ids_collector=None, *, effort=None):
 
 
     thinking_config = None
     output_config = None
     max_tokens = 128000
 
-    if model_name in tenshi_config.CLAUDE_PRO_MODELS:
+    if effort:
+        output_config = {"effort": str(effort)}
+        if model_name in tenshi_config.CLAUDE_PRO_MODELS:
+            thinking_config = {"type": "adaptive", "display": "summarized"}
+    elif model_name in tenshi_config.CLAUDE_PRO_MODELS:
 
         thinking_config = {"type": "adaptive", "display": "summarized"}
         output_config = {"effort": "max"}
@@ -5919,7 +5924,16 @@ def _plain_text_call(
         return (text or "").strip()
 
     if provider == "claude":
-        return _run(lambda: call_claude(model_id, system, messages, tools=None, stream_callback=None))
+        return _run(
+            lambda: call_claude(
+                model_id,
+                system,
+                messages,
+                tools=None,
+                stream_callback=None,
+                effort=reasoning_effort,
+            )
+        )
 
     if provider == "gemini":
         paths = provider_health.filter_paths(
@@ -6837,21 +6851,22 @@ def _gpt_flash_review_prompt(prompt: str) -> dict | None:
         )
     except Exception as e:
         logger.warning(
-            f"[review] Luna（{models[0]}）终审调用失败，改用 Haiku 5.5 替补：{format_exception_inline(e)}"
+            f"[review] Luna（{models[0]}）终审调用失败，改用 {tenshi_config.claude_lite_primary()} 替补：{format_exception_inline(e)}"
         )
     verdict = reply_budget.parse_evaluator_verdict(raw or "")
     if not isinstance(verdict, dict):
-        _fallback_model = str(
-            getattr(tenshi_config, "AUX_REVIEW_FALLBACK_MODEL", "claude-haiku-5-5") or "claude-haiku-5-5"
-        ).strip()
+        _fallback_model = tenshi_config.claude_lite_primary()
         try:
             raw = _plain_text_call(
                 "claude", _fallback_model, _review_system, _review_messages,
                 max_sec=_review_timeout,
+                reasoning_effort="xhigh",
             )
-            logger.info(f"[review] Luna 未给出有效终审，已用 Haiku 5.5（{_fallback_model}）完成终审。")
+            logger.info(
+                f"[review] Luna 未给出有效终审，已用 {_fallback_model}（claude lite 档 [0]）完成终审。"
+            )
         except Exception as e:
-            logger.warning(f"[review] Haiku 5.5 替补也失败：{format_exception_inline(e)}")
+            logger.warning(f"[review] claude lite 档替补也失败：{format_exception_inline(e)}")
             return None
         verdict = reply_budget.parse_evaluator_verdict(raw or "")
     if not isinstance(verdict, dict):

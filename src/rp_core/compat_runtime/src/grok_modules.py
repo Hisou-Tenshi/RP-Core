@@ -761,8 +761,10 @@ def _invoke_pre_dialog_routing_llm(provider: str, system_prompt: str, user_promp
     if provider == "claude":
         from tenshi_reply import _plain_text_call
 
-        model_name = str(getattr(tenshi_config, "AUX_REVIEW_FALLBACK_MODEL", "claude-haiku-5-5"))
-        return _plain_text_call("claude", model_name, system_prompt, messages)
+        model_name = tenshi_config.claude_lite_primary()
+        return _plain_text_call(
+            "claude", model_name, system_prompt, messages, reasoning_effort="xhigh"
+        )
 
     if provider == "gemini":
 

@@ -362,8 +362,9 @@ class ReviewRegressions(unittest.TestCase):
         self.assertEqual(call.call_args_list[0].kwargs["reasoning_effort"], "xhigh")
         fallback = call.call_args_list[1]
         self.assertEqual(
-            fallback.args[:2], ("claude", tr.tenshi_config.AUX_REVIEW_FALLBACK_MODEL)
+            fallback.args[:2], ("claude", tr.tenshi_config.claude_lite_primary())
         )
+        self.assertEqual(fallback.kwargs["reasoning_effort"], "xhigh")
 
     def test_gpt_lite_review_falls_back_to_haiku_on_invalid_verdict(self):
         verdict = {
