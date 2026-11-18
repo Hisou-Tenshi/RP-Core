@@ -91,7 +91,7 @@ def redact(text: str) -> str:
 
 
 def now_utc() -> dt.datetime:
-    return dt.datetime.now(dt.timezone.utc)
+    return dt.datetime.now(dt.UTC)
 
 
 def iso(ts: dt.datetime) -> str:
@@ -168,11 +168,14 @@ def _path_model_id(
     openrouter: bool = False,
     fireworks: bool = False,
     vendor_prefix: str = "",
+    native_model_ids: bool = False,
 ) -> str:
     """原生模型 id → 该通路上真正发送的模型名（Fireworks 命名空间 / OpenRouter slug）。"""
     if fireworks:
         return _fireworks_model_id(native_model)
     if openrouter:
+        if native_model_ids:
+            return f"{vendor_prefix}{native_model}" if vendor_prefix else native_model
         slug = tenshi_config.openrouter_fallback_slug(native_model)
         if slug:
             return slug
@@ -187,6 +190,7 @@ def _with_all_models(
     openrouter: bool = False,
     fireworks: bool = False,
     vendor_prefix: str = "",
+    native_model_ids: bool = False,
 ) -> dict:
     """给一条通路挂上「该 provider 的全部模型」以及它们在本通路的实际模型 id。
 
@@ -201,6 +205,7 @@ def _with_all_models(
             openrouter=openrouter,
             fireworks=fireworks,
             vendor_prefix=vendor_prefix,
+            native_model_ids=native_model_ids,
         )
         for native in native_models
     }
@@ -325,18 +330,30 @@ def collect_targets(providers: list[str]) -> list[dict]:
         for path in build_gemini_paths(tenshi_config.GEMINI_API_KEY, tenshi_config.GEMINI_PROXIES):
             is_openai = path.get("protocol") == "openai"
             vendor_prefix = str(path.get("vendor_prefix") or "")
+            native_ids = bool(path.get("native_model_ids"))
             target = _target(
                 "gemini",
                 path.get("name") or "Proxy",
                 path.get("base_url") or GEMINI_DEFAULT_BASE,
                 path.get("api_key"),
                 "openai" if is_openai else "gemini",
-                (tenshi_config.openrouter_fallback_slug(model) or f"{vendor_prefix}{model}")
+                (
+                    f"{vendor_prefix}{model}"
+                    if native_ids
+                    else (
+                        tenshi_config.openrouter_fallback_slug(model) or f"{vendor_prefix}{model}"
+                    )
+                )
                 if is_openai
                 else model,
             )
             targets.append(
-                _with_all_models(target, openrouter=is_openai, vendor_prefix=vendor_prefix)
+                _with_all_models(
+                    target,
+                    openrouter=is_openai,
+                    vendor_prefix=vendor_prefix,
+                    native_model_ids=native_ids,
+                )
             )
 
     if "deepseek" in providers:
@@ -599,7 +616,7 @@ def probe_tls(host: str, port: int, timeout: float) -> dict:
         if not_after:
             try:
                 expiry = dt.datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(
-                    tzinfo=dt.timezone.utc
+                    tzinfo=dt.UTC
                 )
                 out["days_left"] = (expiry - now_utc()).days
             except ValueError:
