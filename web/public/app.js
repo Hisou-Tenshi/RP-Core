@@ -149,11 +149,15 @@ function renderModels() {
   const sections=config.providers.map(p=>{
     const list=groups.get(p.key)||[];
     if (query && !list.length) return '';
-    return `<div class="provider-card"><h3 class="model-group-title">${escape(p.label)}<span class="count">${list.length}</span></h3><div class="table-scroll"><table class="model-table"><thead><tr><th>原生模型 ID</th><th>厂商</th><th>档位</th><th>代际</th><th>顺序</th><th>主链</th><th>视觉</th><th>OpenRouter 同款 slug</th><th>备注</th><th></th></tr></thead><tbody>${list.length?list.map(rowHtml).join(''):`<tr><td colspan="10" class="empty">该厂商没有登记模型</td></tr>`}</tbody></table></div></div>`;
+    return `<div class="provider-card"><div class="model-group-head"><h3 class="model-group-title">${escape(p.label)}<span class="count">${list.length}</span></h3><button class="button secondary" data-add-model-provider="${escape(p.key)}"${disabled}>＋ 新增模型</button></div><div class="table-scroll"><table class="model-table"><thead><tr><th>原生模型 ID</th><th>厂商</th><th>档位</th><th>代际</th><th>顺序</th><th>主链</th><th>视觉</th><th>OpenRouter 同款 slug</th><th>备注</th><th></th></tr></thead><tbody>${list.length?list.map(rowHtml).join(''):`<tr><td colspan="10" class="empty">该厂商没有登记模型</td></tr>`}</tbody></table></div></div>`;
   }).filter(Boolean).join('');
-  $('models').innerHTML=`<div class="hint">这份注册表直接供完整运行时与探活脚本读取。代际越高越优先；同代际按 Max → Pro → Flash → Lite。显式顺序优先于代际。<br>新增模型需使用现有客户端支持的厂商协议；模型名是否实际可用以探活与服务商为准。</div><div class="toolbar"><input id="model-search" type="search" placeholder="搜索模型名称或备注" value="${escape(state.search)}" aria-label="搜索模型"><button id="add-model" class="button"${disabled}>＋ 新增模型</button></div>${sections||'<div class="hint">没有匹配的模型。</div>'}`;
+  $('models').innerHTML=`<div class="hint">这份注册表直接供完整运行时与探活脚本读取。代际越高越优先；同代际按 Max → Pro → Flash → Lite。显式顺序优先于代际。<br>新增模型需使用现有客户端支持的厂商协议；模型名是否实际可用以探活与服务商为准。</div><div class="toolbar"><input id="model-search" type="search" placeholder="搜索模型名称或备注" value="${escape(state.search)}" aria-label="搜索模型"></div>${sections||'<div class="hint">没有匹配的模型。</div>'}`;
   $('model-search').oninput=e=>{state.search=e.target.value;const position=e.target.selectionStart;renderModels();$('model-search').focus();$('model-search').setSelectionRange(position,position);};
-  $('add-model').onclick=()=>{config.models.push({id:`new-model-${config.models.length+1}`,provider:config.providers[0]?.key||'claude',tier:'flash',generation:0,slug:'',note:'',in_chain:true,vision:false,order:null});state.search='';renderModels();updateDirty();};
+  $('models').querySelectorAll('[data-add-model-provider]').forEach(button=>button.onclick=()=>{
+    const provider=button.dataset.addModelProvider;
+    config.models.push({id:`new-model-${config.models.length+1}`,provider,tier:'flash',generation:0,slug:'',note:'',in_chain:true,vision:false,order:null});
+    state.search='';renderModels();updateDirty();
+  });
   $('models').querySelectorAll('[data-field]').forEach(input=>input.oninput=input.onchange=()=>{
     const m=config.models[Number(input.closest('[data-model]').dataset.model)];const key=input.dataset.field;const previous=m[key];
     m[key]=input.type==='checkbox'?input.checked:input.type==='number'?(input.value===''&&key==='order'?null:Number(input.value)):input.value;
@@ -175,8 +179,8 @@ function chainCard(name,title,description) {
 function renderRouting() {
   if (!state.config) return;
   const disabled=editable()?'':' disabled';
-  $('routing').innerHTML='<div class="hint">对话从当前分档开始，依次尝试后续档位、厂商容灾组与 DeepSeek 链尾。Low 档先从随机池抽取首选。保存后，所有实例共享同一套规则。</div><div class="route-grid">'+
-    [['tier:max','Max · 最高档','复杂任务的静态链首'],['tier:high','High · 高档','高档位的静态链首'],['tier:medium','Medium · 标准档','标准档位的静态链首'],['tier:low','Low · 低档','通常留空，使用下方随机池'],['low_tier_pool','Low 随机池','每次调用重新抽取一个首选模型'],['summary_models','总结模型链','现有总结客户端使用 Claude 协议']].map(a=>chainCard(...a)).join('')+'</div>'+
+  $('routing').innerHTML='<div class="hint">对话从当前分档开始，依次尝试后续档位、厂商容灾组与 DeepSeek 链尾。五档各有静态链首，风险标记会把档位保底抬到 High。保存后，所有实例共享同一套规则。</div><div class="route-grid">'+
+    [['tier:max','Max · 最高档','最重的剧情与多重约束'],['tier:high','High · 高档','潜台词、心理博弈与高危人设'],['tier:medium','Medium · 标准档','常规剧情与关系推进'],['tier:low','Low · 低档','日常轻互动'],['tier:minimal','Minimal · 最低档','微反馈与过场'],['summary_models','总结模型链','现有总结客户端使用 Claude 协议']].map(a=>chainCard(...a)).join('')+'</div>'+
     `<div class="section-heading"><div><h2>厂商容灾顺序</h2><p>同一轮按以下顺序轮转；Lite 从第二轮开始。取消参与只影响容灾组。</p></div></div><div class="panel"><div class="provider-order">${state.config.providers.map((p,i)=>`<div class="chain-item" draggable="${editable()?'true':'false'}" data-drag-kind="provider" data-drag-index="${i}"><span class="chain-index">${i+1}</span><code>${escape(p.label)}</code><label title="参与容灾"><input type="checkbox" data-provider-enabled="${i}" aria-label="${escape(p.label)} 参与容灾"${p.in_fallback_chain?' checked':''}${disabled}></label><button data-provider-move="${i}" data-direction="-1" aria-label="上移 ${escape(p.label)}"${i===0||!editable()?' disabled':''}>↑</button><button data-provider-move="${i}" data-direction="1" aria-label="下移 ${escape(p.label)}"${i===state.config.providers.length-1||!editable()?' disabled':''}>↓</button></div>`).join('')}</div></div>`;
   const routeCards=state.config.providers.map(provider=>{
     const policy=state.config.path_policies[provider.key];

@@ -11,7 +11,8 @@ Telegram messages, private repositories or provider credentials.
 
 - Provider metadata and disaster recovery order.
 - Model IDs, provider/tier/generation, explicit order, vision/chain flags, OpenRouter slugs.
-- Four dialog tiers and the low-tier random pool.
+- Five dialog tiers (Max / High / Medium / Low / Minimal), each with a static head; the
+  legacy low-tier pool field is retained for compatibility but no longer drives routing.
 - The optional explicit Claude summary chain (empty = automatic existing Claude chain).
 - Embedding model/dimensions/input limit and allowlisted public connection/reasoning settings.
 
@@ -35,11 +36,19 @@ require a reviewed public-code change; adding a model ID cannot invent a client.
 The model registry page renders one table per provider in provider order instead of
 one combined table, so each vendor's tier ladder is visible at a glance. Within the
 same generation the tier order is Max → Pro → Flash → Lite; an explicit `order` still
-wins over both. Search applies across every table.
+wins over both. Search applies across every table, and each vendor table carries its
+own add button so a new model is created under that provider directly.
 
 Routing add controls start with an empty “请选择…” choice and an “添加模型” label.
 Selecting a candidate does not modify the configured chain; click “添加” to insert
 it. After insertion, the control returns to its empty state.
+
+The five dialog tiers default to Claude Max[0], Claude Pro[0], Gemini Pro[0],
+Gemini Flash[0] and Claude Flash[0]. The pre-routing rubric scores five 0–10
+dimensions (subtext, persona pressure, narrative span, staging craft, tactical
+logic), applies the weighted score plus a peak-compensation boost, and raises the
+tier to at least High when the independent risk flag is set. Both the rubric and
+the risk intervention note live in the prompt modules, not in the routing code.
 
 ## Deploy your fork
 

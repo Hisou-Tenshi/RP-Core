@@ -28,12 +28,13 @@ MODELS_PATH = os.path.join(SRC, "config", "models.py")
 
 
 _PROVIDER_LIST_CASES = {
-    "CLAUDE_PRO_MODELS": ("claude", ("max", "pro")),
+    "CLAUDE_MAX_MODELS": ("claude", "max"),
+    "CLAUDE_PRO_MODELS": ("claude", "pro"),
     "CLAUDE_FLASH_MODELS": ("claude", "flash"),
     "CLAUDE_LITE_MODELS": ("claude", "lite"),
     "DEEPSEEK_PRO_MODELS": ("deepseek", "pro"),
     "DEEPSEEK_FLASH_MODELS": ("deepseek", "flash"),
-    "GEMINI_PRO_MODELS": ("gemini", ("max", "pro")),
+    "GEMINI_PRO_MODELS": ("gemini", "pro"),
     "GEMINI_LITE_MODELS": ("gemini", "lite"),
     "MAGMAROUTER_MODELS": ("magmarouter", None),
     "OPENROUTER_MODELS": ("openrouter", None),
@@ -96,7 +97,7 @@ class SingleSourceTableTest(unittest.TestCase):
 
 
 class DerivedViewsTest(unittest.TestCase):
-    """列表 / 映射 / 四档 / 容灾组都是派生视图，不是手写常量。"""
+    """列表 / 映射 / 五档 / 容灾组都是派生视图，不是手写常量。"""
 
     def test_provider_lists_are_derived(self):
         for name, (provider, tier) in _PROVIDER_LIST_CASES.items():
@@ -135,10 +136,12 @@ class DerivedViewsTest(unittest.TestCase):
         self.assertIsNone(m.openrouter_fallback_slug(snapshot.id))
 
     def test_dialog_tiers_and_fallback_are_derived(self):
-        self.assertEqual(m.DIALOG_TIER_MAX_MODELS, m.CLAUDE_PRO_MODELS[:1])
-        self.assertEqual(m.DIALOG_TIER_HIGH_MODELS, m.GEMINI_PRO_MODELS[:1])
-        self.assertEqual(m.DIALOG_TIER_MEDIUM_MODELS, m.CLAUDE_FLASH_MODELS[:1])
-        self.assertEqual(m.DIALOG_TIER_LOW_MODELS, [])
+        self.assertEqual(m.DIALOG_TIER_ORDER, ("max", "high", "medium", "low", "minimal"))
+        self.assertEqual(m.DIALOG_TIER_MAX_MODELS, m.CLAUDE_MAX_MODELS[:1])
+        self.assertEqual(m.DIALOG_TIER_HIGH_MODELS, m.CLAUDE_PRO_MODELS[:1])
+        self.assertEqual(m.DIALOG_TIER_MEDIUM_MODELS, m.GEMINI_PRO_MODELS[:1])
+        self.assertEqual(m.DIALOG_TIER_LOW_MODELS, m.GEMINI_FLASH_MODELS[:1])
+        self.assertEqual(m.DIALOG_TIER_MINIMAL_MODELS, m.CLAUDE_FLASH_MODELS[:1])
         self.assertEqual(
             m.DIALOG_TIER_HEAD_MODELS,
             m.dedupe_models(*m.DIALOG_TIER_MODELS.values()),
@@ -148,9 +151,11 @@ class DerivedViewsTest(unittest.TestCase):
             m.disaster_recovery_models(m.DIALOG_TIER_HEAD_MODELS),
         )
 
-        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_max"], m.CLAUDE_PRO_MODELS[0])
-        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_high"], m.GEMINI_PRO_MODELS[0])
-        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_medium"], m.CLAUDE_FLASH_MODELS[0])
+        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_max"], m.DIALOG_TIER_MAX_MODELS[0])
+        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_high"], m.DIALOG_TIER_HIGH_MODELS[0])
+        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_medium"], m.DIALOG_TIER_MEDIUM_MODELS[0])
+        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_low"], m.DIALOG_TIER_LOW_MODELS[0])
+        self.assertEqual(m.TASK_MODEL_PRIMARY["dialog_minimal"], m.DIALOG_TIER_MINIMAL_MODELS[0])
 
 
 class AddOneRowPropagationTest(unittest.TestCase):

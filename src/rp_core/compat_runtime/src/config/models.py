@@ -67,6 +67,7 @@ __all__ = [
     "disaster_recovery_models",
     "provider_for_model",
 
+    "CLAUDE_MAX_MODELS",
     "CLAUDE_PRO_MODELS",
     "CLAUDE_FLASH_MODELS",
     "CLAUDE_LITE_MODELS",
@@ -97,6 +98,7 @@ __all__ = [
     "DIALOG_TIER_HIGH_MODELS",
     "DIALOG_TIER_MEDIUM_MODELS",
     "DIALOG_TIER_LOW_MODELS",
+    "DIALOG_TIER_MINIMAL_MODELS",
     "DIALOG_TIER_ORDER",
     "DIALOG_TIER_MODELS",
     "DIALOG_TIER_HEAD_MODELS",
@@ -309,7 +311,8 @@ def provider_models(
 
 
 
-CLAUDE_PRO_MODELS = provider_models("claude", ("max", "pro"))
+CLAUDE_MAX_MODELS = provider_models("claude", "max")
+CLAUDE_PRO_MODELS = provider_models("claude", "pro")
 CLAUDE_FLASH_MODELS = provider_models("claude", "flash")
 CLAUDE_LITE_MODELS = provider_models("claude", "lite")
 
@@ -317,7 +320,7 @@ DEEPSEEK_PRO_MODELS = provider_models("deepseek", "pro")
 DEEPSEEK_FLASH_MODELS = provider_models("deepseek", "flash")
 
 
-GEMINI_PRO_MODELS = provider_models("gemini", ("max", "pro"))
+GEMINI_PRO_MODELS = provider_models("gemini", "pro")
 GEMINI_FLASH_MODELS = [m for m in provider_models("gemini", "flash") if MODEL_REGISTRY[m].in_chain]
 GEMINI_LITE_MODELS = provider_models("gemini", "lite")
 GEMINI_IMAGE_MODELS = provider_models("gemini", vision=True)
@@ -545,13 +548,15 @@ DIALOG_TIER_MAX_MODELS = list(MODEL_CONFIG["dialog_tiers"]["max"])
 DIALOG_TIER_HIGH_MODELS = list(MODEL_CONFIG["dialog_tiers"]["high"])
 DIALOG_TIER_MEDIUM_MODELS = list(MODEL_CONFIG["dialog_tiers"]["medium"])
 DIALOG_TIER_LOW_MODELS: list[str] = list(MODEL_CONFIG["dialog_tiers"]["low"])
+DIALOG_TIER_MINIMAL_MODELS: list[str] = list(MODEL_CONFIG["dialog_tiers"]["minimal"])
 
-DIALOG_TIER_ORDER = ("max", "high", "medium", "low")
+DIALOG_TIER_ORDER = ("max", "high", "medium", "low", "minimal")
 DIALOG_TIER_MODELS: dict[str, list[str]] = {
     "max": DIALOG_TIER_MAX_MODELS,
     "high": DIALOG_TIER_HIGH_MODELS,
     "medium": DIALOG_TIER_MEDIUM_MODELS,
     "low": DIALOG_TIER_LOW_MODELS,
+    "minimal": DIALOG_TIER_MINIMAL_MODELS,
 }
 
 
@@ -633,9 +638,11 @@ CLAUDE_SUMMARY_MODELS: list[str] = list(MODEL_CONFIG["summary_models"])
 
 TASK_MODEL_PRIMARY: dict[str, str] = {
 
-    "dialog_max": CLAUDE_PRO_MODELS[0],
-    "dialog_high": GEMINI_PRO_MODELS[0],
+    "dialog_max": DIALOG_TIER_MAX_MODELS[0],
+    "dialog_high": DIALOG_TIER_HIGH_MODELS[0],
     "dialog_medium": DIALOG_TIER_MEDIUM_MODELS[0],
+    "dialog_low": DIALOG_TIER_LOW_MODELS[0],
+    "dialog_minimal": DIALOG_TIER_MINIMAL_MODELS[0],
 
 
     "image_description": GEMINI_IMAGE_MODELS[0],
@@ -675,6 +682,8 @@ def task_model_chain(task: str) -> list[str]:
         return dialog_chain_from_tier("medium")
     if key == "dialog_low":
         return dialog_chain_from_tier("low")
+    if key == "dialog_minimal":
+        return dialog_chain_from_tier("minimal")
     if key in ("auxiliary", "intent_analysis"):
         return dedupe_models(DEEPSEEK_FLASH_MODELS, MAGMAROUTER_MODELS, OPENROUTER_MODELS, GROK_MODELS)
     if key == "summary":

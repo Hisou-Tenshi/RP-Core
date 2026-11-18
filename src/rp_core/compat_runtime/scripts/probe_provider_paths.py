@@ -134,7 +134,7 @@ def _dedupe_models(models: list[str]) -> list[str]:
 def _provider_model_ids(provider: str) -> list[str]:
     """某 provider 在 Tenshi 模型注册表里的**全部**模型（顺序 = 业务档位顺序）。"""
     groups: dict[str, tuple[str, ...]] = {
-        "claude": ("CLAUDE_PRO_MODELS", "CLAUDE_FLASH_MODELS", "CLAUDE_LITE_MODELS"),
+        "claude": ("CLAUDE_MAX_MODELS", "CLAUDE_PRO_MODELS", "CLAUDE_FLASH_MODELS", "CLAUDE_LITE_MODELS"),
         "gemini": ("GEMINI_ALL_MODELS",),
         "deepseek": ("DEEPSEEK_PRO_MODELS", "DEEPSEEK_FLASH_MODELS"),
         "gpt": ("GPT_MODELS",),

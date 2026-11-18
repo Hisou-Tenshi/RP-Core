@@ -112,13 +112,13 @@
       "order": null
     },
     {
-      "id": "claude-fable-5-1",
+      "id": "claude-fable-5-2",
       "provider": "claude",
       "tier": "max",
-      "generation": 5.1,
-      "slug": "",
-      "note": "仅注册，暂不进主链",
-      "in_chain": false,
+      "generation": 5.2,
+      "slug": "anthropic/claude-fable-5.2",
+      "note": "5.2 代旗舰；进主链",
+      "in_chain": true,
       "vision": false,
       "order": null
     },
@@ -180,7 +180,7 @@
     {
       "id": "gemini-4-argon",
       "provider": "gemini",
-      "tier": "max",
+      "tier": "pro",
       "generation": 4,
       "slug": "google/gemini-4-argon",
       "note": "Gemini 4 Argon",
@@ -433,15 +433,20 @@
   ],
   "dialog_tiers": {
     "max": [
-      "claude-opus-5-5"
+      "claude-fable-5-2"
     ],
     "high": [
-      "gemini-4-carbon"
+      "claude-opus-5-5"
     ],
     "medium": [
+      "gemini-4-argon"
+    ],
+    "low": [
       "gemini-3.8-flash"
     ],
-    "low": []
+    "minimal": [
+      "claude-sonnet-5-5"
+    ]
   },
   "low_tier_pool": [
     "claude-sonnet-5-5",

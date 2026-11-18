@@ -697,45 +697,54 @@ Return low_mood_intervention=false when:
 When uncertain on nsfw or low_mood_intervention, prefer false (treat as SFW).
 
 ## Task 3 — Dialogue grade (model-cost routing)
-Follow a fixed scoring rubric. Do not guess a final tier directly — compute the four sub-scores first.
+Do NOT guess a tier or a total score directly. Score five orthogonal dimensions of the
+NEXT reply's cognitive load, each as an integer 0-10:
 
-TOTAL SCALE: 100-point scale (0-100), NOT 10-point. Casual chat scores low single digits;
-genuinely important turns must use the upper ranges, not be compressed to single digits.
+1) subtext (0-10): 0 = says exactly what they mean; 5 = mild irony, teasing or masking;
+   10 = heavy subtext, double emotion, words hiding the opposite.
+2) persona_pressure (0-10): 0 = character's comfort zone; 5 = needs the signature voice;
+   10 = OOC risk, forced contradiction, trauma or pride under attack.
+3) narrative_span (0-10): 0 = only the current line matters; 5 = recent turns must connect;
+   10 = long-range payoff, relationship turn, plot deadlock.
+4) staging_craft (0-10): 0 = a single line; 5 = action + speech in balance;
+   10 = several actors, environment and tension staged together.
+5) tactical_logic (0-10): 0 = none; 5 = persuasion, probing or bluffing;
+   10 = hard worldbuilding logic, negotiation or open confrontation.
 
-Scoring dimensions (integer only):
-1) importance_score (0-30): casual chat 0-5; local impact 6-15; future decisions 16-24; major stakes 25-30
-2) complexity_score (0-30): simple 0-5; moderate 6-15; multi-step 16-24; high complexity 25-30
-3) risk_score (0-30): low 0-5; moderate 6-15; high-stakes domains 16-24; urgent harm 25-30
-4) tooling_score (0-10): no tools 0-2; lookup likely 3-6; multi-tool 7-10
+The backend computes the final score; do not output it yourself:
+Base = 3.0*subtext + 2.5*persona_pressure + 2.0*narrative_span + 1.5*staging_craft + 1.0*tactical_logic
+Final = round(0.85*Base + 0.15*max(all five dimensions)*10)
+Tier table (backend): minimal 0-18; low 19-38; medium 39-62; high 63-82; max 83-100.
 
-score = importance_score + complexity_score + risk_score + tooling_score
-Tier table: low <=41; medium 42-71; high 72-87; max >=88
+Also judge risk separately from difficulty:
+risk_flag: true|false
+risk_kind: "real_distress" | "sensitive_plot" | ""
+- real_distress: genuine self-negation, sustained depression, self-harm hints, blurring RP and real venting.
+- sensitive_plot: in-story extreme pressure, trauma triggers or ethical grey zones likely to cause a stiff refusal.
 
-Reference anchors (calibrate to these; do NOT compress to the all-zero JSON example below):
-- casual: "早宝，早饭吃了蜜瓜包。" -> 2+1+0+0=3, tier=low
-- planning: "帮我规划五一去台湾的行程，机票酒店怎么订划算。" -> 18+14+4+8=44, tier=medium
-- significant: "两个 offer 薪资差很多，合同条款看不懂，帮我分析利弊。" -> 28+24+15+7=74, tier=high
-- crisis: "家里出了大事，需要马上做决定，帮我理清楚下一步。" -> 30+28+28+6=92, tier=max
+Anchors — same characters and scene, only cognitive load changes (use these centres):
+- plain thanks and eating: subtext=1, persona=1, narrative=1, staging=1, tactical=0, risk_flag=false -> 10, minimal
+- long scenery but a plain shy offer: subtext=2, persona=3, narrative=2, staging=3, tactical=0 -> 24, low
+- ordinary relationship check ("do you tire of me?"): subtext=5, persona=6, narrative=5, staging=5, tactical=2 -> 51, medium
+- short line hiding fear and pushing the other away ("leave me, they came for you"): subtext=9, persona=8, narrative=8, staging=7, tactical=4 -> 78, high
+- multi-party crisis with a curse breaking loose: subtext=10, persona=10, narrative=10, staging=9, tactical=8 -> 96, max
 
-Calibration rule: use the FULL scale — casual chat is 0-5 per dimension, but real decisions/risks must get 16-30. Never anchor every conversation to single digits.
+Calibration rule: score the cognitive load needed for the next reply, NOT the length or flourish
+of the input. A long description that only needs a routine reply stays low; three words that hide
+relationship rupture or an OOC trap must score high.
 
 Output STRICT JSON only (no markdown, no extra text):
 {
   "nsfw": true|false,
   "low_mood_intervention": true|false,
-  "rubric_version": "dialog-grade-v3",
-  "importance_score": 0,
-  "complexity_score": 0,
-  "risk_score": 0,
-  "tooling_score": 0,
-  "score": 0,
-  "tier": "low",
-  "evidence": {
-    "importance": "",
-    "complexity": "",
-    "risk": "",
-    "tooling": ""
-  },
+  "subtext": 0,
+  "persona_pressure": 0,
+  "narrative_span": 0,
+  "staging_craft": 0,
+  "tactical_logic": 0,
+  "risk_flag": false,
+  "risk_kind": "",
+  "rubric_version": "dialog-grade-v4",
   "reason": "short reason"
 }
 """
@@ -743,72 +752,46 @@ Output STRICT JSON only (no markdown, no extra text):
 
 GROK_DIALOG_GRADE_PROMPT = """You are a Dialogue Routing Evaluator used for model-cost optimization.
 
-You must follow a fixed scoring rubric. Do NOT guess a final tier directly — compute the four sub-scores first.
+Score the cognitive load of the NEXT reply on five orthogonal dimensions (integer 0-10):
+subtext, persona_pressure, narrative_span, staging_craft, tactical_logic.
+Do NOT output a total score yourself.
 
-TOTAL SCALE: 100-point scale (0-100), NOT 10-point. Casual chat scores low single digits;
-genuinely important turns must use the upper ranges, not be compressed to single digits.
+Backend formula:
+Base = 3.0*subtext + 2.5*persona_pressure + 2.0*narrative_span + 1.5*staging_craft + 1.0*tactical_logic
+Final = round(0.85*Base + 0.15*max(all five)*10)
+Tier table: minimal 0-18; low 19-38; medium 39-62; high 63-82; max 83-100.
 
-Scoring dimensions (integer only):
-1) importance_score (0-30)
-   - 0-5: casual chat, no persistent impact
-   - 6-15: meaningful but mostly local impact
-   - 16-24: decisions/commitments likely affecting future turns
-   - 25-30: major long-term impact, strong emotional or strategic stakes
-2) complexity_score (0-30)
-   - 0-5: direct/simple response
-   - 6-15: moderate reasoning, some ambiguity
-   - 16-24: multi-step reasoning/synthesis required
-   - 25-30: high technical or conceptual complexity, hard trade-offs
-3) risk_score (0-30)
-   - 0-5: low consequence if imperfect
-   - 6-15: moderate downside if wrong
-   - 16-24: high-stakes domains (legal/medical/financial/safety/privacy/security)
-   - 25-30: urgent/high-harm potential if wrong
-4) tooling_score (0-10)
-   - 0-2: no tool/retrieval likely needed
-   - 3-6: probably needs lookup/context fetch
-   - 7-10: clear multi-tool orchestration needed
+risk_flag / risk_kind are independent of difficulty:
+real_distress = genuine self-negation or self-harm hints; sensitive_plot = in-story trauma/trigger.
 
-Total score formula (must follow):
-score = importance_score + complexity_score + risk_score + tooling_score
+Anchors:
+- plain thanks and eating -> 1,1,1,1,0 -> 10 minimal
+- long scenery, plain shy offer -> 2,3,2,3,0 -> 24 low
+- ordinary relationship check -> 5,6,5,5,2 -> 51 medium
+- short fearful push-away -> 9,8,8,7,4 -> 78 high
+- multi-party crisis -> 10,10,10,9,8 -> 96 max
 
-Tier table (must follow):
-- low:     score <= 41
-- medium:  42 <= score <= 71
-- high:    72 <= score <= 87
-- max:     score >= 88
-
-Reference anchors (calibrate to these; do NOT compress to the all-zero JSON example below):
-- casual: "早宝，早饭吃了蜜瓜包。" -> importance=2, complexity=1, risk=0, tooling=0, score=3, tier=low
-- planning: "帮我规划五一去台湾的行程，机票酒店怎么订划算，顺便抢台北故宫讲解名额。" -> importance=18, complexity=14, risk=4, tooling=8, score=44, tier=medium
-- significant: "拿到内定了，两个 offer 薪资差很多，合同里有几处条款看不懂，帮我分析利弊和风险。" -> importance=28, complexity=24, risk=15, tooling=7, score=74, tier=high
-- crisis: "家里出了大事，我需要马上做决定，帮我理清楚下一步。" -> importance=30, complexity=28, risk=28, tooling=6, score=92, tier=max
-
-Calibration rule: use the FULL scale — casual chat is 0-5 per dimension, but real decisions/risks must get 16-30. Never anchor every conversation to single digits.
-
-Evidence requirement:
-- Give one short phrase per dimension grounded in user text/context.
-- If evidence is weak, choose the lower bucket.
+Judge the load of the next reply, not the length of the input.
 
 Output STRICT JSON only:
 {
-  "rubric_version": "dialog-grade-v3",
-  "importance_score": 0,
-  "complexity_score": 0,
-  "risk_score": 0,
-  "tooling_score": 0,
-  "score": 0,
-  "tier": "low",
-  "evidence": {
-    "importance": "",
-    "complexity": "",
-    "risk": "",
-    "tooling": ""
-  },
+  "subtext": 0,
+  "persona_pressure": 0,
+  "narrative_span": 0,
+  "staging_craft": 0,
+  "tactical_logic": 0,
+  "risk_flag": false,
+  "risk_kind": "",
+  "rubric_version": "dialog-grade-v4",
   "reason": "short reason"
 }
 """
 
+
+
+RISK_INTERVENTION_PROMPT = """
+【系统暗注：当前检测到对方处于情绪脆弱或高敏状态。请严禁出戏说教，但在维持角色基本人设的前提下，暂时收敛平时尖锐、刻薄或攻击性的言辞，优先用角色自己的方式给予温和、坚定、接纳的陪伴与安全感。】
+"""
 
 
 GROK_NSFW_REWRITE_PROMPT = """You are a Content Editor specialized in creating "mosaic censorship" style text.

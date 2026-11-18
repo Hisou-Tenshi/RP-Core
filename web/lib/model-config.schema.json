@@ -159,7 +159,8 @@
         "max",
         "high",
         "medium",
-        "low"
+        "low",
+        "minimal"
       ],
       "properties": {
         "max": {
@@ -208,6 +209,18 @@
           },
           "uniqueItems": true,
           "maxItems": 100
+        },
+        "minimal": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "uniqueItems": true,
+          "maxItems": 100,
+          "minItems": 1
         }
       }
     },
@@ -221,7 +234,7 @@
       },
       "uniqueItems": true,
       "maxItems": 100,
-      "minItems": 1
+      "minItems": 0
     },
     "summary_models": {
       "type": "array",

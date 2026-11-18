@@ -82,11 +82,12 @@ class PreDialogRoutingTimeoutTest(unittest.TestCase):
         {
             "nsfw": False,
             "low_mood_intervention": False,
-            "importance_score": 2,
-            "complexity_score": 1,
-            "risk_score": 0,
-            "tooling_score": 0,
-            "tier": "low",
+            "subtext": 2,
+            "persona_pressure": 3,
+            "narrative_span": 2,
+            "staging_craft": 3,
+            "tactical_logic": 0,
+            "risk_flag": False,
             "reason": "unit-test",
         }
     )

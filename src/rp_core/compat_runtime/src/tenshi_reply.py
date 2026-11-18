@@ -5435,19 +5435,12 @@ def _try_openrouter_fallback(
 def _build_dialog_model_chain(grade_tier: str) -> list:
     """按档位取主对话降级链：该档（含）到链尾。
 
-    档位 → 模型 的映射集中在 config 的「主对话四档」（DIALOG_TIER_*）里，
+    档位 → 模型 的映射集中在 config 的「主对话五档」（DIALOG_TIER_*）里，
     这里不再按下标切片（旧写法数头部下标，DS Pro/Flash 同 id 被 dedupe 折叠后
-    档位会整体错位一格）。
-    low 档没有静态模型：把 Claude/Gemini 两家最新 Flash 按时间 seed 随机抽中的那个插到链首，
-    其后直接就是容灾组的第一个（抽中的模型不会重复出现，后面的兜底一条都不删）。
+    档位会整体错位一格）。五档各有静态链首，low 档不再从随机池抽取。
     """
     tier = tenshi_config.normalize_dialog_tier(grade_tier)
-    chain = tenshi_config.dialog_chain_from_tier(tier)
-    if tier == "low":
-        picked = tenshi_config.low_tier_random_primary()
-        if picked:
-            chain = dedupe_model_ids([picked] + chain)
-    return chain
+    return tenshi_config.dialog_chain_from_tier(tier)
 
 
 def _build_reply_model_groups(nsfw_detected: bool, grade_tier: str) -> list[tuple[str, list]]:
@@ -7591,6 +7584,15 @@ def _main_impl(*, force_gemini_flash: bool = False):
         if emotional_prompt:
             logger.info("Low-mood intervention detected; appending emotional interaction prompt.")
             volatile_tail += "\n\n" + emotional_prompt
+
+    if bool(dialog_grade.get("risk_flag")):
+        risk_prompt = getattr(tenshi_config, "RISK_INTERVENTION_PROMPT", "").strip()
+        if risk_prompt:
+            logger.info(
+                "Risk flag detected (%s); appending risk intervention prompt.",
+                dialog_grade.get("risk_kind") or "unspecified",
+            )
+            volatile_tail += "\n\n" + risk_prompt
 
     static_core = getattr(tenshi_config, "SYSTEM_PROMPT_STATIC_CORE", "") or ""
 

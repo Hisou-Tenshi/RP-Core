@@ -105,19 +105,20 @@ test('selecting is not an addition; explicit add inserts once and resets to blan
   const {dom,writes}=await page();
   try {
     const {document,Event}=dom.window;
-    const select=document.querySelector('[data-chain-select="low_tier_pool"]');
-    const button=document.querySelector('[data-add-chain="low_tier_pool"]');
-    const selected=select.options[1].value;
+    const select=document.querySelector('[data-chain-select="tier:minimal"]');
+    const button=document.querySelector('[data-add-chain="tier:minimal"]');
+    const selected=[...select.options].find(option=>option.value)?.value;
+    assert.ok(selected);
     select.value=selected;
     select.dispatchEvent(new Event('change',{bubbles:true}));
     assert.equal(button.disabled,false);
     assert.equal(document.querySelector('#save').disabled,true);
     button.onclick();
-    assert.equal(document.querySelector('[data-chain-select="low_tier_pool"]').value,'');
-    assert.equal(document.querySelector('[data-add-chain="low_tier_pool"]').disabled,true);
+    assert.equal(document.querySelector('[data-chain-select="tier:minimal"]').value,'');
+    assert.equal(document.querySelector('[data-add-chain="tier:minimal"]').disabled,true);
     await document.querySelector('#save').onclick();
-    assert.deepEqual(writes[0].config.low_tier_pool,[...config.low_tier_pool,selected]);
-    assert.equal(writes[0].config.low_tier_pool.filter(id=>id===selected).length,1);
+    assert.deepEqual(writes[0].config.dialog_tiers.minimal,[...config.dialog_tiers.minimal,selected]);
+    assert.equal(writes[0].config.dialog_tiers.minimal.filter(id=>id===selected).length,1);
     assert.deepEqual(validateConfig(writes[0].config),[]);
   } finally {dom.window.close();}
 });

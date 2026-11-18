@@ -174,8 +174,9 @@ class ProviderModelRegistryTest(unittest.TestCase):
         self.assertIn("claude-haiku-4-5", models)
         self.assertIn("claude-haiku-4-5-20251001", models)
 
-        expected_pro = list(_load_tenshi_config().CLAUDE_PRO_MODELS)
-        self.assertEqual(models[: len(expected_pro)], expected_pro)
+        cfg = _load_tenshi_config()
+        head = list(cfg.CLAUDE_MAX_MODELS) + list(cfg.CLAUDE_PRO_MODELS)
+        self.assertEqual(models[: len(head)], head)
 
     def test_path_model_id_openrouter_slug(self):
         tenant = _load_tenshi_config()
@@ -329,7 +330,7 @@ class CollectTargetsTest(unittest.TestCase):
         target = self._by("claude", "Codeyu Base")
         self.assertEqual(len(target["models"]), 8)
         self.assertIn("claude-haiku-4-5-20251001", target["models"])
-        self.assertIn("claude-fable-5-1", target["models"])
+        self.assertIn("claude-fable-5-2", target["models"])
 
     def test_gemini_openrouter_uses_google_slugs(self):
         target = self._by("gemini", "OpenRouter")

@@ -89,4 +89,4 @@ def test_historical_fixture_is_not_the_production_catalog():
     assert historical.is_relative_to(ROOT / "validation/fixtures")
     assert historical.resolve() != (CODE / "model-config.json").resolve()
     data = json.loads(historical.read_text())
-    assert data["dialog_tiers"]["high"] == ["gemini-4-argon"]
+    assert data["dialog_tiers"]["high"] == ["claude-opus-5-5"]

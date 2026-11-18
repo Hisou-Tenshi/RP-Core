@@ -101,13 +101,36 @@ def _safe_int(v, default: int = 0) -> int:
         return default
 
 
+RP_DIALOG_GRADE_DIMENSIONS = (
+    "subtext",
+    "persona_pressure",
+    "narrative_span",
+    "staging_craft",
+    "tactical_logic",
+)
+
+
 def _compute_score_from_rubric_fields(parsed: dict) -> tuple[int, str]:
-    """
-    优先使用结构化子分重算总分，避免 LLM 直接拍一个总分。
-    返回：(score, source_tag)
+    """优先按五维 RP 打分重算总分（3/2.5/2/1.5/1 加权 + 峰值补偿）。
+
+    LLM 只给五个 0-10 的整数维度分；总分由这里算，避免它直接拍一个漂移的总分。
+    老的四维子分仍保留兜底，方便旧客户端/回放数据。
     """
     if not isinstance(parsed, dict):
         return 50, "score_fallback_default"
+
+    dims = {name: _safe_int(parsed.get(name), -1) for name in RP_DIALOG_GRADE_DIMENSIONS}
+    if min(dims.values()) >= 0:
+        values = {name: max(0, min(10, score)) for name, score in dims.items()}
+        base = (
+            3.0 * values["subtext"]
+            + 2.5 * values["persona_pressure"]
+            + 2.0 * values["narrative_span"]
+            + 1.5 * values["staging_craft"]
+            + 1.0 * values["tactical_logic"]
+        )
+        peak = max(values.values())
+        return int(round(0.85 * base + 0.15 * peak * 10)), "score_from_rubric_fields"
 
     i = _safe_int(parsed.get("importance_score"), -1)
     c = _safe_int(parsed.get("complexity_score"), -1)
@@ -122,6 +145,17 @@ def _compute_score_from_rubric_fields(parsed: dict) -> tuple[int, str]:
 
     raw_score = _safe_int(parsed.get("score"), 50)
     return max(0, min(100, raw_score)), "score_from_llm_score"
+
+
+def _dialog_grade_risk(parsed: dict) -> tuple[bool, str]:
+    """独立的情绪/敏感风险开关：不参与难度加权，只抬档位与追加暗注。"""
+    raw_flag = parsed.get("risk_flag")
+    risk = raw_flag is True or str(raw_flag).strip().lower() in ("true", "1", "yes")
+    kind = str(parsed.get("risk_kind") or "").strip()
+    if kind not in ("real_distress", "sensitive_plot"):
+        kind = ""
+    return risk, kind
+
 
 def _messages_to_openai_format(system_prompt, messages):
     """转换 messages 为 OpenAI 兼容格式。"""
@@ -690,24 +724,37 @@ def _build_dialog_grade_from_parsed(parsed: dict, query: str, history_context: s
     score, score_source = _compute_score_from_rubric_fields(parsed)
     llm_tier = str(parsed.get("tier", "")).strip().lower()
     score, hard_reason = _apply_dialog_grade_hard_rules(score, query, history_context)
-    max_th = int(getattr(tenshi_config, "CONVERSATION_GRADE_MAX_THRESHOLD", 88) or 88)
-    high_th = int(getattr(tenshi_config, "CONVERSATION_GRADE_HIGH_THRESHOLD", 72) or 72)
-    med_th = int(getattr(tenshi_config, "CONVERSATION_GRADE_MEDIUM_THRESHOLD", 42) or 42)
+    max_th = int(getattr(tenshi_config, "CONVERSATION_GRADE_MAX_THRESHOLD", 83) or 83)
+    high_th = int(getattr(tenshi_config, "CONVERSATION_GRADE_HIGH_THRESHOLD", 63) or 63)
+    med_th = int(getattr(tenshi_config, "CONVERSATION_GRADE_MEDIUM_THRESHOLD", 39) or 39)
+    low_th = int(getattr(tenshi_config, "CONVERSATION_GRADE_LOW_THRESHOLD", 19) or 19)
     if score >= max_th:
         tier = "max"
     elif score >= high_th:
         tier = "high"
     elif score >= med_th:
         tier = "medium"
-    else:
+    elif score >= low_th:
         tier = "low"
+    else:
+        tier = "minimal"
+    risk_flag, risk_kind = _dialog_grade_risk(parsed)
     reason = str(parsed.get("reason", "") or "").strip()
     reason = f"{reason} | {score_source}".strip(" |")
     if hard_reason:
         reason = f"{reason} | {hard_reason}".strip(" |")
-    if llm_tier and llm_tier not in ("max", "high", "medium", "low"):
+    if llm_tier and llm_tier not in ("max", "high", "medium", "low", "minimal"):
         reason = f"{reason} | llm_tier_invalid:{llm_tier}".strip(" |")
-    return {"score": score, "tier": tier, "reason": reason}
+    if risk_flag and tier in ("minimal", "low", "medium"):
+        tier = "high"
+        reason = f"{reason} | risk_flag:floor_high".strip(" |")
+    return {
+        "score": score,
+        "tier": tier,
+        "reason": reason,
+        "risk_flag": risk_flag,
+        "risk_kind": risk_kind,
+    }
 
 
 def _parse_pre_dialog_routing_response(text: str) -> tuple[dict | None, dict | None]:

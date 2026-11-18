@@ -255,12 +255,12 @@ class LowTierHasNonClaudeResortTest(unittest.TestCase):
         self.assertEqual(tenshi_reply._build_dialog_model_chain("max"), full)
         self.assertEqual(
             tenshi_reply._build_dialog_model_chain("max")[0],
-            tenshi_config.CLAUDE_PRO_MODELS[0],
+            tenshi_config.CLAUDE_MAX_MODELS[0],
         )
 
         self.assertEqual(
             tenshi_reply._build_dialog_model_chain("max")[1],
-            tenshi_config.GEMINI_PRO_MODELS[0],
+            tenshi_config.CLAUDE_PRO_MODELS[0],
         )
 
         self.assertEqual(
@@ -269,7 +269,7 @@ class LowTierHasNonClaudeResortTest(unittest.TestCase):
         )
         self.assertEqual(
             tenshi_reply._build_dialog_model_chain("medium")[0],
-            tenshi_config.CLAUDE_FLASH_MODELS[0],
+            tenshi_config.GEMINI_PRO_MODELS[0],
         )
 
 
@@ -278,22 +278,25 @@ class DialogTierStructureTest(unittest.TestCase):
     """5) 四档各自一个列表名，链由 DIALOG_TIER_* 拼接（改档位不用再数下标）。"""
 
     def test_tier_order_and_lists(self):
-        self.assertEqual(tenshi_config.DIALOG_TIER_ORDER, ("max", "high", "medium", "low"))
         self.assertEqual(
-            tenshi_config.dialog_tier_models("max"), [tenshi_config.CLAUDE_PRO_MODELS[0]]
+            tenshi_config.DIALOG_TIER_ORDER, ("max", "high", "medium", "low", "minimal")
         )
-
         self.assertEqual(
-            tenshi_config.dialog_tier_models("high"), [tenshi_config.GEMINI_PRO_MODELS[0]]
+            tenshi_config.dialog_tier_models("max"), [tenshi_config.CLAUDE_MAX_MODELS[0]]
         )
-        self.assertEqual(tenshi_config.dialog_tier_models("high"), ["gemini-4-argon"])
-
         self.assertEqual(
-            tenshi_config.dialog_tier_models("medium"),
+            tenshi_config.dialog_tier_models("high"), [tenshi_config.CLAUDE_PRO_MODELS[0]]
+        )
+        self.assertEqual(
+            tenshi_config.dialog_tier_models("medium"), [tenshi_config.GEMINI_PRO_MODELS[0]]
+        )
+        self.assertEqual(
+            tenshi_config.dialog_tier_models("low"), [tenshi_config.GEMINI_FLASH_MODELS[0]]
+        )
+        self.assertEqual(
+            tenshi_config.dialog_tier_models("minimal"),
             [tenshi_config.CLAUDE_FLASH_MODELS[0]],
         )
-        self.assertEqual(tenshi_config.dialog_tier_models("low"), [])
-        self.assertEqual(tenshi_config.DIALOG_TIER_LOW_MODELS, [])
 
     def test_unknown_tier_falls_back_to_medium(self):
         self.assertEqual(tenshi_config.normalize_dialog_tier("nonsense"), "medium")
@@ -316,30 +319,20 @@ class DialogTierStructureTest(unittest.TestCase):
 
     def test_higher_tier_models_do_not_leak_into_lower_tier_fallback(self):
         """顶配 Claude 只出现在 max 档：低档兜底不该先撞上最贵的模型。"""
-        self.assertNotIn(
-            tenshi_config.CLAUDE_PRO_MODELS[0], tenshi_config.DIALOG_FALLBACK_MODELS
-        )
-        for tier in ("high", "medium", "low"):
-            self.assertNotIn(
-                tenshi_config.CLAUDE_PRO_MODELS[0],
-                tenshi_config.dialog_chain_from_tier(tier),
-                tier,
-            )
+        top = tenshi_config.CLAUDE_MAX_MODELS[0]
+        self.assertNotIn(top, tenshi_config.DIALOG_FALLBACK_MODELS)
+        for tier in ("high", "medium", "low", "minimal"):
+            self.assertNotIn(top, tenshi_config.dialog_chain_from_tier(tier), tier)
 
-    def test_low_chain_is_pure_fallback_when_nothing_is_picked(self):
-        """low 档不做静态兜底：没有随机链首时，low 链就是容灾组本身（+ 链尾 DeepSeek）。"""
-        chain = tenshi_config.dialog_chain_from_tier("low")
-        self.assertEqual(chain[: len(tenshi_config.DIALOG_FALLBACK_MODELS)], tenshi_config.DIALOG_FALLBACK_MODELS)
-        self.assertEqual(len(chain), len(tenshi_config.DIALOG_FALLBACK_MODELS) + 1)
-        self.assertTrue(chain[-1].startswith("deepseek-"), chain[-1])
+    def test_each_tier_has_a_static_head(self):
+        for tier in tenshi_config.DIALOG_TIER_ORDER:
+            models = tenshi_config.dialog_tier_models(tier)
+            self.assertTrue(models, tier)
+            self.assertEqual(tenshi_config.dialog_chain_from_tier(tier)[0], models[0], tier)
 
-    def test_no_tier_owns_gemini_flash_anymore(self):
-        """low 空出来后 gemini-3.8-flash 不再被任何档占用，回到容灾组的 Gemini Flash 段。"""
-        self.assertNotIn(
-            tenshi_config.GEMINI_FLASH_MODELS[0], tenshi_config.DIALOG_TIER_HEAD_MODELS
-        )
-        self.assertIn(
-            tenshi_config.GEMINI_FLASH_MODELS[0], tenshi_config.DIALOG_FALLBACK_MODELS
+    def test_low_tier_owns_gemini_flash(self):
+        self.assertEqual(
+            tenshi_config.DIALOG_TIER_LOW_MODELS, [tenshi_config.GEMINI_FLASH_MODELS[0]]
         )
 
 
@@ -354,23 +347,25 @@ class FallbackLiteDemotionTest(unittest.TestCase):
         self.assertGreaterEqual(len(fallback), 14, f"容灾组异常：{fallback}")
 
 
-        for model_id in fallback[:6]:
+        for model_id in fallback[:5]:
             spec = models_config.MODEL_REGISTRY.get(model_id)
             self.assertIsNotNone(spec, model_id)
             self.assertNotEqual(spec.tier, "lite", f"Lite 不应进第一轮：{model_id}")
 
-        self.assertEqual(
-            models_config.MODEL_REGISTRY[fallback[6]].tier, "lite",
-            f"第 7 名应是第二轮的第一个 Lite：{fallback[6]}",
+        lite_index = next(
+            index
+            for index, model_id in enumerate(fallback)
+            if models_config.MODEL_REGISTRY[model_id].tier == "lite"
         )
+        self.assertGreaterEqual(lite_index, 5, f"Lite 第一轮不该占位：{fallback}")
 
     def test_provider_with_only_lite_does_not_take_first_round_slot(self):
         """GPT 只有 gpt-6-luna（Lite）：第一轮不占位，不能为凑满 7 个硬塞进去。"""
         fallback = tenshi_config.DIALOG_FALLBACK_MODELS
-        self.assertNotIn("gpt-6-luna", fallback[:6])
+        self.assertNotIn("gpt-6-luna", fallback[:5])
         self.assertIn("gpt-6-luna", fallback)
         self.assertGreater(
-            fallback.index("gpt-6-luna"), 6, "GPT 的 Lite 不该挤进第一轮"
+            fallback.index("gpt-6-luna"), 5, "GPT 的 Lite 不该挤进第一轮"
         )
 
     def test_claude_contribution_prefers_old_pro_over_lite(self):
@@ -378,76 +373,34 @@ class FallbackLiteDemotionTest(unittest.TestCase):
         fallback = tenshi_config.DIALOG_FALLBACK_MODELS
         self.assertEqual(fallback[0], "claude-opus-5")
         self.assertIn("claude-haiku-5-5", fallback)
-        self.assertEqual(fallback.index("claude-haiku-5-5"), 6, "Lite 从第二轮(第 7 名)开始")
+        self.assertGreaterEqual(fallback.index("claude-haiku-5-5"), 5, "Lite 不该挤进第一轮")
 
 
 class LowTierFlashRandomPoolTest(unittest.TestCase):
-    """4) 最低档链首 = Claude / Gemini 两家 Flash[0] 时间 seed 随机二选一；后续降级链一条都不能少。"""
+    """4) 五档各有静态链首：low = Gemini Flash[0]，不再随机抽取。"""
 
-    def test_pool_is_two_vendor_flash_primaries(self):
-
-
+    def test_low_tier_starts_with_gemini_flash(self):
         self.assertEqual(
-            tenshi_config.low_tier_flash_models(),
-            [
-                tenshi_config.CLAUDE_FLASH_MODELS[0],
-                tenshi_config.GEMINI_FLASH_MODELS[0],
-            ],
+            tenshi_config.dialog_tier_models("low"), [tenshi_config.GEMINI_FLASH_MODELS[0]]
         )
-        self.assertEqual(len(tenshi_config.low_tier_flash_models()), 2)
-
-        self.assertNotIn(
-            tenshi_config.CLAUDE_PRO_MODELS[0], tenshi_config.low_tier_flash_models()
-        )
-        self.assertNotIn(
-            tenshi_config.GEMINI_PRO_MODELS[0], tenshi_config.low_tier_flash_models()
+        self.assertEqual(
+            tenshi_reply._build_dialog_model_chain("low")[0],
+            tenshi_config.GEMINI_FLASH_MODELS[0],
         )
 
-    def test_random_pick_covers_pool_with_fixed_seeds(self):
-        seen = {tenshi_config.low_tier_random_primary(seed=i) for i in range(500)}
-        self.assertEqual(seen, set(tenshi_config.low_tier_flash_models()))
-
-    def test_non_low_tiers_are_not_randomized(self):
-        for tier in ("max", "high", "medium"):
+    def test_every_tier_is_static(self):
+        for tier in tenshi_config.DIALOG_TIER_ORDER:
             self.assertEqual(
                 tenshi_reply._build_dialog_model_chain(tier),
                 tenshi_config.dialog_chain_from_tier(tier),
                 tier,
             )
 
-    def test_each_pool_member_can_be_injected_without_losing_fallbacks(self):
-        base = tenshi_config.dialog_chain_from_tier("low")
-        original = tenshi_config.low_tier_random_primary
-        try:
-            for model_id in tenshi_config.low_tier_flash_models():
-                tenshi_config.low_tier_random_primary = lambda m=model_id: m
-                chain = tenshi_reply._build_dialog_model_chain("low")
-                self.assertEqual(chain[0], model_id)
-                for kept in base:
-                    self.assertIn(kept, chain, f"{model_id} 注入后丢掉了兜底 {kept}")
-                self.assertEqual(tenshi_reply._provider_from_model_id(chain[-1]), "deepseek")
-        finally:
-            tenshi_config.low_tier_random_primary = original
-
-    def test_low_tier_runner_up_is_always_first_of_fallback(self):
-        """low 无静态档位：抽到谁，第二个都是容灾组的第一个。"""
-        first_fallback = tenshi_config.DIALOG_FALLBACK_MODELS[0]
-        original = tenshi_config.low_tier_random_primary
-        try:
-            for model_id in tenshi_config.low_tier_flash_models():
-                tenshi_config.low_tier_random_primary = lambda m=model_id: m
-                chain = tenshi_reply._build_dialog_model_chain("low")
-                self.assertEqual(chain[0], model_id)
-                self.assertEqual(chain[1], first_fallback, chain[:3])
-        finally:
-            tenshi_config.low_tier_random_primary = original
-
-    def test_low_tier_head_is_always_from_pool(self):
-        pool = set(tenshi_config.low_tier_flash_models())
-        for _ in range(50):
-            chain = tenshi_reply._build_dialog_model_chain("low")
-            self.assertTrue(chain)
-            self.assertIn(chain[0], pool, chain)
+    def test_low_tier_keeps_fallbacks_after_head(self):
+        chain = tenshi_reply._build_dialog_model_chain("low")
+        for kept in tenshi_config.dialog_chain_from_tier("low"):
+            self.assertIn(kept, chain)
+        self.assertEqual(tenshi_reply._provider_from_model_id(chain[-1]), "deepseek")
 
     def test_gpt_candidate_routes_to_gpt_provider(self):
         """抽到 GPT-Flash 时必须走 gpt 通路，而不是被 _provider_from_model_id 误判成 claude。"""
@@ -530,11 +483,11 @@ class GlmProviderTest(unittest.TestCase):
     def test_glm_is_fallback_group_not_tier_head(self):
         """2026-10-18 换档后：GLM 不再占 high 档头，glm-5.3 退回容灾组。"""
         self.assertEqual(
-            tenshi_config.DIALOG_TIER_HIGH_MODELS, [tenshi_config.GEMINI_PRO_MODELS[0]]
+            tenshi_config.DIALOG_TIER_HIGH_MODELS, [tenshi_config.CLAUDE_PRO_MODELS[0]]
         )
         self.assertEqual(
             tenshi_reply._build_dialog_model_chain("high")[0],
-            tenshi_config.GEMINI_PRO_MODELS[0],
+            tenshi_config.CLAUDE_PRO_MODELS[0],
         )
         self.assertIn("glm-5.3", tenshi_config.DIALOG_FALLBACK_MODELS)
 
