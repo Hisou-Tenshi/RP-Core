@@ -272,7 +272,7 @@
       "functions": 27,
       "unchanged_functions": 27,
       "changed_functions": [],
-      "reviewed_sha256": "a7fb0631300b08b284664d1247b4aa182c584ce4b601087778d7ddf3d895b666"
+      "reviewed_sha256": "b13abb97a1e386a14ec22c4df6bab9e746e860dde717e1fe3b3cfdb47b1227a8"
     },
     {
       "path": "src/llm_tool_schema.py",

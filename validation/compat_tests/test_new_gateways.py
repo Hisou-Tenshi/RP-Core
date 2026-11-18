@@ -147,3 +147,32 @@ class DragonGeminiProtocolTest(unittest.TestCase):
         self.assertEqual(
             tr._openrouter_model_id("gemini-4-argon", path), "google/gemini-4-argon"
         )
+
+
+class ClaudeGatewayOrderTest(unittest.TestCase):
+    def test_claude_paths_start_with_the_configured_gateways(self):
+        """Claude must actually route to 77 and Dragon, not only list them in the catalog."""
+        import tenshi_reply as tr
+        from llm_routing import build_claude_proxy_configs_for_model
+
+        fake = [
+            {"name": "77", "api_key": "k", "base_url": "https://api.a77ai.cn", "route_id": "77"},
+            {
+                "name": "To-Tokens",
+                "api_key": "k",
+                "base_url": "https://drc.totokens.cc/v1",
+                "route_id": "totokens",
+            },
+            {
+                "name": "Dragon",
+                "api_key": "k",
+                "base_url": "https://newapi.dragon3api.com/v1",
+                "route_id": "dragon",
+            },
+        ]
+        with mock.patch.object(tr.tenshi_config, "CLAUDE_PROXIES", fake):
+            names = [
+                path["name"]
+                for path in build_claude_proxy_configs_for_model(tr.tenshi_config.claude_lite_primary())
+            ]
+        self.assertEqual(names[:3], ["77", "To-Tokens", "Dragon"])

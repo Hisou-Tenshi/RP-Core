@@ -85,9 +85,17 @@ def build_claude_proxy_configs_for_model(model_id: str) -> list[dict[str, Any]]:
     order = ("prime", "max") if is_claude_fable_model(model_id) else ("base", "prime", "max")
 
     out: list[dict[str, Any]] = []
-    totokens = getattr(tenshi_config, "CLAUDE_TOTOKENS", None)
-    if totokens and totokens.get("api_key") and totokens.get("base_url"):
-        out.append(totokens)
+    # 通用代理（77、To-Tokens、Dragon）对所有档位一致，先按控制台顺序接入。
+    generic_names = {"77", "To-Tokens", "Dragon"}
+    seen: set[str] = set()
+    for proxy in getattr(tenshi_config, "CLAUDE_PROXIES", []) or []:
+        name = str(proxy.get("name") or "")
+        if name not in generic_names or not proxy.get("api_key") or not proxy.get("base_url"):
+            continue
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append(proxy)
     for tier in order:
         conf = tiers.get(tier)
         if conf and conf.get("api_key") and conf.get("base_url"):
