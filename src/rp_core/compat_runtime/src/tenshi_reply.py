@@ -2465,7 +2465,7 @@ def _pre_dialog_routing_providers() -> list:
       因此实际什么都不补）——即本函数当前返回的就是原序列；
     * 一旦以后调整原序列（例如去掉某个 provider），这里会自动把缺的 Flash 补上。
     """
-    original = ["gpt", "gemini", "grok"]
+    original = ["gpt", "claude", "gemini", "grok"]
     if tenshi_config.MAGMAROUTER_API_KEY:
         original.append("magmarouter")
     if tenshi_config.OPENROUTER_API_KEY:
@@ -2476,6 +2476,7 @@ def _pre_dialog_routing_providers() -> list:
     present: list = []
     provider_to_model = {
         "gpt": lambda: tenshi_config.gpt_flash_primary(),
+        "claude": lambda: str(getattr(tenshi_config, "AUX_REVIEW_FALLBACK_MODEL", "claude-haiku-5-5")),
         "gemini": lambda: tenshi_config.gemini_lite_primary(),
         "grok": lambda: tenshi_config.grok_primary(),
         "magmarouter": lambda: tenshi_config.magmarouter_primary(),
@@ -6824,13 +6825,35 @@ def _gpt_flash_review_prompt(prompt: str) -> dict | None:
         "都不算火星文；孤立的个别非简体字也不要判。修正时不要改动这些日文和专名原文。\n\n"
         + prompt
     )
-    raw = _plain_text_call(
-        "gpt", models[0], "You are a strict JSON-only reply scoring and safety auditor.",
-        [{"role": "user", "content": audit_prompt}],
-        max_sec=float(getattr(tenshi_config, "REPLY_AUX_LLM_TIMEOUT_SEC", 45.0) or 45.0),
-        reasoning_effort="xhigh",
-    )
+    _review_system = "You are a strict JSON-only reply scoring and safety auditor."
+    _review_messages = [{"role": "user", "content": audit_prompt}]
+    _review_timeout = float(getattr(tenshi_config, "REPLY_AUX_LLM_TIMEOUT_SEC", 120.0) or 120.0)
+    raw = ""
+    try:
+        raw = _plain_text_call(
+            "gpt", models[0], _review_system, _review_messages,
+            max_sec=_review_timeout,
+            reasoning_effort="xhigh",
+        )
+    except Exception as e:
+        logger.warning(
+            f"[review] Luna（{models[0]}）终审调用失败，改用 Haiku 5.5 替补：{format_exception_inline(e)}"
+        )
     verdict = reply_budget.parse_evaluator_verdict(raw or "")
+    if not isinstance(verdict, dict):
+        _fallback_model = str(
+            getattr(tenshi_config, "AUX_REVIEW_FALLBACK_MODEL", "claude-haiku-5-5") or "claude-haiku-5-5"
+        ).strip()
+        try:
+            raw = _plain_text_call(
+                "claude", _fallback_model, _review_system, _review_messages,
+                max_sec=_review_timeout,
+            )
+            logger.info(f"[review] Luna 未给出有效终审，已用 Haiku 5.5（{_fallback_model}）完成终审。")
+        except Exception as e:
+            logger.warning(f"[review] Haiku 5.5 替补也失败：{format_exception_inline(e)}")
+            return None
+        verdict = reply_budget.parse_evaluator_verdict(raw or "")
     if not isinstance(verdict, dict):
         return None
     expected = {
@@ -8286,13 +8309,20 @@ def _main_impl(*, force_gemini_flash: bool = False):
         audit = review_outgoing_reply(
             user_query=full_query, budget=choice_budget, reply_text=audited_body
         )
-        if audit.get("unsafe") is not False:
-            raise reply_two_stage.UnsafeResponseError(str(audit.get("reason") or "review_rejected"))
+        _martian_fixed_body = ""
         if audit.get("martian"):
             _martian_fixed_body = _clean_text_for_stream_gate(str(audit.get("martian_fix") or ""))
             _martian_fixed_body = strip_choice_layer_markup(
                 reactions.strip_markers(_martian_fixed_body or "")
             ).strip()
+            if _martian_fixed_body:
+                try:
+                    _plan_line, _plan_body = reply_two_stage.split_plan(_martian_fixed_body)
+                    if (_plan_body or "").strip():
+                        _martian_fixed_body = _plan_body.strip()
+                except Exception:
+                    pass
+                _martian_fixed_body = newlines_to_br(_martian_fixed_body).strip()
             if not _martian_fixed_body:
                 logger.warning("[martian] 终审判定含火星文但没有可用的修正稿，本轮按不安全处理。")
                 raise reply_two_stage.UnsafeResponseError("martian_unfixed")
@@ -8300,7 +8330,7 @@ def _main_impl(*, force_gemini_flash: bool = False):
             if _fixed_reason:
                 raise reply_two_stage.UnsafeResponseError(_fixed_reason)
             logger.warning(
-                "[martian] 终审判定正文含火星文，撤回已发内容后重发修正稿"
+                "[martian] 终审判定正文含火星文，直接发送模型给出的修正稿，不再重写重跑"
                 f"（原文 {len(audited_body)} 字，修正 {len(_martian_fixed_body)} 字）。"
             )
             if _withdraw_streamed_turn():
@@ -8322,6 +8352,14 @@ def _main_impl(*, force_gemini_flash: bool = False):
             streamed_superset_of_final = False
             if SMOKE_MODE:
                 _smoke_record["martian_fixed"] = True
+            if audit.get("unsafe") is not False:
+                logger.warning(
+                    "[martian] 终审原本判 unsafe（"
+                    f"{audit.get('reason') or 'review_rejected'}），修正稿已通过本地安全检查，"
+                    "按“能改就不重写”的口径直接发送修正稿。"
+                )
+        if audit.get("unsafe") is not False and not _martian_fixed_body:
+            raise reply_two_stage.UnsafeResponseError(str(audit.get("reason") or "review_rejected"))
         choice_guard["verdict"] = audit
         audit_over, audit_style = _verdict_issues(audit)
         choice_guard["over"] = list(dict.fromkeys(choice_guard.get("over", []) + audit_over))

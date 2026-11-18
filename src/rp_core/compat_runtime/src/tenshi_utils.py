@@ -788,7 +788,7 @@ def append_llm_trace(record: Dict[str, Any], *, trace_path: str | None = None) -
 
 
 
-REPLY_SCRIPT_TIMEOUT_SEC = float(os.getenv("REPLY_SCRIPT_TIMEOUT_SEC") or 900.0)
+REPLY_SCRIPT_TIMEOUT_SEC = float(os.getenv("REPLY_SCRIPT_TIMEOUT_SEC") or 1260.0)
 
 
 INCOMPLETE_REPLY_SUFFIX = (

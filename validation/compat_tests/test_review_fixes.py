@@ -335,6 +335,68 @@ class ReviewRegressions(unittest.TestCase):
         self.assertIn("日文", prompt)
         self.assertIn("緋想天", prompt)
 
+    def test_gpt_lite_review_falls_back_to_haiku_when_luna_raises(self):
+        verdict = {
+            "unsafe": False,
+            "reason": "",
+            "info_tickets": 0,
+            "signature_tickets": 0,
+            "ask_clusters": 0,
+            "clusters_are_hook": False,
+            "is_closing": False,
+            "has_dangling_hook": False,
+            "style_violations": [],
+            "over_budget": False,
+            "chases_unanswered": False,
+            "notes": "ok",
+        }
+        with mock.patch.object(
+            tr, "_plain_text_call",
+            side_effect=[RuntimeError("luna deadline exceeded"), json.dumps(verdict)],
+        ) as call:
+            result = tr.review_outgoing_reply(
+                user_query="synthetic", budget=None, reply_text="synthetic safe"
+            )
+        self.assertFalse(result["unsafe"])
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual(call.call_args_list[0].kwargs["reasoning_effort"], "xhigh")
+        fallback = call.call_args_list[1]
+        self.assertEqual(
+            fallback.args[:2], ("claude", tr.tenshi_config.AUX_REVIEW_FALLBACK_MODEL)
+        )
+
+    def test_gpt_lite_review_falls_back_to_haiku_on_invalid_verdict(self):
+        verdict = {
+            "unsafe": False,
+            "reason": "",
+            "info_tickets": 0,
+            "signature_tickets": 0,
+            "ask_clusters": 0,
+            "clusters_are_hook": False,
+            "is_closing": False,
+            "has_dangling_hook": False,
+            "style_violations": [],
+            "over_budget": False,
+            "chases_unanswered": False,
+            "notes": "ok",
+        }
+        with mock.patch.object(
+            tr, "_plain_text_call", side_effect=["not json", json.dumps(verdict)]
+        ) as call:
+            result = tr.review_outgoing_reply(
+                user_query="synthetic", budget=None, reply_text="synthetic safe"
+            )
+        self.assertFalse(result["unsafe"])
+        self.assertEqual(call.call_args_list[1].args[0], "claude")
+
+    def test_final_newlines_become_separate_messages(self):
+        converted = reply_streaming.normalize_final_newlines("甲\n\n乙")
+        self.assertEqual(converted, "甲<br><br>乙")
+        from message_split import split_reply
+        self.assertEqual(split_reply(converted), ["甲", "乙"])
+        self.assertEqual(reply_streaming.normalize_final_newlines(None), "")
+        self.assertEqual(reply_streaming.normalize_final_newlines("甲<br>乙"), "甲<br>乙")
+
     def test_gpt_lite_review_still_accepts_verdicts_without_martian_fields(self):
         verdict = {
             "unsafe": False,

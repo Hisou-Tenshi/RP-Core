@@ -34,6 +34,12 @@ class TestSplitReply(unittest.TestCase):
         text = "喂，看这儿。比那名居天子，天界来的，记住没？"
         self.assertEqual(split_reply(text, chunk_long=False), [text])
 
+    def test_split_for_send_turns_blank_lines_into_separate_messages(self):
+        import stickers
+
+        self.assertEqual(stickers.split_for_send("甲\n\n乙"), ["甲", "乙"])
+        self.assertEqual(stickers.split_for_send("甲\n乙"), ["甲", "乙"])
+
     def test_chunk_long_false_still_splits_on_marker(self):
         """chunk_long=False 只关超长切,不关 <br> 切分。"""
         self.assertEqual(split_reply("甲<br>乙", chunk_long=False), ["甲", "乙"])

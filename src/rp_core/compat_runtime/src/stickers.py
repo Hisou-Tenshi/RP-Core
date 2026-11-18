@@ -25,6 +25,7 @@ from typing import Any
 
 
 from config.persona import TYPING_STICKER_PROTOCOL
+from message_split import newlines_to_br
 
 logger = logging.getLogger("TenshiReply")
 
@@ -297,7 +298,9 @@ def split_for_send(text: str | None, **split_kwargs) -> list[str]:
     """
     from message_split import split_reply
 
-    t = normalize_reply(text or "")
+    # 真实换行（模型常写 \n\n 分段）先收敛成 <br>，否则 split_reply 看不到分段点，
+    # 整段会挤成一条消息发出去。
+    t = newlines_to_br(normalize_reply(text or ""))
     segs = split_reply(t, **split_kwargs)
     if not has_marker(t):
         return segs

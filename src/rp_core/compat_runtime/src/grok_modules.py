@@ -758,6 +758,12 @@ def _invoke_pre_dialog_routing_llm(provider: str, system_prompt: str, user_promp
     """
     messages = [{"role": "user", "content": user_prompt}]
 
+    if provider == "claude":
+        from tenshi_reply import _plain_text_call
+
+        model_name = str(getattr(tenshi_config, "AUX_REVIEW_FALLBACK_MODEL", "claude-haiku-5-5"))
+        return _plain_text_call("claude", model_name, system_prompt, messages)
+
     if provider == "gemini":
 
         from tenshi_reply import call_gemini
@@ -976,6 +982,7 @@ def run_pre_dialog_routing(query: str, history_context: str = "") -> dict:
         "gemini": "Gemini",
         "gpt": "GPT",
         "deepseek": "DeepSeek",
+        "claude": "Claude Haiku",
     }
 
     per_provider_timeout, total_budget = _pre_routing_deadlines()

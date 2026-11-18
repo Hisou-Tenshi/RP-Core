@@ -120,16 +120,16 @@ class PreDialogRoutingTimeoutTest(unittest.TestCase):
         grok_modules._invoke_pre_dialog_routing_llm = _fake
 
     def test_hung_first_provider_falls_through_to_next_model(self):
-        """GPT 卡住 → 到点放弃 → 用 Gemini 的结果，而不是等 GPT 回来。"""
+        """GPT 卡住 → 到点放弃 → 用 Claude Haiku 的结果，而不是等 GPT 回来。"""
         tenshi_config.PRE_ROUTING_PROVIDER_TIMEOUT_SEC = 0.2
         tenshi_config.PRE_ROUTING_TOTAL_TIMEOUT_SEC = 30.0
-        self._set_hang({"gpt"}, good_provider="gemini")
+        self._set_hang({"gpt"}, good_provider="claude")
 
         started = time.monotonic()
         result = grok_modules.run_pre_dialog_routing(self.QUERY)
         elapsed = time.monotonic() - started
 
-        self.assertEqual(self.calls[:2], ["gpt", "gemini"])
+        self.assertEqual(self.calls[:2], ["gpt", "claude"])
         self.assertFalse(result["nsfw"])
         self.assertEqual(result["dialog_grade"]["tier"], "low")
 
@@ -139,7 +139,7 @@ class PreDialogRoutingTimeoutTest(unittest.TestCase):
         """整条链都卡死：总预算用尽即停，回退安全默认（不会逐个等满）。"""
         tenshi_config.PRE_ROUTING_PROVIDER_TIMEOUT_SEC = 0.2
         tenshi_config.PRE_ROUTING_TOTAL_TIMEOUT_SEC = 0.5
-        self._set_hang({"gpt", "gemini", "grok", "openrouter", "deepseek"}, hang_sec=1.2)
+        self._set_hang({"gpt", "claude", "gemini", "grok", "openrouter", "deepseek"}, hang_sec=1.2)
 
         started = time.monotonic()
         result = grok_modules.run_pre_dialog_routing(self.QUERY)
@@ -203,7 +203,7 @@ class PreDialogRoutingTimeoutTest(unittest.TestCase):
 
         result = grok_modules.run_pre_dialog_routing(self.QUERY)
 
-        self.assertEqual(self.calls[:2], ["gpt", "gemini"])
+        self.assertEqual(self.calls[:2], ["gpt", "claude"])
         self.assertFalse(result["nsfw"])
 
     def test_config_defaults_are_exposed(self):

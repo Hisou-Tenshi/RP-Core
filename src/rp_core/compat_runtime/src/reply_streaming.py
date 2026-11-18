@@ -18,13 +18,24 @@ import time
 import requests
 from error_text import format_exception_inline
 from llm_tool_text import has_tool_call_markup, strip_tool_call_markup
-from message_split import describe_split, split_reply, unescape_model_text
+from message_split import describe_split, newlines_to_br, split_reply, unescape_model_text
 import stickers
 import reactions
 
 
 
 _TYPING_REFRESH_SEC = 4.0
+
+
+def normalize_final_newlines(text: str | None) -> str:
+    """最终外发前的换行收敛：真实换行一律变成 ``<br>``（空行 = 分两条发）。
+
+    模型给的修正稿/覆写文本常带 ``\n\n``；不收敛的话 split_reply 看不到
+    ``<br>``，整段会挤成一条消息。
+    """
+    if not isinstance(text, str):
+        return ""
+    return newlines_to_br(text)
 
 
 logger = logging.getLogger("TenshiReply")
@@ -643,6 +654,13 @@ class TelegramStreamer:
                 unescaped = unescape_model_text(buffered)
                 if unescaped != buffered:
                     buffered = unescaped
+                    self.full_text = buffered
+
+                # 最终外发前把所有真实换行收敛成 <br>：空行 → 两条消息，单换行 → 下一条。
+                # 模型给的修正稿/覆写文本常带空行，不收敛会被当成一条长消息发出去。
+                br_ready = normalize_final_newlines(buffered)
+                if br_ready != buffered:
+                    buffered = br_ready
                     self.full_text = buffered
 
 
