@@ -472,7 +472,7 @@
         "read_config_file",
         "_main_impl"
       ],
-      "reviewed_sha256": "4e362732cbda468003a1249cf602778e77091946b9ba4c90e117e8f072210b59"
+      "reviewed_sha256": "498612cf81e3aab103a4d45bc36d48b8684f35e32978906a90074b85ee7a30c4"
     },
     {
       "path": "src/tenshi_skills.py",

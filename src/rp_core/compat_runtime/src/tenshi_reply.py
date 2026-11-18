@@ -6818,7 +6818,10 @@ def _gpt_flash_review_prompt(prompt: str) -> dict | None:
         "或在汉字之间插入空格（如「沒擦干 旳那奌氺分」）。命中时 martian=true，并在 martian_fix 里给出"
         "修正后的完整回复正文：只把字还原成现代标准简体、删掉汉字之间的空格，保留标点、<br>、语气"
         "与全部内容，不改写、不解释、不增删句子；没有命中时 martian=false、martian_fix 为空字符串。"
-        "无法确定改法时 martian=true、martian_fix 留空。\n\n"
+        "无法确定改法时 martian=true、martian_fix 留空。"
+        "判定范围只限成片出现的形近替换：正常的日文（假名，以及「丼」「焼」「円」「駅」这类日文汉字）、"
+        "引用中的日本人名/地名/作品名/菜名、用户原话里的繁体、以及有意保留的繁体专名（如「緋想天」）"
+        "都不算火星文；孤立的个别非简体字也不要判。修正时不要改动这些日文和专名原文。\n\n"
         + prompt
     )
     raw = _plain_text_call(

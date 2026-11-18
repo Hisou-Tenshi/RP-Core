@@ -332,6 +332,8 @@ class ReviewRegressions(unittest.TestCase):
         prompt = call.call_args.args[3][0]["content"]
         self.assertIn("martian_fix", prompt)
         self.assertIn("火星文", prompt)
+        self.assertIn("日文", prompt)
+        self.assertIn("緋想天", prompt)
 
     def test_gpt_lite_review_still_accepts_verdicts_without_martian_fields(self):
         verdict = {
