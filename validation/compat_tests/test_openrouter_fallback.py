@@ -160,17 +160,18 @@ class OpenRouterPathInsertionTest(unittest.TestCase):
 
     def test_proxy_first_providers_put_openrouter_between_proxy_and_official(self):
         builders = {
-            "gemini": (lambda: build_gemini_paths("k", [self.PROXY]), "Official"),
-            "grok": (lambda: build_grok_paths("k", "https://api.x.ai/v1", [self.PROXY]), "Official"),
-            "gpt": (lambda: build_gpt_paths("k", "https://api.openai.com/v1", [self.PROXY]), "OpenAI"),
+            # 2026-11 口径：Gemini 是 proxies → official → OpenRouter；GPT/Grok 仍在官方之前插 OR。
+            "gemini": (lambda: build_gemini_paths("k", [self.PROXY]), ["Relay", "Official", "OpenRouter"]),
+            "grok": (lambda: build_grok_paths("k", "https://api.x.ai/v1", [self.PROXY]), ["Relay", "OpenRouter", "Official"]),
+            "gpt": (lambda: build_gpt_paths("k", "https://api.openai.com/v1", [self.PROXY]), ["Relay", "OpenRouter", "OpenAI"]),
         }
-        for provider, (build, official_name) in builders.items():
+        for provider, (build, expected) in builders.items():
             names = [p["name"] for p in build()]
-            self.assertEqual(names, ["Relay", "OpenRouter", official_name], provider)
+            self.assertEqual(names, expected, provider)
 
     def test_official_first_providers_put_openrouter_last(self):
         gemini = [p["name"] for p in build_gemini_paths("k", [self.PROXY])]
-        self.assertEqual(gemini[-1], "Official")
+        self.assertEqual(gemini, ["Relay", "Official", "OpenRouter"])
         deepseek = [p["name"] for p in build_deepseek_paths("k", "https://api.deepseek.com", [self.PROXY])]
         self.assertEqual(deepseek, ["Official", "Relay", "OpenRouter"])
         glm = [p["name"] for p in build_glm_paths("k", "https://open.bigmodel.cn/api/paas/v4")]

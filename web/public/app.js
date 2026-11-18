@@ -3,12 +3,14 @@ const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels = {health:'通路探活',models:'模型注册表',routing:'路由配置',settings:'请求与向量'};
 const pathCatalog = {
-  claude:[['totokens','To-Tokens'],['codeyu_base','Codeyu · Base'],['codeyu_prime','Codeyu · Prime'],['codeyu_max','Codeyu · Max'],['coderplan','CoderPlan'],['77','77'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','Official']],
-  gemini:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','Official']],
-  gpt:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['77','77'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','OpenAI 官方']],
-  grok:[['codeyu','Codeyu'],['totokens','To-Tokens'],['coderplan','CoderPlan'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','Grok 官方']],
-  deepseek:[['official','DeepSeek 官方'],['fireworks_pro','Fireworks DeepSeek Pro'],['openrouter','OpenRouter']],
-  glm:[['official','GLM 官方'],['openrouter','OpenRouter']],qwen:[['official','Qwen 官方']],
+  claude:[['77','77'],['totokens','To-Tokens'],['dragon','Dragon'],['codeyu_base','Codeyu · Base'],['codeyu_prime','Codeyu · Prime'],['codeyu_max','Codeyu · Max'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Official']],
+  gemini:[['dragon','Dragon'],['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['official','Official'],['openrouter','OpenRouter']],
+  gpt:[['totokens','To-Tokens'],['codeyu','Codeyu'],['77','77'],['dragon','Dragon'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','OpenAI 官方']],
+  grok:[['dragon','Dragon'],['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Grok 官方']],
+  deepseek:[['official','DeepSeek 官方'],['dragon','Dragon'],['fireworks_pro','Fireworks DeepSeek Pro'],['openrouter','OpenRouter']],
+  glm:[['official','GLM 官方'],['dragon','Dragon'],['openrouter','OpenRouter']],
+  kimi:[['dragon','Dragon'],['official','Kimi 官方']],
+  qwen:[['official','Qwen 官方']],
   magmarouter:[['official','MagmaRouter']],openrouter:[['official','OpenRouter']],
 };
 const legacyRouteIds = {
@@ -83,10 +85,12 @@ function tab(name) {
 function color(item) {
   if (!item || item.verdict === 'unknown') return 'unknown';
   if (item.verdict === 'not_configured') return 'not_configured';
+  // 通路的鉴权/连接正常，但它下面还有模型不可用（或未判定）时按「部分可用」显示橙色。
+  if (item.ok === true && item.models && Object.values(item.models).some(model => ['red','warn','unknown'].includes(color(model)))) return 'warn';
   return item.severity === 'warn' || item.verdict === 'rate_limited' ? 'warn' : item.ok === true ? 'green' : item.ok === false ? 'red' : 'unknown';
 }
 const verdicts = {ok:'可用',not_configured:'未配置',dns_fail:'DNS 失败',tcp_fail:'连接失败',tls_fail:'TLS 失败',tls_cert_invalid:'证书不受信',auth_denied:'鉴权拒绝',blocked:'被拦截',model_not_found:'模型不可用',rate_limited:'限流',quota_exhausted:'额度问题',bad_request:'请求被拒',upstream_error:'上游错误',timeout:'超时',http_error:'请求异常',unknown:'未判定'};
-const badge = item => `<span class="pill ${color(item)}">${escape(verdicts[item?.verdict] || '未判定')}</span>`;
+const badge = item => {const status=color(item);const text=status==='warn'&&item?.ok===true?'部分可用':(verdicts[item?.verdict] || '未判定');return `<span class="pill ${status}">${escape(text)}</span>`;};
 function modelCell(item) {
   const status = color(item); const glyph={green:'✓',red:'×',warn:'!',not_configured:'–',unknown:'·'}[status];
   return `<span class="model-state ${status}" title="${escape(verdicts[item?.verdict] || '未判定')}${item?.status ? ' · HTTP '+item.status:''}">${glyph}</span>`;
@@ -113,7 +117,9 @@ function renderHealth() {
   }
   html+='<div class="section-heading"><div><h2>模型 × 通路</h2><p>非生成检查 · 只验证可达性、鉴权和模型支持，不代表真实生成质量</p></div><div class="legend"><span><i style="background:var(--ok)"></i>可用</span><span><i style="background:var(--warn)"></i>限流</span><span><i style="background:var(--bad)"></i>不可用</span></div></div>';
   if (stale || mismatch) html+='<div class="hint">过期结果或与当前模型配置不一致的结果不会用于阻断运行时通路。可触发新探活后再检查。</div>';
-  for (const [provider,item] of Object.entries(data.providers)) {
+  const providerRank=Object.fromEntries((state.config?.providers||[]).map((p,i)=>[p.key,i]));
+  const providerEntries=Object.entries(data.providers).sort(([a],[b])=>(providerRank[a]??99)-(providerRank[b]??99));
+  for (const [provider,item] of providerEntries) {
     const models=[...new Set(Object.values(item.paths).flatMap(p=>Object.keys(p.models || {})))];
     const label=state.config?.providers.find(p=>p.key===provider)?.label || provider;
     const paths=Object.entries(item.paths);
@@ -130,7 +136,10 @@ function options(values,selected) {return values.map(v=>`<option value="${escape
 function renderModels() {
   if (!state.config) return;
   const disabled=editable()?'':' disabled';const config=state.config;
-  const filtered=config.models.map((m,i)=>[m,i]).filter(([m])=>(state.filter==='all'||m.provider===state.filter)&&`${m.id} ${m.note}`.toLowerCase().includes(state.search.toLowerCase()));
+  const providerRank=Object.fromEntries(config.providers.map((p,i)=>[p.key,i]));
+  const filtered=config.models.map((m,i)=>[m,i])
+    .sort(([a],[b])=>providerRank[a.provider]-providerRank[b.provider])
+    .filter(([m])=>(state.filter==='all'||m.provider===state.filter)&&`${m.id} ${m.note}`.toLowerCase().includes(state.search.toLowerCase()));
   $('models').innerHTML=`<div class="hint">这份注册表直接供完整运行时与探活脚本读取。代际越高越优先；同代际按 Pro → Flash → Lite。显式顺序优先于代际。<br>新增模型需使用现有客户端支持的厂商协议；模型名是否实际可用以探活与服务商为准。</div><div class="toolbar"><input id="model-search" type="search" placeholder="搜索模型名称或备注" value="${escape(state.search)}" aria-label="搜索模型"><select id="provider-filter" aria-label="按厂商筛选"><option value="all">全部厂商 · ${config.models.length}</option>${config.providers.map(p=>`<option value="${p.key}"${p.key===state.filter?' selected':''}>${escape(p.label)}</option>`).join('')}</select><button id="add-model" class="button"${disabled}>＋ 新增模型</button></div><div class="provider-card"><div class="table-scroll"><table class="model-table"><thead><tr><th>原生模型 ID</th><th>厂商</th><th>档位</th><th>代际</th><th>顺序</th><th>主链</th><th>视觉</th><th>OpenRouter 同款 slug</th><th>备注</th><th></th></tr></thead><tbody>${filtered.map(([m,i])=>`<tr data-model="${i}"><td><input class="model-id" aria-label="模型 ID ${i+1}" data-field="id" value="${escape(m.id)}"${disabled}></td><td><select data-field="provider" aria-label="模型厂商 ${i+1}"${disabled}>${options(config.providers.map(p=>p.key),m.provider)}</select></td><td><select data-field="tier" aria-label="模型档位 ${i+1}"${disabled}>${options(['pro','flash','lite'],m.tier)}</select></td><td><input type="number" step="0.1" min="0" data-field="generation" aria-label="模型代际 ${i+1}" value="${m.generation}"${disabled}></td><td><input type="number" min="0" data-field="order" aria-label="模型顺序 ${i+1}" value="${m.order ?? ''}" placeholder="自动"${disabled}></td><td><input type="checkbox" data-field="in_chain" aria-label="进入主链 ${i+1}"${m.in_chain?' checked':''}${disabled}></td><td><input type="checkbox" data-field="vision" aria-label="支持视觉 ${i+1}"${m.vision?' checked':''}${disabled}></td><td><input class="model-slug" data-field="slug" aria-label="OpenRouter slug ${i+1}" value="${escape(m.slug)}"${disabled}></td><td><input class="model-note" data-field="note" aria-label="模型备注 ${i+1}" value="${escape(m.note)}"${disabled}></td><td><button class="button secondary danger" data-delete-model="${i}"${disabled}>移除</button></td></tr>`).join('')}</tbody></table></div></div>`;
   $('model-search').oninput=e=>{state.search=e.target.value;const position=e.target.selectionStart;renderModels();$('model-search').focus();$('model-search').setSelectionRange(position,position);};
   $('provider-filter').onchange=e=>{state.filter=e.target.value;renderModels();};
@@ -158,14 +167,14 @@ function renderRouting() {
   const disabled=editable()?'':' disabled';
   $('routing').innerHTML='<div class="hint">对话从当前分档开始，依次尝试后续档位、厂商容灾组与 DeepSeek 链尾。Low 档先从随机池抽取首选。保存后，所有实例共享同一套规则。</div><div class="route-grid">'+
     [['tier:max','Max · 最高档','复杂任务的静态链首'],['tier:high','High · 高档','高档位的静态链首'],['tier:medium','Medium · 标准档','标准档位的静态链首'],['tier:low','Low · 低档','通常留空，使用下方随机池'],['low_tier_pool','Low 随机池','每次调用重新抽取一个首选模型'],['summary_models','总结模型链','现有总结客户端使用 Claude 协议']].map(a=>chainCard(...a)).join('')+'</div>'+
-    `<div class="section-heading"><div><h2>厂商容灾顺序</h2><p>同一轮按以下顺序轮转；Lite 从第二轮开始。取消参与只影响容灾组。</p></div></div><div class="panel"><div class="provider-order">${state.config.providers.map((p,i)=>`<div class="chain-item"><span class="chain-index">${i+1}</span><code>${escape(p.label)}</code><label title="参与容灾"><input type="checkbox" data-provider-enabled="${i}" aria-label="${escape(p.label)} 参与容灾"${p.in_fallback_chain?' checked':''}${disabled}></label><button data-provider-move="${i}" data-direction="-1" aria-label="上移 ${escape(p.label)}"${i===0||!editable()?' disabled':''}>↑</button><button data-provider-move="${i}" data-direction="1" aria-label="下移 ${escape(p.label)}"${i===state.config.providers.length-1||!editable()?' disabled':''}>↓</button></div>`).join('')}</div></div>`;
+    `<div class="section-heading"><div><h2>厂商容灾顺序</h2><p>同一轮按以下顺序轮转；Lite 从第二轮开始。取消参与只影响容灾组。</p></div></div><div class="panel"><div class="provider-order">${state.config.providers.map((p,i)=>`<div class="chain-item" draggable="${editable()?'true':'false'}" data-drag-kind="provider" data-drag-index="${i}"><span class="chain-index">${i+1}</span><code>${escape(p.label)}</code><label title="参与容灾"><input type="checkbox" data-provider-enabled="${i}" aria-label="${escape(p.label)} 参与容灾"${p.in_fallback_chain?' checked':''}${disabled}></label><button data-provider-move="${i}" data-direction="-1" aria-label="上移 ${escape(p.label)}"${i===0||!editable()?' disabled':''}>↑</button><button data-provider-move="${i}" data-direction="1" aria-label="下移 ${escape(p.label)}"${i===state.config.providers.length-1||!editable()?' disabled':''}>↓</button></div>`).join('')}</div></div>`;
   const routeCards=state.config.providers.map(provider=>{
     const policy=state.config.path_policies[provider.key];
     const routeOrder=orderedRouteIds(provider.key);
     const routes=routeOrder.map((id,index)=>{
       const label=routeLabel(provider.key,id);
       const isDisabled=policy.disabled.includes(id);
-      return `<div class="chain-item${isDisabled?' route-disabled':''}"><span class="chain-index">${String(index+1).padStart(2,'0')}</span><code>${escape(label)}</code><label class="route-enable" title="勾选表示启用"><input type="checkbox" data-route-enabled="${id}" data-provider="${provider.key}" aria-label="启用 ${escape(provider.label)} ${escape(label)}"${isDisabled?'':' checked'}${disabled}>启用</label><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="-1" aria-label="上移 ${escape(label)}"${index===0||!editable()?' disabled':''}>↑</button><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="1" aria-label="下移 ${escape(label)}"${index===routeOrder.length-1||!editable()?' disabled':''}>↓</button></div>`;
+      return `<div class="chain-item${isDisabled?' route-disabled':''}" draggable="${editable()?'true':'false'}" data-drag-kind="route" data-drag-provider="${provider.key}" data-drag-index="${index}"><span class="chain-index">${String(index+1).padStart(2,'0')}</span><code>${escape(label)}</code><label class="route-enable" title="勾选表示启用"><input type="checkbox" data-route-enabled="${id}" data-provider="${provider.key}" aria-label="启用 ${escape(provider.label)} ${escape(label)}"${isDisabled?'':' checked'}${disabled}>启用</label><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="-1" aria-label="上移 ${escape(label)}"${index===0||!editable()?' disabled':''}>↑</button><button data-route-move data-provider="${provider.key}" data-index="${index}" data-direction="1" aria-label="下移 ${escape(label)}"${index===routeOrder.length-1||!editable()?' disabled':''}>↓</button></div>`;
     }).join('');
     return `<article class="panel path-policy"><h3>${escape(provider.label)}</h3><div class="path-list">${routes}</div></article>`;
   }).join('');
@@ -184,6 +193,23 @@ function renderRouting() {
   $('routing').querySelectorAll('[data-provider-enabled]').forEach(b=>b.onchange=()=>{state.config.providers[Number(b.dataset.providerEnabled)].in_fallback_chain=b.checked;updateDirty();});
   $('routing').querySelectorAll('[data-provider-move]').forEach(b=>b.onclick=()=>{const a=state.config.providers,i=Number(b.dataset.providerMove),j=i+Number(b.dataset.direction);[a[i],a[j]]=[a[j],a[i]];renderRouting();updateDirty();});
   $('routing').querySelectorAll('[data-route-move]').forEach(b=>b.onclick=()=>{const policy=state.config.path_policies[b.dataset.provider],i=Number(b.dataset.index),j=i+Number(b.dataset.direction);policy.order=orderedRouteIds(b.dataset.provider);[policy.order[i],policy.order[j]]=[policy.order[j],policy.order[i]];renderRouting();updateDirty();});
+  $('routing').querySelectorAll('[data-drag-kind]').forEach(item=>{
+    item.ondragstart=e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',JSON.stringify({kind:item.dataset.dragKind,provider:item.dataset.dragProvider||'',index:Number(item.dataset.dragIndex)}));};
+    item.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';item.classList.add('drag-over');};
+    item.ondragleave=()=>item.classList.remove('drag-over');
+    item.ondrop=e=>{
+      e.preventDefault();item.classList.remove('drag-over');
+      let payload;try{payload=JSON.parse(e.dataTransfer.getData('text/plain'));}catch{return;}
+      const target=Number(item.dataset.dragIndex);
+      if(payload.kind==='provider'){
+        const list=state.config.providers;const [moved]=list.splice(payload.index,1);list.splice(target,0,moved);
+      }else if(payload.kind==='route'&&payload.provider===item.dataset.dragProvider){
+        const policy=state.config.path_policies[payload.provider];const order=orderedRouteIds(payload.provider);
+        const [moved]=order.splice(payload.index,1);order.splice(target,0,moved);policy.order=order;
+      }else{return;}
+      renderRouting();updateDirty();
+    };
+  });
   $('routing').querySelectorAll('[data-route-enabled]').forEach(b=>b.onchange=()=>{const policy=state.config.path_policies[b.dataset.provider],items=new Set(policy.disabled),id=b.dataset.routeEnabled;if(b.checked)items.delete(id);else items.add(id);policy.disabled=[...items];renderRouting();updateDirty();});
 }
 function renderSettings() {

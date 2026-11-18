@@ -75,7 +75,13 @@ disabled until all credentials and the administrator list are present.
 
 Route checkboxes use **checked = enabled**, unchecked = disabled. With the current
 empty disabled lists all routes are checked. Proxy labels, IDs and credentials use
-Codeyu, CoderPlan and To-Tokens instead of numbered proxies.
+77, To-Tokens, Dragon, Codeyu and CoderPlan instead of numbered proxies.
+
+Provider order on every page is Claude, Gemini, Grok, ChatGPT, DeepSeek, GLM, KIMI,
+Qwen, OpenRouter, MagmaRouter. Routing rows and provider cards can be reordered by
+dragging (or with the ↑/↓ buttons); the drag order is saved with the public config.
+The health strips are 3px wide: green routes keep the full bar, orange
+(models partially available) is half height, and red is a quarter height.
 
 See [the Actions secret migration guide](provider-secrets.md) for the 13 new secret
 names, the public Claude Codeyu URL variable, and the safe cutover order.
@@ -84,15 +90,18 @@ names, the public Claude Codeyu URL variable, and the safe cutover order.
 
 ### Site-labelled proxy routes
 
-Routes use their upstream site names. To-Tokens is first for Claude, Gemini, and
-GPT. Grok Codeyu is now the first Grok route:
+Routes use their upstream site names. Each provider's first route follows the
+saved `path_policies` order:
 
 | Provider | First route | Public URL setting | Actions secret |
 |---|---|---|---|
-| Claude | To-Tokens | `CLAUDE_TOTOKENS_BASE_URL` | `CLAUDE_TOTOKENS_API_KEY` |
+| Claude | 77 | `CLAUDE_77_BASE_URL` | `CLAUDE_77_API_KEY` |
+| Gemini | Dragon | `GEMINI_DRAGON_BASE_URL` | `GEMINI_DRAGON_API_KEY` |
+| Grok | Dragon | `GROK_DRAGON_BASE_URL` | `GROK_DRAGON_API_KEY` |
 | GPT | To-Tokens | `GPT_TOTOKENS_BASE_URL` | `GPT_TOTOKENS_API_KEY` |
-| Gemini | To-Tokens | `GEMINI_TOTOKENS_BASE_URL` | `GEMINI_TOTOKENS_API_KEY` |
-| Grok | Codeyu | `GROK_CODEYU_BASE_URL` | `GROK_CODEYU_API_KEY` |
+| DeepSeek | Official | `DEEPSEEK_BASE_URL` | `DEEPSEEK_API_KEY` |
+| GLM | Official | `GLM_BASE_URL` | `GLM_API_KEY` |
+| Kimi | Dragon | `KIMI_DRAGON_BASE_URL` | `KIMI_DRAGON_API_KEY` |
 
 The vendor's key-use panels specify `https://drc.totokens.cc`; OpenAI-compatible
 clients use its `/v1` base. GPT and Grok To-Tokens routes use the Responses protocol,

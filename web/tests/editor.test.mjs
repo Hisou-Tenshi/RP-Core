@@ -180,7 +180,7 @@ test('per-vendor routes save named priorities and unchecking disables a route',a
     const official=document.querySelector('[data-provider="gemini"][data-route-enabled="official"]');
     official.checked=false;official.dispatchEvent(new Event('change',{bubbles:true}));
     await document.querySelector('#save').onclick();
-    assert.deepEqual(writes[0].config.path_policies.gemini.order.slice(0,2),['codeyu','totokens']);
+    assert.deepEqual(writes[0].config.path_policies.gemini.order.slice(0,2),['totokens','dragon']);
     assert.deepEqual(writes[0].config.path_policies.gemini.disabled,['official']);
     assert.deepEqual(validateConfig(writes[0].config),[]);
   }finally{dom.window.close();}
@@ -217,7 +217,7 @@ test('partial route priorities still show all routes and can move an appended ro
     assert.equal(routes[0].dataset.routeEnabled,'official');
     document.querySelector('[data-route-move][data-provider="gpt"][data-index="4"][data-direction="-1"]').click();
     await document.querySelector('#save').onclick();
-    assert.deepEqual(writes[0].config.path_policies.gpt.order,['official','totokens','codeyu','77','coderplan','dragon','openrouter']);
+    assert.deepEqual(writes[0].config.path_policies.gpt.order,['official','totokens','codeyu','dragon','77','coderplan','openrouter']);
     assert.deepEqual(validateConfig(writes[0].config),[]);
   }finally{dom.window.close();}
 });
@@ -254,4 +254,33 @@ test('health panel renders sanitized near-100 provider route counts',async()=>{
     assert.match(document.querySelector('.call-stats').textContent,/31/);
     assert.match(document.querySelector('.call-stats').textContent,/2/);
   }finally{result.dom.window.close();}
+});
+
+test('health marks a route orange when only some of its models are available',async()=>{
+  const latest={instance_id:'example',generated_at_utc:'2026-11-16T00:00:00Z',run_id:'1',providers:{claude:{models_ok:1,models_total:2,enabled:true,paths:{'Proxy 3':{ok:true,verdict:'ok',severity:'green',latency_ms:10,models:{'claude-opus-5-5':{ok:true,verdict:'ok'},'claude-haiku-5-5':{ok:false,verdict:'auth_denied'}}}}}}};
+  const {dom}=await page({healthResult:{available:true,latest,history:[],calls:null}});
+  try{
+    const {document}=dom.window;
+    const pill=document.querySelector('.provider-card .pill');
+    assert.match(pill.className,/warn/);
+    assert.equal(pill.textContent,'部分可用');
+    assert.equal([...document.querySelectorAll('.model-state')].filter(el=>el.classList.contains('red')).length,1);
+  }finally{dom.window.close();}
+});
+
+test('dragging a provider reorders the fallback chain and saves it',async()=>{
+  const {dom,writes}=await page();
+  try{
+    const {document,Event}=dom.window;
+    const items=document.querySelectorAll('[data-provider-move]');
+    const source=document.querySelector('[data-drag-kind="provider"][data-drag-index="0"]');
+    const target=document.querySelector('[data-drag-kind="provider"][data-drag-index="2"]');
+    assert.ok(items.length);
+    const drop=new Event('drop',{bubbles:true,cancelable:true});
+    drop.dataTransfer={getData:()=>JSON.stringify({kind:'provider',index:0})};
+    target.dispatchEvent(drop);
+    assert.equal(document.querySelector('[data-drag-kind="provider"][data-drag-index="2"] code').textContent,config.providers[0].label);
+    await document.querySelector('#save').onclick();
+    assert.equal(writes[0].config.providers[2].key,config.providers[0].key);
+  }finally{dom.window.close();}
 });

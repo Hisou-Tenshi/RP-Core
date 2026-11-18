@@ -19,8 +19,8 @@
     },
     "providers": {
       "type": "array",
-      "minItems": 9,
-      "maxItems": 9,
+      "minItems": 10,
+      "maxItems": 10,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -42,7 +42,8 @@
               "gpt",
               "glm",
               "qwen",
-              "openrouter"
+              "openrouter",
+              "kimi"
             ]
           },
           "label": {
@@ -108,7 +109,8 @@
               "gpt",
               "glm",
               "qwen",
-              "openrouter"
+              "openrouter",
+              "kimi"
             ]
           },
           "tier": {
@@ -455,7 +457,8 @@
         "glm",
         "qwen",
         "magmarouter",
-        "openrouter"
+        "openrouter",
+        "kimi"
       ],
       "properties": {
         "claude": {
@@ -483,6 +486,9 @@
           "$ref": "#/definitions/provider_route_policy"
         },
         "openrouter": {
+          "$ref": "#/definitions/provider_route_policy"
+        },
+        "kimi": {
           "$ref": "#/definitions/provider_route_policy"
         }
       }

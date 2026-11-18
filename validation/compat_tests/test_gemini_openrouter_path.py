@@ -117,16 +117,12 @@ class FixedGeminiProxiesOrderTest(unittest.TestCase):
         finally:
             (tenshi_config.OPENROUTER_API_KEY, tenshi_config.OPENROUTER_BASE_URL) = orig
 
-    def test_openrouter_is_inserted_before_official(self):
+    def test_openrouter_is_inserted_after_official(self):
         paths = self._build_with_openrouter_key("dummy-for-tests")
         names = [p["name"] for p in paths]
-        self.assertEqual(names[-1], "Official", "官方必须最后")
+        self.assertEqual(names[-2], "Official", "官方必须紧邻 OpenRouter 之前")
+        self.assertEqual(names[-1], "OpenRouter", "OpenRouter 最后")
         self.assertIn("OpenRouter", names)
-        self.assertEqual(
-            names.index("OpenRouter"),
-            len(names) - 2,
-            f"OpenRouter 必须紧邻官方之前：{names}",
-        )
 
         proxy_names = [p.get("name") for p in fixed.GEMINI_PROXIES]
         self.assertEqual(names[: len(proxy_names)], proxy_names)

@@ -518,6 +518,89 @@ if FIREWORKS_API_KEY and FIREWORKS_BASE_URL:
         }
     )
 
+DEEPSEEK_DRAGON_BASE_URL = _ensure_openai_v1(
+    _env("DEEPSEEK_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+)
+DEEPSEEK_DRAGON_API_KEY = _env("DEEPSEEK_DRAGON_API_KEY")
+DEEPSEEK_DRAGON: dict | None = None
+if DEEPSEEK_DRAGON_API_KEY and DEEPSEEK_DRAGON_BASE_URL:
+    DEEPSEEK_DRAGON = {
+        "name": "Dragon",
+        "route_id": "dragon",
+        "api_key": DEEPSEEK_DRAGON_API_KEY,
+        "base_url": DEEPSEEK_DRAGON_BASE_URL,
+        "protocol": "openai",
+        "native_model_ids": True,
+    }
+if DEEPSEEK_DRAGON is not None:
+    DEEPSEEK_PROXIES.append(dict(DEEPSEEK_DRAGON))
+
+
+GLM_PROXIES: list[dict] = []
+GLM_DRAGON_BASE_URL = _ensure_openai_v1(
+    _env("GLM_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+)
+GLM_DRAGON_API_KEY = _env("GLM_DRAGON_API_KEY")
+GLM_DRAGON: dict | None = None
+if GLM_DRAGON_API_KEY and GLM_DRAGON_BASE_URL:
+    GLM_DRAGON = {
+        "name": "Dragon",
+        "route_id": "dragon",
+        "api_key": GLM_DRAGON_API_KEY,
+        "base_url": GLM_DRAGON_BASE_URL,
+        "protocol": "openai",
+        "native_model_ids": True,
+    }
+if GLM_DRAGON is not None:
+    GLM_PROXIES.append(dict(GLM_DRAGON))
+
+
+KIMI_API_KEY = _env("KIMI_API_KEY")
+KIMI_BASE_URL = _env("KIMI_BASE_URL", default="https://api.moonshot.cn/v1")
+KIMI_PROXIES: list[dict] = []
+KIMI_DRAGON_BASE_URL = _ensure_openai_v1(
+    _env("KIMI_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+)
+KIMI_DRAGON_API_KEY = _env("KIMI_DRAGON_API_KEY")
+KIMI_DRAGON: dict | None = None
+if KIMI_DRAGON_API_KEY and KIMI_DRAGON_BASE_URL:
+    KIMI_DRAGON = {
+        "name": "Dragon",
+        "route_id": "dragon",
+        "api_key": KIMI_DRAGON_API_KEY,
+        "base_url": KIMI_DRAGON_BASE_URL,
+        "protocol": "openai",
+        "native_model_ids": True,
+    }
+if KIMI_DRAGON is not None:
+    KIMI_PROXIES.append(dict(KIMI_DRAGON))
+
+
+def _sort_proxies_by_name(proxies: list[dict], names: tuple[str, ...]) -> None:
+    """按控制台展示顺序整理代理列表；最终顺序仍由 route policy 决定。"""
+    rank = {name: index for index, name in enumerate(names)}
+    proxies.sort(key=lambda item: rank.get(str(item.get("name") or ""), len(rank)))
+
+
+_sort_proxies_by_name(
+    CLAUDE_PROXIES,
+    (
+        "77",
+        "To-Tokens",
+        "Dragon",
+        "Codeyu Base",
+        "Codeyu Prime",
+        "Codeyu Max",
+        "CoderPlan",
+    ),
+)
+_sort_proxies_by_name(GEMINI_PROXIES, ("Dragon", "To-Tokens", "Codeyu", "CoderPlan"))
+_sort_proxies_by_name(GPT_PROXIES, ("To-Tokens", "Codeyu", "77", "Dragon", "CoderPlan"))
+_sort_proxies_by_name(GROK_PROXIES, ("Dragon", "To-Tokens", "Codeyu", "CoderPlan"))
+_sort_proxies_by_name(DEEPSEEK_PROXIES, ("Dragon", "Fireworks DeepSeek Pro"))
+_sort_proxies_by_name(GLM_PROXIES, ("Dragon",))
+_sort_proxies_by_name(KIMI_PROXIES, ("Dragon",))
+
 
 @dataclass(frozen=True)
 class ProviderPathPolicy:
@@ -542,6 +625,7 @@ class ProviderPathPolicy:
 
 
 _PROXY_THEN_OR_THEN_OFFICIAL = ("proxies", "openrouter", "official")
+_PROXY_THEN_OFFICIAL_THEN_OR = ("proxies", "official", "openrouter")
 _OFFICIAL_THEN_PROXY_THEN_OR = ("official", "proxies", "openrouter")
 _OFFICIAL_ONLY = ("official",)
 
@@ -556,11 +640,11 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
     ),
     "gemini": ProviderPathPolicy(
         "gemini",
-        _PROXY_THEN_OR_THEN_OFFICIAL,
+        _PROXY_THEN_OFFICIAL_THEN_OR,
         "Official",
         "google/",
         True,
-        "To-Tokens → Codeyu → CoderPlan → OpenRouter → 官方",
+        "Dragon → To-Tokens → Codeyu → CoderPlan → 官方 → OpenRouter",
     ),
     "grok": ProviderPathPolicy(
         "grok",
@@ -584,7 +668,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "deepseek/",
         True,
-        "官方 → OpenRouter(Fireworks 代理 2026-11 已停用:代理段为空,壳保留)",
+        "官方 → Dragon → Fireworks 代理 → OpenRouter",
     ),
     "glm": ProviderPathPolicy(
         "glm",
@@ -592,7 +676,15 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "z-ai/",
         True,
-        "官方 → OpenRouter",
+        "官方 → Dragon → OpenRouter",
+    ),
+    "kimi": ProviderPathPolicy(
+        "kimi",
+        ("proxies", "official"),
+        "Official",
+        None,
+        False,
+        "Dragon → Kimi 官方（OpenAI 兼容；不挂 OpenRouter）",
     ),
     "qwen": ProviderPathPolicy(
         "qwen",
@@ -640,8 +732,9 @@ PROVIDER_ROUTE_CATALOG = {
     "gemini": ("totokens", "codeyu", "coderplan", "dragon", "openrouter", "official"),
     "gpt": ("totokens", "codeyu", "coderplan", "77", "dragon", "openrouter", "official"),
     "grok": ("codeyu", "totokens", "coderplan", "dragon", "openrouter", "official"),
-    "deepseek": ("official", "fireworks_pro", "openrouter"),
-    "glm": ("official", "openrouter"),
+    "deepseek": ("official", "dragon", "fireworks_pro", "openrouter"),
+    "glm": ("official", "dragon", "openrouter"),
+    "kimi": ("dragon", "official"),
     "qwen": ("official",),
     "magmarouter": ("official",),
     "openrouter": ("official",),
@@ -681,7 +774,8 @@ PROVIDER_PROXIES: dict[str, list[dict]] = {
     "gpt": GPT_PROXIES,
     "grok": GROK_PROXIES,
     "deepseek": DEEPSEEK_PROXIES,
-    "glm": [],
+    "glm": GLM_PROXIES,
+    "kimi": KIMI_PROXIES,
     "qwen": [],
     "magmarouter": [],
     "openrouter": [],
@@ -1072,6 +1166,62 @@ PROXY_ENV_SPECS += [
         "env": "GROK_DRAGON_API_KEY",
         "default": "",
     },
+    {
+        "provider": "deepseek",
+        "proxy": "Dragon",
+        "role": "url",
+        "env": "DEEPSEEK_DRAGON_BASE_URL",
+        "default": "https://newapi.dragon3api.com/v1",
+    },
+    {
+        "provider": "deepseek",
+        "proxy": "Dragon",
+        "role": "key",
+        "env": "DEEPSEEK_DRAGON_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "glm",
+        "proxy": "Dragon",
+        "role": "url",
+        "env": "GLM_DRAGON_BASE_URL",
+        "default": "https://newapi.dragon3api.com/v1",
+    },
+    {
+        "provider": "glm",
+        "proxy": "Dragon",
+        "role": "key",
+        "env": "GLM_DRAGON_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "kimi",
+        "proxy": "Dragon",
+        "role": "url",
+        "env": "KIMI_DRAGON_BASE_URL",
+        "default": "https://newapi.dragon3api.com/v1",
+    },
+    {
+        "provider": "kimi",
+        "proxy": "Dragon",
+        "role": "key",
+        "env": "KIMI_DRAGON_API_KEY",
+        "default": "",
+    },
+    {
+        "provider": "kimi",
+        "proxy": "Official",
+        "role": "url",
+        "env": "KIMI_BASE_URL",
+        "default": "https://api.moonshot.cn/v1",
+    },
+    {
+        "provider": "kimi",
+        "proxy": "Official",
+        "role": "key",
+        "env": "KIMI_API_KEY",
+        "default": "",
+    },
 ]
 
 
@@ -1094,4 +1244,17 @@ __all__ += [
     "GROK_DRAGON_BASE_URL",
     "GROK_DRAGON_API_KEY",
     "GROK_DRAGON",
+    "DEEPSEEK_DRAGON_BASE_URL",
+    "DEEPSEEK_DRAGON_API_KEY",
+    "DEEPSEEK_DRAGON",
+    "GLM_PROXIES",
+    "GLM_DRAGON_BASE_URL",
+    "GLM_DRAGON_API_KEY",
+    "GLM_DRAGON",
+    "KIMI_API_KEY",
+    "KIMI_BASE_URL",
+    "KIMI_PROXIES",
+    "KIMI_DRAGON_BASE_URL",
+    "KIMI_DRAGON_API_KEY",
+    "KIMI_DRAGON",
 ]

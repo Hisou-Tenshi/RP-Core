@@ -77,6 +77,15 @@
       "in_fallback_chain": false,
       "route": "grok",
       "model_prefixes": []
+    },
+    {
+      "key": "kimi",
+      "label": "KIMI",
+      "in_fallback_chain": false,
+      "route": null,
+      "model_prefixes": [
+        "kimi-"
+      ]
     }
   ],
   "models": [
@@ -376,6 +385,17 @@
       "in_chain": true,
       "vision": false,
       "order": null
+    },
+    {
+      "id": "kimi-k3.1-pro",
+      "provider": "kimi",
+      "tier": "pro",
+      "generation": 3.1,
+      "slug": "",
+      "note": "仅注册，暂不安排调用",
+      "in_chain": false,
+      "vision": false,
+      "order": null
     }
   ],
   "dialog_tiers": {
@@ -450,6 +470,10 @@
       "disabled": []
     },
     "openrouter": {
+      "order": [],
+      "disabled": []
+    },
+    "kimi": {
       "order": [],
       "disabled": []
     }

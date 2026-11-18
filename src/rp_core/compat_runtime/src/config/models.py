@@ -83,6 +83,8 @@ __all__ = [
     "GPT_MODELS",
     "GLM_PRO_MODELS",
     "GLM_FLASH_MODELS",
+    "KIMI_MODELS",
+    "KIMI_PRO_MODELS",
     "EMBEDDING_MODEL",
     "EMBEDDING_DIM",
     "EMBEDDING_MAX_INPUT_CHARS",
@@ -145,6 +147,8 @@ __all__ = [
     "glm_flash_models",
     "glm_pro_primary",
     "glm_flash_primary",
+    "kimi_models",
+    "kimi_primary",
 ]
 
 
@@ -325,11 +329,15 @@ GROK_MODELS = provider_models("grok")
 
 
 GPT_MODELS = provider_models("gpt")
-GPT_FLASH_MODELS = GPT_MODELS
+# 前置路由只使用进入主链的 GPT 模型；注册但暂不调用的模型不参与任何调用链。
+GPT_FLASH_MODELS = [m for m in GPT_MODELS if MODEL_REGISTRY[m].in_chain]
 
 
 GLM_PRO_MODELS = provider_models("glm", "pro")
 GLM_FLASH_MODELS = provider_models("glm", "flash")
+
+KIMI_MODELS = provider_models("kimi")
+KIMI_PRO_MODELS = provider_models("kimi", "pro")
 
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL") or MODEL_CONFIG["embedding"]["model"]
@@ -859,6 +867,14 @@ def glm_pro_primary() -> str:
 
 def glm_flash_primary() -> str:
     return GLM_FLASH_MODELS[0]
+
+
+def kimi_models() -> list[str]:
+    return list(KIMI_MODELS)
+
+
+def kimi_primary() -> str:
+    return KIMI_MODELS[0]
 
 
 

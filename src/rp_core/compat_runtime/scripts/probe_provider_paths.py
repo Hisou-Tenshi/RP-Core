@@ -29,6 +29,7 @@ from llm_routing import (
     build_glm_paths,
     build_gpt_paths,
     build_grok_paths,
+    build_kimi_paths,
     build_magmarouter_paths,
     build_openrouter_paths,
 )
@@ -138,6 +139,7 @@ def _provider_model_ids(provider: str) -> list[str]:
         "deepseek": ("DEEPSEEK_PRO_MODELS", "DEEPSEEK_FLASH_MODELS"),
         "gpt": ("GPT_MODELS",),
         "glm": ("GLM_PRO_MODELS", "GLM_FLASH_MODELS"),
+        "kimi": ("KIMI_PRO_MODELS",),
         "magmarouter": ("MAGMAROUTER_MODELS",),
         "openrouter": ("OPENROUTER_MODELS",),
         "grok": ("GROK_MODELS",),
@@ -381,7 +383,12 @@ def collect_targets(providers: list[str]) -> list[dict]:
                 model,
             )
             targets.append(
-                _with_all_models(target, openrouter=is_openrouter, fireworks=is_fireworks)
+                _with_all_models(
+                    target,
+                    openrouter=is_openrouter,
+                    fireworks=is_fireworks,
+                    native_model_ids=bool(path.get("native_model_ids")),
+                )
             )
 
     if "gpt" in providers:
@@ -426,7 +433,10 @@ def collect_targets(providers: list[str]) -> list[dict]:
                 )
 
     if "glm" in providers:
-        for path in build_glm_paths(tenshi_config.GLM_API_KEY, tenshi_config.GLM_BASE_URL):
+        for path in build_glm_paths(
+            tenshi_config.GLM_API_KEY,
+            tenshi_config.GLM_BASE_URL,
+        ):
             is_openrouter = bool(path.get("openrouter")) or path.get("name") == "OpenRouter"
             _glm_model = tenshi_config.glm_pro_primary()
             if is_openrouter:
@@ -439,7 +449,31 @@ def collect_targets(providers: list[str]) -> list[dict]:
                 "openai",
                 _glm_model,
             )
-            targets.append(_with_all_models(target, openrouter=is_openrouter))
+            targets.append(
+                _with_all_models(
+                    target,
+                    openrouter=is_openrouter,
+                    native_model_ids=bool(path.get("native_model_ids")),
+                )
+            )
+
+    if "kimi" in providers:
+        _kimi_models = tenshi_config.kimi_models()
+        _kimi_model = _kimi_models[0] if _kimi_models else "kimi-k3.1-pro"
+        for path in build_kimi_paths(
+            tenshi_config.KIMI_API_KEY,
+            tenshi_config.KIMI_BASE_URL,
+            tenshi_config.KIMI_PROXIES,
+        ):
+            target = _target(
+                "kimi",
+                path.get("name") or "Official",
+                path.get("base_url") or tenshi_config.KIMI_BASE_URL,
+                path.get("api_key"),
+                "openai",
+                _kimi_model,
+            )
+            targets.append(_with_all_models(target, native_model_ids=True))
 
     if "magmarouter" in providers:
         for path in build_magmarouter_paths(
@@ -1636,7 +1670,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--providers",
-        default="claude,gemini,deepseek,gpt,glm,magmarouter,openrouter,grok",
+        default="claude,gemini,deepseek,gpt,glm,kimi,magmarouter,openrouter,grok",
         help="要探测的类别（逗号分隔）",
     )
     parser.add_argument("--timeout", type=float, default=20.0, help="单次网络操作超时（秒）")

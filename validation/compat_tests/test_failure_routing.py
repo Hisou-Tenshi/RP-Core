@@ -136,19 +136,18 @@ class PathOrderWithOpenRouterTest(unittest.TestCase):
         ) = self._orig_or
 
     def test_proxy_then_openrouter_then_official(self):
-        for provider, build, official_name in (
-            ("gemini", lambda: build_gemini_paths("k", self.PROXIES), "Official"),
-            ("grok", lambda: build_grok_paths("k", "https://api.x.ai/v1", self.PROXIES), "Official"),
-            ("gpt", lambda: build_gpt_paths("k", "https://api.openai.com/v1", self.PROXIES), "OpenAI"),
-        ):
+        cases = (
+            ("gemini", lambda: build_gemini_paths("k", self.PROXIES), ["Relay", "Official", "OpenRouter"]),
+            ("grok", lambda: build_grok_paths("k", "https://api.x.ai/v1", self.PROXIES), ["Relay", "OpenRouter", "Official"]),
+            ("gpt", lambda: build_gpt_paths("k", "https://api.openai.com/v1", self.PROXIES), ["Relay", "OpenRouter", "OpenAI"]),
+        )
+        for provider, build, expected in cases:
             paths = build()
-            self.assertEqual(
-                [p["name"] for p in paths],
-                ["Relay", "OpenRouter", official_name],
-                provider,
-            )
-            self.assertTrue(paths[-1]["is_official"], provider)
-            or_path = paths[1]
+            names = [p["name"] for p in paths]
+            self.assertEqual(names, expected, provider)
+            official = next(p for p in paths if p["name"] in ("Official", "OpenAI"))
+            self.assertTrue(official["is_official"], provider)
+            or_path = paths[names.index("OpenRouter")]
             self.assertTrue(or_path.get("openrouter"), provider)
             self.assertEqual(or_path.get("protocol"), "openai", provider)
 

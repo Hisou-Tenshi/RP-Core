@@ -526,17 +526,19 @@ def build_glm_paths(
     glm_base_url: str | None,
     proxy_configs: Iterable[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    """GLM(智谱 / Z.ai)通路:官方 → OpenRouter。
+    """GLM(智谱 / Z.ai)通路:官方 → Dragon → OpenRouter。
 
     注意:base_url 是 **zai-sdk 的 base_url**,由 glm_modules.build_glm_client 交给
     官方 SDK;OpenRouter 通路(protocol=openai)由调用侧改走 call_openrouter。
     """
+    import tenshi_config
+
     return build_provider_paths(
         "glm",
         official_key=glm_api_key,
         official_base_url=glm_base_url,
         official_name="Official",
-        proxy_configs=proxy_configs,
+        proxy_configs=tenshi_config.GLM_PROXIES if proxy_configs is None else proxy_configs,
     )
 
 
@@ -647,7 +649,7 @@ def build_deepseek_paths(
     deepseek_base_url: str | None,
     proxy_configs: Iterable[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    """DeepSeek 通路:官方 → Fireworks 代理 → OpenRouter。"""
+    """DeepSeek 通路:官方 → Dragon → Fireworks 代理 → OpenRouter。"""
     import tenshi_config
 
     return build_provider_paths(
@@ -656,6 +658,28 @@ def build_deepseek_paths(
         official_base_url=deepseek_base_url,
         proxy_configs=tenshi_config.DEEPSEEK_PROXIES if proxy_configs is None else proxy_configs,
     )
+
+
+def build_kimi_paths(
+    kimi_api_key: str | None,
+    kimi_base_url: str | None,
+    proxy_configs: Iterable[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Kimi 通路:Dragon → Kimi 官方（两家都是 OpenAI 兼容协议）。"""
+    import tenshi_config
+
+    paths = build_provider_paths(
+        "kimi",
+        official_key=kimi_api_key,
+        official_base_url=kimi_base_url,
+        official_name="Official",
+        proxy_configs=tenshi_config.KIMI_PROXIES if proxy_configs is None else proxy_configs,
+    )
+    for path in paths:
+        if path.get("is_official"):
+            path["protocol"] = "openai"
+            path["native_model_ids"] = True
+    return paths
 
 
 def run_path_first(

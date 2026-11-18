@@ -86,7 +86,7 @@ class FirstPriorityRoutesTest(unittest.TestCase):
                 p["name"]
                 for p in llm_routing.build_grok_paths("official", "https://official.example/v1")
             ][:3],
-            ["Codeyu", "To-Tokens", "CoderPlan"],
+            ["To-Tokens", "Codeyu", "CoderPlan"],
         )
 
     def test_gemini_dual_auxiliary_client_also_uses_totokens_first(self):
@@ -106,7 +106,7 @@ class FirstPriorityRoutesTest(unittest.TestCase):
             ("claude", "To-Tokens"),
             ("gpt", "To-Tokens"),
             ("gemini", "To-Tokens"),
-            ("grok", "Codeyu"),
+            ("grok", "To-Tokens"),
         ]:
             self.assertEqual(next(t["name"] for t in targets if t["provider"] == provider), name)
 

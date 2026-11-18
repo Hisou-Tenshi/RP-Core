@@ -29,24 +29,8 @@
       ]
     },
     {
-      "key": "deepseek",
-      "label": "DeepSeek",
-      "in_fallback_chain": true,
-      "route": null,
-      "model_prefixes": [
-        "deepseek-"
-      ]
-    },
-    {
-      "key": "magmarouter",
-      "label": "MagmaRouter",
-      "in_fallback_chain": true,
-      "route": "grok",
-      "model_prefixes": []
-    },
-    {
       "key": "gpt",
-      "label": "GPT",
+      "label": "ChatGPT",
       "in_fallback_chain": true,
       "route": null,
       "model_prefixes": [
@@ -56,12 +40,30 @@
       ]
     },
     {
+      "key": "deepseek",
+      "label": "DeepSeek",
+      "in_fallback_chain": true,
+      "route": null,
+      "model_prefixes": [
+        "deepseek-"
+      ]
+    },
+    {
       "key": "glm",
       "label": "GLM",
       "in_fallback_chain": true,
       "route": null,
       "model_prefixes": [
         "glm-"
+      ]
+    },
+    {
+      "key": "kimi",
+      "label": "KIMI",
+      "in_fallback_chain": false,
+      "route": null,
+      "model_prefixes": [
+        "kimi-"
       ]
     },
     {
@@ -75,6 +77,13 @@
       "key": "openrouter",
       "label": "OpenRouter",
       "in_fallback_chain": false,
+      "route": "grok",
+      "model_prefixes": []
+    },
+    {
+      "key": "magmarouter",
+      "label": "MagmaRouter",
+      "in_fallback_chain": true,
       "route": "grok",
       "model_prefixes": []
     }
@@ -345,6 +354,39 @@
       "order": null
     },
     {
+      "id": "gpt-6.2-astra",
+      "provider": "gpt",
+      "tier": "pro",
+      "generation": 6.2,
+      "slug": "",
+      "note": "仅注册，暂不安排调用",
+      "in_chain": false,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "gpt-6.2-sol",
+      "provider": "gpt",
+      "tier": "pro",
+      "generation": 6.2,
+      "slug": "",
+      "note": "仅注册，暂不安排调用",
+      "in_chain": false,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "gpt-6.1-terra",
+      "provider": "gpt",
+      "tier": "pro",
+      "generation": 6.1,
+      "slug": "",
+      "note": "仅注册，暂不安排调用",
+      "in_chain": false,
+      "vision": false,
+      "order": null
+    },
+    {
       "id": "glm-5.3",
       "provider": "glm",
       "tier": "pro",
@@ -363,6 +405,17 @@
       "slug": "z-ai/glm-5.3-flash",
       "note": "",
       "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "kimi-k3.1-pro",
+      "provider": "kimi",
+      "tier": "pro",
+      "generation": 3.1,
+      "slug": "",
+      "note": "仅注册，暂不安排调用",
+      "in_chain": false,
       "vision": false,
       "order": null
     },
@@ -419,13 +472,13 @@
   "path_policies": {
     "claude": {
       "order": [
+        "77",
         "totokens",
+        "dragon",
         "codeyu_base",
         "codeyu_prime",
         "codeyu_max",
         "coderplan",
-        "77",
-        "dragon",
         "openrouter",
         "official"
       ],
@@ -433,31 +486,53 @@
     },
     "gemini": {
       "order": [
+        "dragon",
         "totokens",
         "codeyu",
         "coderplan",
-        "dragon",
         "official",
         "openrouter"
       ],
       "disabled": []
     },
     "gpt": {
-      "order": [],
+      "order": [
+        "totokens",
+        "codeyu",
+        "77",
+        "dragon",
+        "coderplan",
+        "openrouter",
+        "official"
+      ],
       "disabled": []
     },
     "grok": {
-      "order": [],
+      "order": [
+        "dragon",
+        "totokens",
+        "codeyu",
+        "coderplan",
+        "openrouter",
+        "official"
+      ],
       "disabled": []
     },
     "deepseek": {
-      "order": [],
-      "disabled": [
-        "fireworks_pro"
-      ]
+      "order": [
+        "official",
+        "dragon",
+        "fireworks_pro",
+        "openrouter"
+      ],
+      "disabled": []
     },
     "glm": {
-      "order": [],
+      "order": [
+        "official",
+        "dragon",
+        "openrouter"
+      ],
       "disabled": []
     },
     "qwen": {
@@ -470,6 +545,13 @@
     },
     "openrouter": {
       "order": [],
+      "disabled": []
+    },
+    "kimi": {
+      "order": [
+        "dragon",
+        "official"
+      ],
       "disabled": []
     }
   }

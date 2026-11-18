@@ -19,12 +19,14 @@ export function validateConfig(value) {
   if (ids.size !== value.models.length) errors.push('模型 ID 不能重复');
   if (new Set(value.providers.map(p => p.key)).size !== value.providers.length) errors.push('厂商不能重复');
   const routeCatalog = {
-    claude:['totokens','codeyu_base','codeyu_prime','codeyu_max','coderplan','77','dragon','openrouter','official'],
-    gemini:['totokens','codeyu','coderplan','dragon','openrouter','official'],
-    gpt:['totokens','codeyu','coderplan','77','dragon','openrouter','official'],
-    grok:['codeyu','totokens','coderplan','dragon','openrouter','official'],
-    deepseek:['official','fireworks_pro','openrouter'],
-    glm:['official','openrouter'],qwen:['official'],magmarouter:['official'],openrouter:['official'],
+    claude:['77','totokens','dragon','codeyu_base','codeyu_prime','codeyu_max','coderplan','openrouter','official'],
+    gemini:['dragon','totokens','codeyu','coderplan','official','openrouter'],
+    gpt:['totokens','codeyu','77','dragon','coderplan','openrouter','official'],
+    grok:['dragon','totokens','codeyu','coderplan','openrouter','official'],
+    deepseek:['official','dragon','fireworks_pro','openrouter'],
+    glm:['official','dragon','openrouter'],
+    kimi:['dragon','official'],
+    qwen:['official'],magmarouter:['official'],openrouter:['official'],
   };
   for (const [provider,policy] of Object.entries(value.path_policies || {})) {
     const valid = new Set(routeCatalog[provider] || []);

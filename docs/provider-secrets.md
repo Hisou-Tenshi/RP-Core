@@ -1,9 +1,11 @@
 # Provider site names and Actions secret migration
 
-Route IDs and labels use upstream site names: `codeyu` (Codeyu), `coderplan`
-(CoderPlan), and `totokens` (To-Tokens). Claude's Codeyu routes retain separate
-`base`, `prime`, and `max` tiers. To-Tokens remains first for Claude, Gemini, and
-GPT. Grok Codeyu is first for Grok. Renaming does not change request protocols.
+Route IDs and labels use upstream site names: `77` (77), `totokens` (To-Tokens),
+`dragon` (Dragon), `codeyu` (Codeyu), `coderplan` (CoderPlan), `fireworks_pro`
+(Fireworks DeepSeek Pro), and `official`. Claude's Codeyu routes retain separate
+`base`, `prime`, and `max` tiers. Current first routes are 77 for Claude, Dragon
+for Gemini and Grok, To-Tokens for GPT, DeepSeek official for DeepSeek, and the
+official endpoints for GLM and Kimi. Renaming does not change request protocols.
 
 The console uses **checked = enabled**. Unchecking disables a route; checking it
 again enables it. The persisted `path_policies.disabled` array keeps its existing
@@ -38,6 +40,26 @@ uses the value you configured separately.
 | `GROK_PROXY2_KEY` | `GROK_TOTOKENS_API_KEY` |
 | `GROK_PROXY_KEY` | `GROK_CODERPLAN_API_KEY` |
 | Newly added | `GROK_CODEYU_API_KEY` |
+
+Gateway secrets added for 77 and Dragon (`sk-...` values are stored only in
+Actions secrets, never in the public catalog):
+
+| Provider | Gateway | Secret |
+|---|---|---|
+| Claude | 77 | `CLAUDE_77_API_KEY` |
+| GPT | 77 | `GPT_77_API_KEY` |
+| Claude | Dragon | `CLAUDE_DRAGON_API_KEY` |
+| GPT | Dragon | `GPT_DRAGON_API_KEY` |
+| Gemini | Dragon | `GEMINI_DRAGON_API_KEY` |
+| Grok | Dragon | `GROK_DRAGON_API_KEY` |
+| DeepSeek | Dragon | `DEEPSEEK_DRAGON_API_KEY` |
+| GLM | Dragon | `GLM_DRAGON_API_KEY` |
+| Kimi | Dragon | `KIMI_DRAGON_API_KEY` |
+| Kimi | Official | `KIMI_API_KEY` (reserved; Kimi models are registered but not scheduled yet) |
+
+`CLAUDE_77_BASE_URL` / `CLAUDE_DRAGON_BASE_URL` and the matching provider base
+URLs have public defaults (`https://api.a77ai.cn`,
+`https://newapi.dragon3api.com`), so only the keys need to be stored.
 
 `CLAUDE_PROXY_KEY` was only a legacy fallback for an absent
 `CLAUDE_PROXY_KEY_BASE`. Prefer the effective Base credential previously used;

@@ -80,6 +80,7 @@ from llm_routing import (
     build_glm_paths,
     build_gpt_paths,
     build_grok_paths,
+    build_kimi_paths,
     build_magmarouter_paths,
     build_grok_slot_tiers,
     build_openrouter_paths,
@@ -5687,7 +5688,15 @@ def _run_path_first_provider(
         paths = build_gpt_paths(GPT_API_KEY, tenshi_config.GPT_BASE_URL, tenshi_config.GPT_PROXIES)
     elif provider_name == "glm":
 
-        paths = build_glm_paths(GLM_API_KEY, tenshi_config.GLM_BASE_URL)
+        paths = build_glm_paths(
+            GLM_API_KEY, tenshi_config.GLM_BASE_URL, tenshi_config.GLM_PROXIES
+        )
+    elif provider_name == "kimi":
+        paths = build_kimi_paths(
+            tenshi_config.KIMI_API_KEY,
+            tenshi_config.KIMI_BASE_URL,
+            tenshi_config.KIMI_PROXIES,
+        )
     elif provider_name == "grok":
         magma_models = [m for m in model_ids if m in tenshi_config.magmarouter_models()]
         openrouter_models = [m for m in model_ids if "/" in (m or "") or m in tenshi_config.openrouter_models()]
@@ -5839,7 +5848,7 @@ def _run_path_first_provider(
                     llm_path=path,
                 )
             if provider_name == "glm":
-                if _is_openrouter_path(path):
+                if _is_openrouter_path(path) or path.get("protocol") == "openai":
                     return call_openrouter_with_tools_loop(
                         _openrouter_model_id(model_id, path),
                         system_prompt,
@@ -5858,7 +5867,7 @@ def _run_path_first_provider(
                     stream_callback=stream_cb,
                     llm_path=path,
                 )
-            if _is_openrouter_path(path):
+            if _is_openrouter_path(path) or path.get("protocol") == "openai":
                 return call_openrouter_with_tools_loop(
                     _openrouter_model_id(model_id, path),
                     system_prompt,
@@ -5956,7 +5965,19 @@ def _plain_text_call(
         )
     elif provider == "glm":
         paths = provider_health.filter_paths(
-            "glm", build_glm_paths(GLM_API_KEY, tenshi_config.GLM_BASE_URL), model=model_id
+            "glm",
+            build_glm_paths(GLM_API_KEY, tenshi_config.GLM_BASE_URL, tenshi_config.GLM_PROXIES),
+            model=model_id,
+        )
+    elif provider == "kimi":
+        paths = provider_health.filter_paths(
+            "kimi",
+            build_kimi_paths(
+                tenshi_config.KIMI_API_KEY,
+                tenshi_config.KIMI_BASE_URL,
+                tenshi_config.KIMI_PROXIES,
+            ),
+            model=model_id,
         )
     elif provider in ("grok", "magmarouter", "openrouter"):
         builders = {

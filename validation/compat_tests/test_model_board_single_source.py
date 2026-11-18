@@ -107,7 +107,10 @@ class DerivedViewsTest(unittest.TestCase):
                 f"{name} 与 provider_models({provider!r}, {tier!r}) 不一致",
             )
         self.assertEqual(m.GEMINI_IMAGE_MODELS, m.provider_models("gemini", vision=True))
-        self.assertIs(m.GPT_FLASH_MODELS, m.GPT_MODELS)
+        self.assertEqual(
+            m.GPT_FLASH_MODELS,
+            [model for model in m.GPT_MODELS if m.MODEL_REGISTRY[model].in_chain],
+        )
         self.assertEqual(tunable_config.GEMINI_IMAGE_MODELS, m.GEMINI_IMAGE_MODELS)
 
     def test_provider_table_drives_labels_and_fallback_order(self):
