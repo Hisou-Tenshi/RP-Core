@@ -61,9 +61,14 @@ class NewGatewayTest(unittest.TestCase):
         self.assertNotIn("Dragon", names["claude"][:1])
 
     def test_openai_compatible_gateways_end_with_v1(self):
-        p = self._reload(GPT_77_API_KEY="k", GPT_DRAGON_API_KEY="k", GROK_DRAGON_API_KEY="k")
-        for proxy in p.GPT_PROXIES + p.GROK_PROXIES:
-            if proxy["name"] in ("77", "Dragon"):
+        p = self._reload(
+            GPT_77_API_KEY="k",
+            GPT_DRAGON_API_KEY="k",
+            GROK_DRAGON_API_KEY="k",
+            GEMINI_DRAGON_API_KEY="k",
+        )
+        for proxy in p.GPT_PROXIES + p.GROK_PROXIES + p.GEMINI_PROXIES:
+            if proxy["name"] in ("77", "Dragon") and proxy.get("protocol") == "openai":
                 self.assertTrue(proxy["base_url"].rstrip("/").endswith("/v1"), proxy)
 
     def test_route_catalog_lists_the_new_gateways(self):
@@ -89,7 +94,8 @@ class NewGatewayTest(unittest.TestCase):
             self.assertEqual(specs[env]["role"], "key")
         self.assertEqual(specs["CLAUDE_77_BASE_URL"]["default"], "https://api.a77ai.cn")
         self.assertEqual(
-            specs["GEMINI_DRAGON_BASE_URL"]["default"], "https://newapi.dragon3api.com"
+            specs["GEMINI_DRAGON_BASE_URL"]["default"],
+            "https://newapi.dragon3api.com/v1",
         )
 
     def test_no_proxy_without_a_key(self):

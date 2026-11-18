@@ -107,8 +107,9 @@ def _ensure_openai_v1(url: str | None) -> str | None:
     探活拼 ``{base}/models`` 同样 404,还会被 fail-open 记成「没结论」。
     这里只看字符串(不发网络请求):已含 ``/v1`` 的原样返回,否则末尾拼 ``/v1``。
 
-    只用于 GPT / Grok 的 OpenAI 兼容代理。Claude / Gemini 的 CoderPlan 通路
-    虽然同为 coderplan 域名,但协议客户端自己会带 ``/v1`` / ``/v1beta``,不能套这条规则。
+    用于 GPT / Grok 的 OpenAI 兼容代理，以及 Dragon 的 Gemini（该网关只开
+    OpenAI 协议）。Claude / Gemini 走原生协议的代理通路不能套这条规则:
+    协议客户端自己会带 ``/v1`` / ``/v1beta``。
     """
     if not url:
         return url
@@ -307,7 +308,9 @@ if GEMINI_CODERPLAN_API_KEY and GEMINI_CODERPLAN_BASE_URL:
     }
 
 
-GEMINI_DRAGON_BASE_URL = _env("GEMINI_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+GEMINI_DRAGON_BASE_URL = _ensure_openai_v1(
+    _env("GEMINI_DRAGON_BASE_URL", default="https://newapi.dragon3api.com")
+)
 GEMINI_DRAGON_API_KEY = _env("GEMINI_DRAGON_API_KEY")
 GEMINI_DRAGON: dict | None = None
 if GEMINI_DRAGON_API_KEY and GEMINI_DRAGON_BASE_URL:
@@ -1032,7 +1035,7 @@ PROXY_ENV_SPECS += [
         "proxy": "Dragon",
         "role": "url",
         "env": "GEMINI_DRAGON_BASE_URL",
-        "default": "https://newapi.dragon3api.com",
+        "default": "https://newapi.dragon3api.com/v1",
     },
     {
         "provider": "gemini",
