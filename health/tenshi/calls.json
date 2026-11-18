@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-18T09:52:59+00:00",
+  "generated_at_utc": "2026-11-18T11:21:55+00:00",
   "window_per_provider": 100,
-  "sample_size": 191,
+  "sample_size": 198,
   "providers": {
     "claude": {
       "codeyu_base": {
@@ -16,15 +16,15 @@
         "failure": 0
       },
       "totokens": {
-        "calls": 34,
-        "success": 34,
+        "calls": 36,
+        "success": 36,
         "failure": 0
       }
     },
     "gemini": {
       "totokens": {
-        "calls": 53,
-        "success": 49,
+        "calls": 56,
+        "success": 52,
         "failure": 4
       },
       "coderplan": {
@@ -45,8 +45,8 @@
     },
     "gpt": {
       "totokens": {
-        "calls": 44,
-        "success": 38,
+        "calls": 46,
+        "success": 40,
         "failure": 6
       },
       "openrouter": {
