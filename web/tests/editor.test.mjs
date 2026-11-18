@@ -162,6 +162,8 @@ test('current routes start checked unless saved as disabled, with named sites an
     assert.match(policies,/Codeyu/);
     assert.match(policies,/CoderPlan/);
     assert.match(policies,/To-Tokens/);
+    assert.match(policies,/77/);
+    assert.match(policies,/Dragon/);
     assert.doesNotMatch(policies,/Proxy|proxy[123]/);
     assert.equal(document.querySelector('#save').disabled,true);
   }finally{dom.window.close();}
@@ -211,11 +213,11 @@ test('partial route priorities still show all routes and can move an appended ro
   try{
     const {document}=dom.window;
     const routes=[...document.querySelectorAll('[data-provider="gpt"][data-route-enabled]')];
-    assert.equal(routes.length,5);
+    assert.equal(routes.length,7);
     assert.equal(routes[0].dataset.routeEnabled,'official');
     document.querySelector('[data-route-move][data-provider="gpt"][data-index="4"][data-direction="-1"]').click();
     await document.querySelector('#save').onclick();
-    assert.deepEqual(writes[0].config.path_policies.gpt.order,['official','totokens','codeyu','openrouter','coderplan']);
+    assert.deepEqual(writes[0].config.path_policies.gpt.order,['official','totokens','codeyu','77','coderplan','dragon','openrouter']);
     assert.deepEqual(validateConfig(writes[0].config),[]);
   }finally{dom.window.close();}
 });

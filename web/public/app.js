@@ -3,10 +3,10 @@ const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels = {health:'通路探活',models:'模型注册表',routing:'路由配置',settings:'请求与向量'};
 const pathCatalog = {
-  claude:[['totokens','To-Tokens'],['codeyu_base','Codeyu · Base'],['codeyu_prime','Codeyu · Prime'],['codeyu_max','Codeyu · Max'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Official']],
-  gemini:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Official']],
-  gpt:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','OpenAI 官方']],
-  grok:[['codeyu','Codeyu'],['totokens','To-Tokens'],['coderplan','CoderPlan'],['openrouter','OpenRouter'],['official','Grok 官方']],
+  claude:[['totokens','To-Tokens'],['codeyu_base','Codeyu · Base'],['codeyu_prime','Codeyu · Prime'],['codeyu_max','Codeyu · Max'],['coderplan','CoderPlan'],['77','77'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','Official']],
+  gemini:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','Official']],
+  gpt:[['totokens','To-Tokens'],['codeyu','Codeyu'],['coderplan','CoderPlan'],['77','77'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','OpenAI 官方']],
+  grok:[['codeyu','Codeyu'],['totokens','To-Tokens'],['coderplan','CoderPlan'],['dragon','Dragon'],['openrouter','OpenRouter'],['official','Grok 官方']],
   deepseek:[['official','DeepSeek 官方'],['fireworks_pro','Fireworks DeepSeek Pro'],['openrouter','OpenRouter']],
   glm:[['official','GLM 官方'],['openrouter','OpenRouter']],qwen:[['official','Qwen 官方']],
   magmarouter:[['official','MagmaRouter']],openrouter:[['official','OpenRouter']],
