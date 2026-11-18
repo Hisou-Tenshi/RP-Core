@@ -636,7 +636,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "anthropic/",
         True,
-        "To-Tokens → Codeyu 三档 → CoderPlan → OpenRouter → 官方(官方仅 sonnet 系列)",
+        "77 → To-Tokens → Dragon → Codeyu 三档 → CoderPlan → OpenRouter → 官方(官方仅 sonnet 系列)",
     ),
     "gemini": ProviderPathPolicy(
         "gemini",
@@ -652,7 +652,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "Official",
         "x-ai/",
         True,
-        "Codeyu → To-Tokens → CoderPlan → OpenRouter → 官方",
+        "Dragon → To-Tokens → Codeyu → CoderPlan → OpenRouter → 官方",
     ),
     "gpt": ProviderPathPolicy(
         "gpt",
@@ -660,7 +660,7 @@ PROVIDER_PATH_POLICIES: dict[str, ProviderPathPolicy] = {
         "OpenAI",
         "openai/",
         True,
-        "To-Tokens → Codeyu → CoderPlan→ OpenRouter → 官方",
+        "To-Tokens → Codeyu → 77 → Dragon → CoderPlan → OpenRouter → 官方",
     ),
     "deepseek": ProviderPathPolicy(
         "deepseek",
