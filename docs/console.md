@@ -94,9 +94,9 @@ empty disabled lists all routes are checked. Proxy labels, IDs and credentials u
 Provider order on every page is Claude, Gemini, Grok, ChatGPT, DeepSeek, GLM, KIMI,
 Qwen, OpenRouter, MagmaRouter. Routing rows and provider cards can be reordered by
 dragging (or with the ↑/↓ buttons); the drag order is saved with the public config.
-The health strips are 3px wide: green routes keep the full bar, orange
-(partial model availability or another warning) is half height, and red is a
-quarter height. Each bar reflects its own check, not the current route state.
+The health strips are 3px wide. Green routes keep the full bar, gold
+(partial model availability or another warning) is three-fifths height, and red
+is a quarter height. Each bar reflects its own check, not the current route state.
 Call statistics aggregate one shared window of up to 500 recorded route attempts
 per instance, displayed in configured provider and route order. Previously
 discarded attempts cannot be recovered when upgrading from the per-provider window.
