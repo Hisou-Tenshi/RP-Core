@@ -453,10 +453,10 @@
       "gemini-4-neon"
     ],
     "low": [
-      "gemini-3.8-flash"
+      "gemini-4-argon"
     ],
     "minimal": [
-      "claude-sonnet-5-5"
+      "gemini-3.8-flash"
     ]
   },
   "low_tier_pool": [

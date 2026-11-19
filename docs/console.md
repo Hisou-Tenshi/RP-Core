@@ -43,8 +43,8 @@ Routing add controls start with an empty “请选择…” choice and an “添
 Selecting a candidate does not modify the configured chain; click “添加” to insert
 it. After insertion, the control returns to its empty state.
 
-The five dialog tiers default to Claude Max[0], Claude Pro[0], Gemini Pro[0],
-Gemini Flash[0] and Claude Flash[0]. The pre-routing rubric scores five 0–10
+From `max` to `minimal`, the five dialog tiers default to Claude Max, Claude Pro,
+Gemini Max, Gemini Pro and Gemini Flash. The pre-routing rubric scores five 0–10
 dimensions (subtext, persona pressure, narrative span, staging craft, tactical
 logic), applies the weighted score plus a peak-compensation boost, and raises the
 tier to at least High when the independent risk flag is set. Both the rubric and
