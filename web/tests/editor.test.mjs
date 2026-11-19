@@ -260,10 +260,11 @@ test('health panel orders the shared call window by configured provider and rout
     const [official,proxy]=document.querySelectorAll('.call-stats tbody tr');
     const width=cell=>parseFloat(cell.querySelector('.call-count-bar').style.width);
     assert.equal(width(proxy.cells[2]),100);
-    assert.ok(width(proxy.cells[3])<100);
-    assert.equal(width(official.cells[2]),width(official.cells[3]));
-    assert.ok(width(proxy.cells[4])>10 && width(proxy.cells[4])<width(official.cells[2]));
-    assert.equal(width(official.cells[4]),0);
+    assert.equal(width(proxy.cells[3]),100*459/460);
+    assert.equal(width(official.cells[2]),100*31/460);
+    assert.equal(width(official.cells[3]),width(official.cells[2]));
+    assert.equal(width(proxy.cells[4]),100/460);
+    assert.equal(official.cells[4].querySelector('.call-count-bar'),null);
     assert.ok(proxy.cells[4].querySelector('.call-count.red'));
   }finally{result.dom.window.close();}
 });

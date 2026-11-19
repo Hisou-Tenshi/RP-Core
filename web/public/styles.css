@@ -259,7 +259,7 @@ tbody tr:hover{background:var(--row-hover)}
 .call-count-value{text-align:right;font-variant-numeric:tabular-nums}
 .call-count-track,.call-count-bar{display:block;height:6px;border-radius:3px}
 .call-count-track{background:var(--panel2)}
-.call-count-bar{background:currentColor}
+.call-count-bar{min-width:3px;background:currentColor}
 .call-count.total .call-count-bar{background:var(--accent)}
 
 /* ── Settings fields ──────────────────────────────────────────────────────── */

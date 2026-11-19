@@ -101,9 +101,9 @@ function modelCell(item) {
   return `<span class="model-state ${status}" title="${escape(verdicts[item?.verdict] || '未判定')}${item?.status ? ' · HTTP '+item.status:''}">${glyph}</span>`;
 }
 function callCountCell(count, kind, maxCount) {
-  // Compress the range so single-digit counts stay visible next to busy routes.
-  const width = 100 * Math.cbrt(count / maxCount);
-  return `<td><div class="call-count ${kind}"><span class="call-count-value">${count}</span><span class="call-count-track" aria-hidden="true"><span class="call-count-bar" style="width:${width}%"></span></span></div></td>`;
+  const width = 100 * count / maxCount;
+  const bar = count > 0 ? `<span class="call-count-bar" style="width:${width}%"></span>` : '';
+  return `<td><div class="call-count ${kind}"><span class="call-count-value">${count}</span><span class="call-count-track" aria-hidden="true">${bar}</span></div></td>`;
 }
 function renderHealth() {
   const result=state.health; const data=result?.latest; const calls=result?.calls;
@@ -146,7 +146,7 @@ function renderHealth() {
       ${callCountCell(item.success,'green',maxCount)}
       ${callCountCell(item.failure,'red',maxCount)}
     </tr>`).join('');
-    html+=`<section class="panel call-stats"><div class="panel-header"><div><h2>${title} · 共 ${Number(calls.sample_size)||0} 次</h2><p>${note}只发布厂商、代理/官方和计数，不包含模型输入、回复或密钥。三列柱长共用立方根刻度。</p></div><small>更新于 ${time(calls.generated_at_utc)}</small></div><div class="table-scroll"><table><thead><tr><th>厂商</th><th>代理 / 官方</th><th>调用</th><th>成功</th><th>失败</th></tr></thead><tbody>${rows||'<tr><td colspan="5">当前窗口暂无调用</td></tr>'}</tbody></table></div></section>`;
+    html+=`<section class="panel call-stats"><div class="panel-header"><div><h2>${title} · 共 ${Number(calls.sample_size)||0} 次</h2><p>${note}只发布厂商、代理/官方和计数，不包含模型输入、回复或密钥。</p></div><small>更新于 ${time(calls.generated_at_utc)}</small></div><div class="table-scroll"><table><thead><tr><th>厂商</th><th>代理 / 官方</th><th>调用</th><th>成功</th><th>失败</th></tr></thead><tbody>${rows||'<tr><td colspan="5">当前窗口暂无调用</td></tr>'}</tbody></table></div></section>`;
   }
   html+='<div class="section-heading"><div><h2>模型 × 通路</h2><p>非生成检查 · 只验证可达性、鉴权和模型支持，不代表真实生成质量</p></div><div class="legend"><span><i style="background:var(--ok)"></i>可用</span><span><i style="background:var(--warn-mark)"></i>部分可用 / 告警</span><span><i style="background:var(--bad)"></i>不可用</span></div></div>';
   if (stale || mismatch) html+='<div class="hint">过期结果或与当前模型配置不一致的结果不会用于阻断运行时通路。可触发新探活后再检查。</div>';
