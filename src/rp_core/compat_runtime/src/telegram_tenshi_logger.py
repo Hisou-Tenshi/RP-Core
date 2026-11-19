@@ -20,6 +20,7 @@ from tenshi_utils import (
     prune_empty_fields,
     dedupe_back_to_back_long_repeat,
     REPLY_SCRIPT_TIMEOUT_SEC,
+    REPLY_PREDELIVERY_FAILURE_EXIT,
     recover_reply_text_from_llm_trace,
     persist_partial_bot_answer,
     is_reply_marked_incomplete,
@@ -532,21 +533,19 @@ def parse_reply_to(raw) -> dict | None:
         return None
 
 
-def message_already_replied(history, msg_id):
-    """同一条 update 是否已经入档且回复过（重复投递的幂等保护，纯函数）。
-
-    只认「已回复」的条目：上次若在写入后、回复前崩溃（replied_flag 未置位），
-    返回 False，让重跑把本该有的回复补上，而不是无声跳过。
-    """
+def _find_logged_message(history, msg_id):
     target = str(msg_id)
-    for entry in history or []:
-        if not isinstance(entry, dict):
-            continue
-        if str(entry.get('msg_id')) != target:
-            continue
-        if str(entry.get('replied_flag', '')).lower() == 'true' or entry.get('bot_answer'):
-            return True
-    return False
+    return next((entry for entry in history or []
+                 if isinstance(entry, dict) and str(entry.get("msg_id")) == target), None)
+
+
+def message_already_replied(history, msg_id):
+    """Whether this update has already been answered or isolated for reconciliation."""
+    entry = _find_logged_message(history, msg_id)
+    return bool(entry and (
+        str(entry.get("replied_flag", "")).lower() == "true"
+        or entry.get("bot_answer") or entry.get("rp_delivery_quarantined")
+    ))
 
 
 async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, file_type=None, file_name=None, location_data=None, is_random_trigger=False, timestamp=None, reply_to=None):
@@ -699,13 +698,9 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
 
 
 
-            if (text or local_files) and message_already_replied(
-                target_conversation.get('chat_history'), msg_id
-            ):
-                existing = next(
-                    entry for entry in target_conversation.get("chat_history", [])
-                    if isinstance(entry, dict) and str(entry.get("msg_id")) == str(msg_id)
-                )
+            history = target_conversation.get("chat_history", [])
+            existing = _find_logged_message(history, msg_id)
+            if existing is not None and message_already_replied(history, msg_id):
                 if existing.get("no_send") or str(existing.get("bot_decision", "")).upper() == "SILENCE":
                     return "no_send"
                 if existing.get("rp_delivery_quarantined") or existing.get("delivery_status") != "sent":
@@ -713,7 +708,7 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                 logger.warning(f"重复投递的消息已确认送达，跳过（msg_id={msg_id}）")
                 return "already_completed"
 
-            if text or local_files:
+            if existing is None and (text or local_files):
                 message_entry = {
                     "msg_id": str(msg_id),
                     "time": timestamp,
@@ -1072,6 +1067,10 @@ async def process_single_message(text, chat_id, user_id, msg_id, file_id=None, f
                          )
                 return "delivery_unknown"
         else:
+
+            if process.returncode == REPLY_PREDELIVERY_FAILURE_EXIT:
+                logger.warning("打字失败，尚未发送回复，保留原消息供队列重试。")
+                return "retryable_failure"
 
             err_msg = "回复脚本崩溃（详见上方实时 stderr 输出）"
             logger.error(f"回复脚本崩溃，返回码 {process.returncode}：{err_msg}")

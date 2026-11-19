@@ -19,13 +19,20 @@ class CallCancelled(BaseException):
 class CallScope:
     deadline: float | None = None
     parent: "CallScope | None" = None
+    first_text: threading.Event | None = None
+    hard_deadline: float | None = None
     cancelled: threading.Event = field(default_factory=threading.Event)
 
     def check(self):
         if self.parent is not None:
             self.parent.check()
+        now = time.monotonic()
         if self.cancelled.is_set() or (
-            self.deadline is not None and time.monotonic() >= self.deadline
+            self.hard_deadline is not None and now >= self.hard_deadline
+        ) or (
+            self.deadline is not None
+            and not (self.first_text is not None and self.first_text.is_set())
+            and now >= self.deadline
         ):
             raise CallCancelled()
 
@@ -40,13 +47,24 @@ def ensure_active():
         scope.check()
 
 
+def mark_text_progress(text):
+    """Release first-text timers from the current request through its streaming wrappers."""
+    if not isinstance(text, str) or not text.strip():
+        return
+    ensure_active()
+    scope = current_scope.get()
+    while scope is not None and scope.first_text is not None:
+        scope.first_text.set()
+        scope = scope.parent
+
+
 def remaining_timeout(configured):
     """Clamp SDK network timeouts to every active parent call's deadline."""
     ensure_active()
     remaining = float(configured)
     scope = current_scope.get()
     while scope is not None:
-        if scope.deadline is not None:
+        if scope.deadline is not None and scope.first_text is None:
             remaining = min(remaining, max(0.001, scope.deadline - time.monotonic()))
         scope = scope.parent
     return remaining

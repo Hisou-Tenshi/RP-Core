@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import threading
 import time
+from contextlib import suppress
 from contextvars import copy_context
+from types import SimpleNamespace
 from typing import Any, Callable, TypeVar
 
-from _rp_cancellation import CallCancelled, CallScope, current_scope, ensure_active, remaining_timeout
+from _rp_cancellation import CallCancelled, CallScope, current_scope, ensure_active, mark_text_progress, remaining_timeout
 
 import httpx
 import tenshi_config
@@ -45,23 +47,35 @@ def call_with_deadline(
     *,
     timeout_sec: float | None,
     label: str = "llm",
+    first_text: bool = False,
+    hard_timeout_sec: float | None = None,
 ) -> T:
     """在独立守护线程里执行 fn,超过 timeout_sec 未返回就抛 LlmDeadlineExceeded。
 
     * timeout_sec 为 None 或 <= 0 时：不设上限,直接同步执行 fn（保持原行为）。
     * 超时取消当前调用作用域；SDK 请求由自身网络超时收尾，后续请求、流式回调
       和工具执行在公共边界检查取消标记。已经开始的 I/O 无法由线程强行撤销。
+    * first_text=True 时，收到非空正文后解除首字计时，仍受父级硬上限约束。
     * fn 自身抛出的异常原样向上抛(不吞、不包装),调用方按原有 except 逻辑降级。
     """
     ensure_active()
     if timeout_sec is None or float(timeout_sec) <= 0:
-        return fn()
+        if hard_timeout_sec is None:
+            return fn()
+        timeout_sec = hard_timeout_sec
+        first_text = False
 
     timeout_sec = remaining_timeout(timeout_sec)
     box: dict = {}
     done = threading.Event()
+    progress = threading.Event() if first_text else None
+    started = time.monotonic()
+    hard_deadline = (
+        started + remaining_timeout(hard_timeout_sec) if hard_timeout_sec is not None else None
+    )
     scope = CallScope(
-        deadline=time.monotonic() + float(timeout_sec), parent=current_scope.get()
+        deadline=started + timeout_sec, parent=current_scope.get(), first_text=progress,
+        hard_deadline=hard_deadline,
     )
     context = copy_context()
 
@@ -85,12 +99,110 @@ def call_with_deadline(
     )
     worker.start()
 
-    if not done.wait(float(timeout_sec)):
-        scope.cancelled.set()
-        raise LlmDeadlineExceeded(f"{label} 在 {float(timeout_sec):.1f}s 内无返回")
+    while not done.is_set():
+        deadline = hard_deadline
+        if progress is None or not progress.is_set():
+            deadline = min(deadline, scope.deadline) if deadline is not None else scope.deadline
+        remaining = None if deadline is None else deadline - time.monotonic()
+        if remaining is not None and remaining <= 0:
+            if progress is not None and progress.is_set() and deadline != hard_deadline:
+                continue
+            scope.cancelled.set()
+            phase = "首字" if progress is not None and not progress.is_set() else "请求"
+            raise LlmDeadlineExceeded(f"{label} 超过{phase}限时")
+        # Keep nested workers responsive to cancellation by a parent scope.
+        if scope.parent is not None:
+            try:
+                scope.parent.check()
+            except CallCancelled:
+                scope.cancelled.set()
+                raise
+            remaining = min(remaining, 0.25) if remaining is not None else 0.25
+        if progress is not None and not progress.is_set():
+            remaining = min(remaining, 0.25) if remaining is not None else 0.25
+        done.wait(remaining)
     if "error" in box:
         raise box["error"]
     return box.get("result")
+
+
+def stream_unsupported(exc):
+    """Only downgrade a capability rejection, never a timeout or a provider outage."""
+    if isinstance(exc, NotImplementedError):
+        return True
+    message = str(exc).lower()
+    if "stream" not in message:
+        return False
+    return (getattr(exc, "status_code", None) or getattr(exc, "code", None)) in (400, 405, 422, 501) and any(
+        cue in message for cue in ("not support", "unsupported", "not implemented", "stream=false")
+    )
+
+
+def chat_completion(create, *, on_text=None, **options):
+    """Consume Chat Completions SSE and return its usual message shape to callers."""
+    ensure_active()
+    stream = None
+    received_delta = False
+    try:
+        stream = create(**{**options, "stream": True})
+        # Some compatible gateways answer stream=true with an ordinary completion.
+        if hasattr(stream, "choices"):
+            return stream
+        response = getattr(stream, "response", None)
+        if response is not None and response.headers.get("content-type", "").startswith("application/json"):
+            response.read()
+            data = response.json()
+            if data.get("error"):
+                raise RuntimeError("Chat Completions gateway returned an error")
+            from openai.types.chat import ChatCompletion
+            return ChatCompletion.model_validate(data)
+        text, reasoning, calls = [], [], {}
+        finish = None
+        for chunk in stream:
+            ensure_active()
+            choices = getattr(chunk, "choices", None)
+            if not choices:
+                continue
+            choice = choices[0]
+            finish = getattr(choice, "finish_reason", None) or finish
+            delta = choice.delta
+            content = getattr(delta, "content", None)
+            if content:
+                received_delta = True
+                mark_text_progress(content)
+                text.append(content)
+                if on_text is not None:
+                    on_text(content)
+            thought = getattr(delta, "reasoning_content", None) or getattr(delta, "reasoning", None)
+            if isinstance(thought, str):
+                reasoning.append(thought)
+            for item in getattr(delta, "tool_calls", None) or ():
+                received_delta = True
+                tool = calls.setdefault(item.index, {
+                    "id": "", "type": "function", "function": {"name": "", "arguments": ""}
+                })
+                if item.id:
+                    tool["id"] = item.id
+                if item.function:
+                    tool["function"]["name"] += item.function.name or ""
+                    tool["function"]["arguments"] += item.function.arguments or ""
+        if finish is None and received_delta:
+            raise RuntimeError("Chat Completions stream ended without a finish reason")
+        message = SimpleNamespace(
+            role="assistant", content="".join(text), reasoning_content="".join(reasoning),
+            tool_calls=[calls[index] for index in sorted(calls)],
+        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=message, finish_reason=finish)])
+    except Exception as exc:
+        if received_delta or not stream_unsupported(exc):
+            raise
+    finally:
+        close = getattr(stream, "close", None)
+        if callable(close):
+            with suppress(Exception):
+                close()
+    ensure_active()
+    return create(**{**options, "stream": False})
 
 
 def build_llm_timeout() -> httpx.Timeout:

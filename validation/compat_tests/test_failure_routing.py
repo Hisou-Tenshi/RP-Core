@@ -183,12 +183,12 @@ class OpenRouterTextStreamTest(unittest.TestCase):
         class _Completions:
             def create(self, **kwargs):
                 captured.update(kwargs)
-                return iter([self._c("你"), self._c("好"), self._c("世界"), SimpleNamespace(choices=[])])
+                return iter([self._c("你"), self._c("好"), self._c("世界", finish="stop"), SimpleNamespace(choices=[])])
 
             @staticmethod
-            def _c(text):
+            def _c(text, finish=None):
                 return SimpleNamespace(
-                    choices=[SimpleNamespace(delta=SimpleNamespace(content=text))]
+                    choices=[SimpleNamespace(delta=SimpleNamespace(content=text), finish_reason=finish)]
                 )
 
         fake_client = SimpleNamespace(chat=SimpleNamespace(completions=_Completions()))

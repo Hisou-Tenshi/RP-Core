@@ -788,6 +788,8 @@ def append_llm_trace(record: Dict[str, Any], *, trace_path: str | None = None) -
 
 
 
+# Explicit child outcome, only for failures proven to precede outbound delivery.
+REPLY_PREDELIVERY_FAILURE_EXIT = 76
 REPLY_SCRIPT_TIMEOUT_SEC = float(os.getenv("REPLY_SCRIPT_TIMEOUT_SEC") or 1260.0)
 
 

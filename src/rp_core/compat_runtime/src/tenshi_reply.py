@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from _rp_cancellation import CallCancelled, ensure_active, remaining_timeout, tools_disabled
+from _rp_cancellation import CallCancelled, ensure_active, mark_text_progress, tools_disabled
 import json
 import os
 import sys
@@ -21,6 +21,7 @@ import anthropic
 from tenshi_utils import (
     INNER_TRACE_BEGIN_SOURCE,
     INNER_TRACE_END_SOURCE,
+    REPLY_PREDELIVERY_FAILURE_EXIT,
     FileLock,
     setup_logger,
     encrypt_content_wrapped,
@@ -138,6 +139,7 @@ import provider_health
 import provider_call_stats
 from llm_compat import (
     build_sdk_timeout,
+    stream_unsupported,
 )
 from tenshi_tool_exec import (
     ToolLoopState,
@@ -323,103 +325,17 @@ def _llm_deadline(label: str, *, reserve_sec: float | None = None):
 
 
 
-def _stream_idle_timeout_sec(label: str) -> float:
-    """流式空闲上限（秒）：取单请求上限，至少 30s；<= 0 表示关闭看门狗。"""
-    base = _llm_deadline(label)
-    if base is None or is_budget_exhausted(base):
-        return 0.0
-    try:
-        base = float(base)
-    except Exception:
-        return 0.0
-    if base <= 0:
-        return 0.0
-    return max(30.0, base)
-
-
-def _stream_iter_bounded(iterable, *, label: str):
-    """把流式迭代器包成「空闲超时即抛 LlmDeadlineExceeded」的生成器。
-
-    * 块照常**逐块** yield（保持边生成边外发的体验，不做任何缓冲）；
-    * 后台看门狗只负责「唤醒」主线程：连续 idle 秒没有新块时置位事件，
-      主线程用 `next()` 轮询 + 短等待感知到之后立即抛错；
-    * 看门狗是 daemon，不会拖住进程退出。
-    """
-    idle = _stream_idle_timeout_sec(label)
-    if idle <= 0:
-        yield from iterable
-        return
-
-    import queue as _queue
-
-    box: "_queue.Queue" = _queue.Queue(maxsize=64)
-    sentinel = object()
-    stop = threading.Event()
-
-    def _pump():
-        try:
-            for item in iterable:
-                if stop.is_set():
-                    break
-                while not stop.is_set():
-                    try:
-                        box.put(item, timeout=0.2)
-                        break
-                    except _queue.Full:
-                        continue
-            box.put(sentinel, timeout=1.0)
-        except BaseException as exc:
-            try:
-                box.put(exc, timeout=1.0)
-            except Exception:
-                pass
-
-    pump = threading.Thread(target=_pump, name=f"stream-pump:{label}", daemon=True)
-    pump.start()
-    try:
-        while True:
-            try:
-                item = box.get(timeout=idle)
-            except _queue.Empty:
-                raise LlmDeadlineExceeded(
-                    f"{label} 流式响应连续 {idle:.1f}s 无新块，判定挂死"
-                )
-            if item is sentinel:
-                return
-            if isinstance(item, BaseException):
-                raise item
-            yield item
-    finally:
-        stop.set()
-        close = getattr(iterable, "close", None)
-        if callable(close):
-            try:
-                close()
-            except Exception:
-                pass
-
-
-def _bounded_call(label: str, fn, *, reserve_sec: float | None = None):
-    """按 `_llm_deadline` 限时执行一次阻塞式 LLM 请求。
-
-    到点即抛 `LlmDeadlineExceeded`（调用方按「这次尝试失败」处理，
-    继续降级到下一个通路/模型），绝不会把异常文本当成模型输出返回。
-
-    整轮预算已用尽时**直接不发起请求**并抛 `LlmDeadlineExceeded`：
-    此时再开一个请求只会白烧连接，最终还是要被端到端死线砍掉。
-    """
+def _bounded_call(label: str, fn, *, reserve_sec: float | None = None, first_text: bool = False):
+    """Limit each call, keeping a separate whole-reply ceiling for streams."""
     timeout = _llm_deadline(label, reserve_sec=reserve_sec)
     if is_budget_exhausted(timeout):
         raise LlmDeadlineExceeded(
             f"{label} 未发起：整轮回复预算已用尽（{reply_deadline_status()}）"
         )
-    return call_with_deadline(fn, timeout_sec=timeout, label=label)
-
-
-
-
-
-
+    hard_timeout = reply_deadline_remaining() if first_text else None
+    return call_with_deadline(
+        fn, timeout_sec=timeout, label=label, first_text=first_text, hard_timeout_sec=hard_timeout
+    )
 
 
 def _model_turn_budget_sec() -> float:
@@ -4078,9 +3994,6 @@ def _call_claude_impl(client, model_name, system_prompt, claude_messages, tools,
 
 
 
-    force_stream = False
-    if (thinking_config or max_tokens > 21333) and not stream_callback:
-        force_stream = True
 
 
 
@@ -4092,27 +4005,25 @@ def _call_claude_impl(client, model_name, system_prompt, claude_messages, tools,
     _req_timeout = _llm_deadline(f"claude:{model_name}")
 
     def _call(_kwargs):
-        ensure_active()
-        _kwargs = {**_kwargs, "timeout": build_sdk_timeout(anthropic)}
-        return _bounded_call(
-            f"claude:{model_name}",
-            (lambda: client.messages.create(**_kwargs)) if not (stream_callback or force_stream)
-            else (lambda: _stream_claude(_kwargs)),
-        )
+        def request():
+            options = {**_kwargs, "timeout": build_sdk_timeout(anthropic)}
+            saw_text = False
+            try:
+                with client.messages.stream(**options) as stream:
+                    for text in stream.text_stream:
+                        mark_text_progress(text)
+                        saw_text = saw_text or bool(text)
+                        if stream_callback:
+                            streamed_tokens.append(text)
+                            stream_callback(text)
+                    return stream.get_final_message()
+            except Exception as exc:
+                if saw_text or not stream_unsupported(exc):
+                    raise
+            ensure_active()
+            return client.messages.create(**options)
 
-    def _stream_claude(_kwargs):
-        ensure_active()
-        with client.messages.stream(**_kwargs) as stream:
-            if stream_callback:
-                for text in stream.text_stream:
-                    streamed_tokens.append(text)
-                    ensure_active()
-                    stream_callback(text)
-            else:
-
-                for _ in stream.text_stream:
-                    ensure_active()
-            return stream.get_final_message()
+        return _bounded_call(f"claude:{model_name}", request, first_text=True)
 
     try:
         response = _call(kwargs)
@@ -4450,6 +4361,46 @@ def _default_gemini_path() -> dict:
     }
 
 
+def _gemini_chat_reply(chat, parts, *, label, stream_callback=None):
+    def request():
+        stream = None
+        answer, calls = [], []
+        try:
+            stream = chat.send_message_stream(parts)
+            for chunk in stream:
+                ensure_active()
+                candidates = chunk.candidates or []
+                content = candidates[0].content if candidates else None
+                for part in (content.parts or []) if content else ():
+                    if part.text and not getattr(part, "thought", False):
+                        mark_text_progress(part.text)
+                        answer.append(part.text)
+                        if stream_callback is not None:
+                            stream_callback(part.text)
+                            try:
+                                append_llm_trace({"source": "tenshi_reply.gemini.stream", "token": part.text})
+                            except Exception:
+                                pass
+                    if part.function_call:
+                        calls.append(part)
+            return "".join(answer), calls
+        except Exception as exc:
+            if answer or calls or not stream_unsupported(exc):
+                raise
+        finally:
+            if stream is not None and callable(getattr(stream, "close", None)):
+                stream.close()
+        ensure_active()
+        response = chat.send_message(parts)
+        candidates = response.candidates or []
+        content = candidates[0].content if candidates else None
+        return response.text or "", [
+            part for part in ((content.parts or []) if content else ()) if part.function_call
+        ]
+
+    return _bounded_call(label, request, first_text=True)
+
+
 def call_gemini(
     model_name,
     system_prompt,
@@ -4464,7 +4415,7 @@ def call_gemini(
 
     _http_options_kwargs = {
 
-        "timeout": max(1, int(remaining_timeout(tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC) * 1000)),
+        "timeout": max(1, int(tenshi_config.LLM_CLIENT_READ_TIMEOUT_SEC * 1000)),
 
         "retryOptions": types.HttpRetryOptions(attempts=tenshi_config.LLM_CLIENT_MAX_RETRIES),
     }
@@ -4584,93 +4535,10 @@ def call_gemini(
 
 
 
-        is_streaming_response = (stream_callback is not None)
-        current_tool_calls = []
-        text_buffer = ""
-
-        if is_streaming_response:
-
-
-
-
-            ensure_active()
-            for chunk in _stream_iter_bounded(
-                chat.send_message_stream(current_parts),
-                label=f"gemini:{model_name}",
-            ):
-                if not chunk.candidates or not chunk.candidates[0].content:
-                    continue
-
-                for part in chunk.candidates[0].content.parts:
-                    if part.text:
-                        text_buffer += part.text
-                        ensure_active()
-                        stream_callback(part.text)
-
-                        try:
-                            append_llm_trace(
-                                {
-                                    "source": "tenshi_reply.gemini.stream",
-                                    "provider": "gemini",
-                                    "model": model_name,
-                                    "token": part.text,
-                                }
-                            )
-                        except Exception:
-                            pass
-                    if part.function_call:
-                        current_tool_calls.append(part)
-
-                        try:
-                            append_llm_trace(
-                                {
-                                    "source": "tenshi_reply.gemini.tool_call_emitted",
-                                    "provider": "gemini",
-                                    "model": model_name,
-                                    "tool_name": part.function_call.name,
-                                    "tool_args": part.function_call.args,
-                                }
-                            )
-                        except Exception:
-                            pass
-        else:
-            ensure_active()
-            response = _bounded_call(
-                f"gemini:{model_name}",
-                lambda: chat.send_message(current_parts),
-            )
-            if response.text:
-                full_text += response.text
-                try:
-                    append_llm_trace(
-                        {
-                            "source": "tenshi_reply.gemini.chunk",
-                            "provider": "gemini",
-                            "model": model_name,
-                            "chunk_text": response.text,
-                        }
-                    )
-                except Exception:
-                    pass
-            if response.candidates and response.candidates[0].content:
-                for part in response.candidates[0].content.parts:
-                    if part.function_call:
-                        current_tool_calls.append(part)
-                        try:
-                            append_llm_trace(
-                                {
-                                    "source": "tenshi_reply.gemini.tool_call_emitted",
-                                    "provider": "gemini",
-                                    "model": model_name,
-                                    "tool_name": part.function_call.name,
-                                    "tool_args": part.function_call.args,
-                                }
-                            )
-                        except Exception:
-                            pass
-
-        full_text += text_buffer
-
+        label = f"gemini:{model_name}"
+        full_text, current_tool_calls = _gemini_chat_reply(
+            chat, current_parts, label=label, stream_callback=stream_callback
+        )
 
         while current_tool_calls and loop_count < MAX_TOOL_LOOP:
 
@@ -4737,15 +4605,14 @@ def call_gemini(
                 if full_text.strip():
                     followup_parts.append(
                         types.Part.from_text(
-                            "SYSTEM CONTINUATION NOTICE: Continue your previous reply from where you left off. "
+                            text="SYSTEM CONTINUATION NOTICE: Continue your previous reply from where you left off. "
                             "Do not restart from the beginning and do not repeat already emitted text."
                         )
                     )
                 followup_parts.extend(tool_outputs)
                 ensure_active()
-                response = _bounded_call(
-                    f"gemini:{model_name}",
-                    lambda: chat.send_message(followup_parts),
+                chunk_text, current_tool_calls = _gemini_chat_reply(
+                    chat, followup_parts, label=label, stream_callback=stream_callback
                 )
             except Exception as e:
 
@@ -4775,46 +4642,21 @@ def call_gemini(
                     if full_text.strip():
                         followup_parts.append(
                             types.Part.from_text(
-                                "SYSTEM CONTINUATION NOTICE: Continue your previous reply from where you left off. "
+                                text="SYSTEM CONTINUATION NOTICE: Continue your previous reply from where you left off. "
                                 "Do not restart from the beginning and do not repeat already emitted text."
                             )
                         )
                     followup_parts.extend(tool_outputs)
                     ensure_active()
-                    response = _bounded_call(
-                        f"gemini:{model_name}",
-                        lambda: chat.send_message(followup_parts),
+                    chunk_text, current_tool_calls = _gemini_chat_reply(
+                        chat, followup_parts, label=label, stream_callback=stream_callback
                     )
                 else:
                     raise e
 
 
 
-            current_tool_calls = []
-
-            if response.text:
-
-                chunk_text = response.text
-                full_text += chunk_text
-                if is_streaming_response:
-                    ensure_active()
-                    stream_callback(chunk_text)
-                try:
-                    append_llm_trace(
-                        {
-                            "source": "tenshi_reply.gemini.chunk",
-                            "provider": "gemini",
-                            "model": model_name,
-                            "chunk_text": chunk_text,
-                        }
-                    )
-                except Exception:
-                    pass
-
-            if response.candidates and response.candidates[0].content:
-                for part in response.candidates[0].content.parts:
-                    if part.function_call:
-                        current_tool_calls.append(part)
+            full_text += chunk_text
 
             if not current_tool_calls:
                 logger.info("Final response generated after tool loop")
@@ -4878,13 +4720,10 @@ def call_gemini(
                 pass
             try:
                 ensure_active()
-                response = _bounded_call(
-                    f"gemini:{model_name}",
-                    lambda: chat.send_message(
-                        [types.Part.from_text(format_recovered_tool_results_notice(results))]
-                    ),
+                extra_text, _ = _gemini_chat_reply(
+                    chat, [types.Part.from_text(text=format_recovered_tool_results_notice(results))],
+                    label=label,
                 )
-                extra_text = response.text or ""
                 if extra_text:
                     full_text = f"{full_text}\n{extra_text}".strip() if full_text else extra_text
 
@@ -5017,7 +4856,7 @@ def _run_openai_compat_tools_loop(
 
 
 
-        call_result = _bounded_call(f"{provider}:{model_name}", lambda: call_with_tools(**_call_kw))
+        call_result = _bounded_call(f"{provider}:{model_name}", lambda: call_with_tools(**_call_kw), first_text=True)
         if len(call_result) >= 3:
             content, current_tool_calls, assistant_msg = call_result[0], call_result[1], call_result[2]
         else:
@@ -5884,7 +5723,7 @@ def _run_path_first_provider(
 
 
         try:
-            result = _bounded_call(label, _call)
+            result = _bounded_call(label, _call, first_text=True)
             text, _thinking, _had_tools = _unpack_model_call_result(result)
             require_nonempty_model_text(text, label)
             if is_error_placeholder_response(text):
@@ -5909,24 +5748,27 @@ def _plain_text_call(
     max_sec: float | None = None,
     reasoning_effort: str | None = None,
 ) -> str:
-    """对单个模型发一次不带工具、不流式的纯文本请求，返回文本；失败抛异常。
+    """对单个模型发一次不带工具、优先流式的纯文本请求，返回文本；失败抛异常。
 
     刻意不复用带工具循环的 `_run_path_first_provider`：工具只属于「心里」那一步，
     打字这一步不能再触发 note_patch / schedule_perception 之类的副作用。
     """
     flat = flatten_claude_system(system) if isinstance(system, list) else (system or "")
     stage_timeout = float(getattr(tenshi_config, "REPLY_TYPING_TIMEOUT_SEC", 90.0) or 90.0)
-    if max_sec is not None and max_sec > 0:
-        stage_timeout = min(stage_timeout, float(max_sec))
+    deadline = time.monotonic() + max_sec if max_sec is not None else None
 
-    def _deadline() -> float | None:
-        t = _llm_deadline(f"typing:{model_id}")
-        if is_budget_exhausted(t):
-            raise LlmDeadlineExceeded(f"typing:{model_id} 未发起：整轮回复预算已用尽")
-        return stage_timeout if t is None else min(float(t), stage_timeout)
-
-    def _run(fn):
-        out = call_with_deadline(fn, timeout_sec=_deadline(), label=f"typing:{provider}:{model_id}")
+    def _run(fn, paths_left=1):
+        budget = _llm_deadline(f"typing:{model_id}")
+        remaining = deadline - time.monotonic() if deadline is not None else None
+        if is_budget_exhausted(budget) or (remaining is not None and remaining <= 0):
+            raise LlmDeadlineExceeded(f"typing:{model_id} 未发起：预算已用尽")
+        timeout = min(stage_timeout, budget) if budget is not None else stage_timeout
+        if remaining is not None:
+            timeout = min(timeout, remaining / paths_left)
+        out = call_with_deadline(
+            fn, timeout_sec=timeout, label=f"typing:{provider}:{model_id}",
+            first_text=True, hard_timeout_sec=reply_deadline_remaining(),
+        )
         text, _thinking, _tools = _unpack_model_call_result(out)
         return (text or "").strip()
 
@@ -5991,29 +5833,32 @@ def _plain_text_call(
         raise RuntimeError(f"typing: {provider} 没有可用通路")
 
     last_exc: Exception | None = None
-    for path in paths:
+    for index, path in enumerate(paths):
+        def run_path(fn):
+            return _run(fn, paths_left=len(paths) - index)
+
         try:
             if _is_openrouter_path(path) or path.get("protocol") == "openai":
                 _or_model = _openrouter_model_id(model_id, path)
-                text = _run(lambda: call_openrouter(_or_model, flat, messages, llm_path=path))
+                text = run_path(lambda: call_openrouter(_or_model, flat, messages, llm_path=path))
             elif provider == "gemini":
-                text = _run(lambda: call_gemini(model_id, flat, messages, tools=None, llm_path=path))
+                text = run_path(lambda: call_gemini(model_id, flat, messages, tools=None, llm_path=path))
             elif provider == "deepseek":
-                text = _run(lambda: call_deepseek(model_id, flat, messages, llm_path=path))
+                text = run_path(lambda: call_deepseek(model_id, flat, messages, llm_path=path))
             elif provider == "gpt":
-                text = _run(
+                text = run_path(
                     lambda: call_gpt(
                         model_id, flat, messages, llm_path=path, reasoning_effort=reasoning_effort
                     )
                 )
             elif provider == "grok":
-                text = _run(lambda: call_grok(model_id, flat, messages, llm_path=path))
+                text = run_path(lambda: call_grok(model_id, flat, messages, llm_path=path))
             elif provider == "magmarouter":
-                text = _run(lambda: call_magmarouter(model_id, flat, messages, llm_path=path))
+                text = run_path(lambda: call_magmarouter(model_id, flat, messages, llm_path=path))
             elif provider == "openrouter":
-                text = _run(lambda: call_openrouter(model_id, flat, messages, llm_path=path))
+                text = run_path(lambda: call_openrouter(model_id, flat, messages, llm_path=path))
             else:
-                text = _run(lambda: call_glm(model_id, flat, messages, llm_path=path))
+                text = run_path(lambda: call_glm(model_id, flat, messages, llm_path=path))
             provider_call_stats.record(
                 provider, path, success=bool(text) and not is_error_placeholder_response(text)
             )
@@ -6096,18 +5941,36 @@ def run_typing_stage(
         order.append(prefer_model_id)
     order += [m for m in (model_chain or []) if m not in order]
     messages = [{"role": "user", "content": typing_user}]
-    tried = 0
-    for model_id in order:
-        if tried >= max_models or reply_deadline_exceeded():
+    candidates = [
+        (model_id, provider) for model_id in order
+        if (provider := _provider_from_model_id(model_id)) != "grok"
+        and (force_configured_model or not _provider_is_dead_this_round(provider))
+    ]
+    # Give each provider a chance before trying more models on the same backend.
+    seen = set()
+    first, rest = [], []
+    for candidate in candidates:
+        provider = candidate[1]
+        (rest if provider in seen else first).append(candidate)
+        seen.add(provider)
+    candidates = (first + rest)[:max_models]
+    for index, (model_id, provider) in enumerate(candidates):
+        if reply_deadline_exceeded():
             break
+        if not force_configured_model and _provider_is_dead_this_round(provider):
+            continue
         remaining = None if stage_deadline is None else stage_deadline - time.monotonic()
         if remaining is not None and remaining <= 0:
-            logger.warning(f"[typing] 共享预算（{total_budget:.0f}s）用尽，已试 {tried} 个。")
+            logger.warning(f"[typing] 共享预算（{total_budget:.0f}s）用尽。")
             break
-        provider = _provider_from_model_id(model_id)
-        if provider == "grok" or (not force_configured_model and _provider_is_dead_this_round(provider)):
-            continue
-        tried += 1
+        if remaining is not None:
+            hard_remaining = reply_deadline_remaining()
+            if hard_remaining is not None:
+                reserve = float(getattr(tenshi_config, "REPLY_DEADLINE_RESERVE_SEC", 60.0) or 0.0)
+                remaining = min(remaining, hard_remaining - reserve)
+                if remaining <= 0:
+                    break
+            remaining /= len(candidates) - index
         try:
             raw = _plain_text_call(provider, model_id, typing_system, messages, max_sec=remaining)
         except Exception as e:
@@ -7047,6 +6910,16 @@ def _suppress_unsafe_reply(
             stage,
         )
     _persist_unsafe_turn_outcome(reason=reason, withdraw_ok=withdraw_ok)
+
+
+def _typing_failed_before_delivery(streamer, reason):
+    # The typing response and its plan have stayed in memory. Keep the original
+    # ambiguous-delivery handling if any delivery path has already run.
+    if getattr(streamer, "message_id", None) or getattr(streamer, "sent_message_ids", ()):
+        raise RuntimeError(reason)
+    if os.getenv("RP_ACTIVE_TASK") != "reply":
+        _schedule_failed_reply_retry(reason=reason)
+    return REPLY_PREDELIVERY_FAILURE_EXIT
 
 
 def main():
@@ -8007,8 +7880,7 @@ def _main_impl(*, force_gemini_flash: bool = False):
             if typing_model:
                 raise reply_two_stage.UnsafeResponseError("unsafe_typing_output")
             logger.critical("打字那一步全部失败；心里那一步的内容不外发。")
-            _schedule_failed_reply_retry(reason="打字那一步全部候选失败")
-            raise Exception("Typing stage failed to produce a message.")
+            return _typing_failed_before_delivery(streamer, "打字那一步全部候选失败")
         final_response = typed_text
         unsafe_reason = reply_two_stage.unsafe_response_reason(final_response)
         if unsafe_reason and not reply_no_send:
@@ -8017,9 +7889,7 @@ def _main_impl(*, force_gemini_flash: bool = False):
 
         if not reply_no_send and is_error_placeholder_response(final_response):
             logger.critical("打字层返回上游错误占位，按失败处理（不外发）。")
-            _clear_streamer_text(streamer)
-            _schedule_failed_reply_retry(reason="打字层返回上游错误占位")
-            raise Exception("Typing stage returned an upstream error placeholder.")
+            return _typing_failed_before_delivery(streamer, "打字层返回上游错误占位")
         had_tool_calls = False
         used_stream_fallback = False
         using_last_resort = False
@@ -8642,7 +8512,10 @@ def _main_impl(*, force_gemini_flash: bool = False):
 
 if __name__ == "__main__":
     try:
-        main()
+        outcome = main()
+        if outcome == REPLY_PREDELIVERY_FAILURE_EXIT:
+            _write_smoke_output(error="Typing failed before delivery")
+            sys.exit(outcome)
         _write_smoke_output()
     except Exception as e:
         logger.critical(f"CRITICAL ERROR: {format_exception_inline(e)}", exc_info=True)

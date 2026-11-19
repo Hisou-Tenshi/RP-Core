@@ -11,7 +11,7 @@ import json
 import re
 
 import tenshi_config
-from llm_compat import build_openai_compat_client, normalize_tool_calls as _normalize_tool_calls
+from llm_compat import chat_completion, build_openai_compat_client, normalize_tool_calls as _normalize_tool_calls
 from openai import OpenAI
 from tenshi_utils import append_llm_trace, setup_logger
 from error_text import format_exception_inline
@@ -163,10 +163,10 @@ def call_deepseek(
         if isinstance(llm_path, dict):
             base_url = llm_path.get("base_url")
         ensure_active()
-        completion = client.chat.completions.create(
+        completion = chat_completion(
+            client.chat.completions.create,
             model=_normalize_model_name_for_path(model_name, base_url=base_url),
             messages=_to_openai_messages(system_prompt, messages),
-            stream=False,
             **_thinking_kwargs(agent_complex=agent_complex),
         )
         msg = completion.choices[0].message
@@ -174,31 +174,6 @@ def call_deepseek(
     except Exception as e:
         logger.error(f"DeepSeek API 调用失败：{format_exception_inline(e)}")
         raise
-
-
-def _accumulate_stream_tool_calls(tool_calls_by_index: dict, raw_tool_calls) -> None:
-    if not raw_tool_calls:
-        return
-    for tc_delta in raw_tool_calls:
-        idx = getattr(tc_delta, "index", 0)
-        if idx not in tool_calls_by_index:
-            tool_calls_by_index[idx] = {
-                "id": "",
-                "type": "function",
-                "function": {"name": "", "arguments": ""},
-            }
-        acc = tool_calls_by_index[idx]
-        tc_id = getattr(tc_delta, "id", None)
-        if tc_id:
-            acc["id"] = tc_id
-        fn = getattr(tc_delta, "function", None)
-        if fn:
-            name = getattr(fn, "name", None)
-            if name:
-                acc["function"]["name"] = name
-            args_part = getattr(fn, "arguments", None)
-            if args_part:
-                acc["function"]["arguments"] += args_part
 
 
 def call_deepseek_with_tools(
@@ -213,7 +188,6 @@ def call_deepseek_with_tools(
     agent_complex: bool = False,
 ):
     client, _ = _client_for_path(llm_path)
-    use_stream = callable(stream_callback) or callable(on_stream_token)
     try:
         base_url = None
         if isinstance(llm_path, dict):
@@ -221,52 +195,19 @@ def call_deepseek_with_tools(
         kwargs = {
             "model": _normalize_model_name_for_path(model_name, base_url=base_url),
             "messages": _to_openai_messages(system_prompt, messages),
-            "stream": use_stream,
             **_thinking_kwargs(tools=tools or [], agent_complex=agent_complex),
         }
-        if not use_stream:
-            ensure_active()
-            completion = client.chat.completions.create(**kwargs)
-            choice_msg = completion.choices[0].message
-            content = getattr(choice_msg, "content", None) or ""
-            raw_tool_calls = getattr(choice_msg, "tool_calls", None)
-            tool_calls = _normalize_tool_calls(raw_tool_calls) if raw_tool_calls else []
-            return content, tool_calls, assistant_message_dict(choice_msg)
-
-        ensure_active()
-        stream = client.chat.completions.create(**kwargs)
-        content_parts: list[str] = []
-        reasoning_parts: list[str] = []
-        tool_calls_by_index: dict = {}
-
-        for chunk in stream:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta
-            rc = getattr(delta, "reasoning_content", None)
-            if rc:
-                reasoning_parts.append(rc)
-            if delta.content:
-                content_parts.append(delta.content)
-                if callable(stream_callback):
+        def on_text(text):
+            for callback in (stream_callback, on_stream_token):
+                if callable(callback):
                     ensure_active()
-                    stream_callback(delta.content)
-                if callable(on_stream_token):
-                    ensure_active()
-                    on_stream_token(delta.content)
-            _accumulate_stream_tool_calls(tool_calls_by_index, getattr(delta, "tool_calls", None))
+                    callback(text)
 
-        content = "".join(content_parts)
-        reasoning = "".join(reasoning_parts).strip()
-        tool_calls = _normalize_tool_calls(
-            [tool_calls_by_index[i] for i in sorted(tool_calls_by_index)]
-        )
-        assistant_msg = {"role": "assistant", "content": content}
-        if reasoning:
-            assistant_msg["reasoning_content"] = reasoning
-        if tool_calls:
-            assistant_msg["tool_calls"] = tool_calls
-        return content, tool_calls, assistant_msg
+        completion = chat_completion(client.chat.completions.create, on_text=on_text, **kwargs)
+        choice_msg = completion.choices[0].message
+        raw_tool_calls = getattr(choice_msg, "tool_calls", None)
+        tool_calls = _normalize_tool_calls(raw_tool_calls) if raw_tool_calls else []
+        return getattr(choice_msg, "content", None) or "", tool_calls, assistant_message_dict(choice_msg)
     except Exception as e:
         logger.error(f"DeepSeek 工具调用 API 失败：{format_exception_inline(e)}")
         raise
@@ -289,10 +230,10 @@ def deepseek_generate_json(
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
     ensure_active()
-    completion = client.chat.completions.create(
+    completion = chat_completion(
+        client.chat.completions.create,
         model=_normalize_model_name_for_path(model_name, base_url=base_url),
         messages=messages,
-        stream=False,
         **_thinking_kwargs(json_mode=True, agent_complex=agent_complex),
     )
     return (completion.choices[0].message.content or "").strip()

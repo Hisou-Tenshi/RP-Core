@@ -41,7 +41,7 @@ import threading
 
 import tenshi_config
 from error_text import format_exception_inline
-from llm_compat import normalize_tool_calls as _normalize_tool_calls
+from llm_compat import chat_completion, normalize_tool_calls as _normalize_tool_calls
 from tenshi_utils import append_llm_trace, setup_logger
 
 logger = setup_logger("TenshiGlmModules", tenshi_config.DEBUG_LOG_PATH)
@@ -234,10 +234,10 @@ def call_glm(
     client, _ = _client_for_path(llm_path)
     try:
         ensure_active()
-        completion = client.chat.completions.create(
+        completion = chat_completion(
+            client.chat.completions.create,
             model=_normalize_model_name_for_path(model_name),
             messages=_to_glm_messages(system_prompt, messages),
-            stream=False,
             **_thinking_kwargs(agent_complex=agent_complex),
         )
         msg = completion.choices[0].message
@@ -245,34 +245,6 @@ def call_glm(
     except Exception as e:
         logger.error(f"GLM API 调用失败：{format_exception_inline(e)}")
         raise
-
-
-def _accumulate_stream_tool_calls(tool_calls_by_index: dict, raw_tool_calls) -> None:
-    """把流式 chunk 里的 tool_calls 增量按 index 拼成完整调用。"""
-    if not raw_tool_calls:
-        return
-    for tc_delta in raw_tool_calls:
-        idx = getattr(tc_delta, "index", 0)
-        if idx is None:
-            idx = 0
-        if idx not in tool_calls_by_index:
-            tool_calls_by_index[idx] = {
-                "id": "",
-                "type": "function",
-                "function": {"name": "", "arguments": ""},
-            }
-        acc = tool_calls_by_index[idx]
-        tc_id = getattr(tc_delta, "id", None)
-        if tc_id:
-            acc["id"] = tc_id
-        fn = getattr(tc_delta, "function", None)
-        if fn:
-            name = getattr(fn, "name", None)
-            if name:
-                acc["function"]["name"] = name
-            args_part = getattr(fn, "arguments", None)
-            if args_part:
-                acc["function"]["arguments"] += args_part
 
 
 def call_glm_with_tools(
@@ -290,64 +262,28 @@ def call_glm_with_tools(
 
     返回 `(content_text, tool_calls, assistant_msg_dict)`：
       * `assistant_msg_dict` 是**规范化后的普通 dict**，可直接 append 回 messages 再回灌；
-      * 传了 `stream_callback` / `on_stream_token` 时走流式，逐块回调增量文本。
+      * 优先走流式，传入的回调会收到增量文本。
         zai 的 chunk 形状为 `choices[0].delta.content` / `.reasoning_content` /
         `.tool_calls`，且收尾可能发空 `choices`（usage-only），必须容忍。
     """
     client, _ = _client_for_path(llm_path)
-    use_stream = callable(stream_callback) or callable(on_stream_token)
     try:
         kwargs = {
             "model": _normalize_model_name_for_path(model_name),
             "messages": _to_glm_messages(system_prompt, messages),
-            "stream": use_stream,
             **_thinking_kwargs(tools=tools or [], agent_complex=agent_complex),
         }
-        if not use_stream:
-            ensure_active()
-            completion = client.chat.completions.create(**kwargs)
-            choice_msg = completion.choices[0].message
-            content = getattr(choice_msg, "content", None) or ""
-            raw_tool_calls = getattr(choice_msg, "tool_calls", None)
-            tool_calls = _normalize_tool_calls(raw_tool_calls) if raw_tool_calls else []
-            return content, tool_calls, assistant_message_dict(choice_msg)
-
-        ensure_active()
-        stream = client.chat.completions.create(**kwargs)
-        content_parts: list[str] = []
-        reasoning_parts: list[str] = []
-        tool_calls_by_index: dict = {}
-
-        for chunk in stream:
-            choices = getattr(chunk, "choices", None)
-            if not choices:
-                continue
-            delta = choices[0].delta
-            rc = getattr(delta, "reasoning_content", None)
-            if rc:
-                reasoning_parts.append(rc)
-            text = getattr(delta, "content", None)
-            if text:
-                content_parts.append(text)
-                if callable(stream_callback):
+        def on_text(text):
+            for callback in (stream_callback, on_stream_token):
+                if callable(callback):
                     ensure_active()
-                    stream_callback(text)
-                if callable(on_stream_token):
-                    ensure_active()
-                    on_stream_token(text)
-            _accumulate_stream_tool_calls(tool_calls_by_index, getattr(delta, "tool_calls", None))
+                    callback(text)
 
-        content = "".join(content_parts)
-        reasoning = "".join(reasoning_parts).strip()
-        tool_calls = _normalize_tool_calls(
-            [tool_calls_by_index[i] for i in sorted(tool_calls_by_index)]
-        )
-        assistant_msg = {"role": "assistant", "content": content}
-        if reasoning:
-            assistant_msg["reasoning_content"] = reasoning
-        if tool_calls:
-            assistant_msg["tool_calls"] = tool_calls
-        return content, tool_calls, assistant_msg
+        completion = chat_completion(client.chat.completions.create, on_text=on_text, **kwargs)
+        choice_msg = completion.choices[0].message
+        raw_tool_calls = getattr(choice_msg, "tool_calls", None)
+        tool_calls = _normalize_tool_calls(raw_tool_calls) if raw_tool_calls else []
+        return getattr(choice_msg, "content", None) or "", tool_calls, assistant_message_dict(choice_msg)
     except Exception as e:
         logger.error(f"GLM 工具调用 API 失败：{format_exception_inline(e)}")
         raise
@@ -368,10 +304,10 @@ def glm_generate_json(
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
     ensure_active()
-    completion = client.chat.completions.create(
+    completion = chat_completion(
+        client.chat.completions.create,
         model=_normalize_model_name_for_path(model_name),
         messages=messages,
-        stream=False,
         response_format={"type": "json_object"},
         **_thinking_kwargs(agent_complex=agent_complex),
     )

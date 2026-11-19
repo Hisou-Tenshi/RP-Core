@@ -4,6 +4,7 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
+from time import sleep
 
 import pytest
 
@@ -43,6 +44,14 @@ def api():
             )
             status, body = responses.pop(0)
             self.send_response(status)
+            if isinstance(body, list):
+                self.send_header("Content-Type", "text/event-stream")
+                self.end_headers()
+                for delay, event in body:
+                    sleep(delay)
+                    self.wfile.write(f"data: {dumps(event)}\n\n".encode())
+                    self.wfile.flush()
+                return
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(dumps(body).encode())
@@ -98,6 +107,44 @@ def test_public_provider_network_protocol_and_fallback(api, monkeypatch):
     )
     assert result["output"]["decision"] == "silent" and len(requests) == 2
     assert requests[0]["payload"]["model"] == "synthetic"
+
+
+def test_public_provider_stream_spans_first_text_timeout(api, monkeypatch):
+    base, requests, responses = api
+    monkeypatch.setenv("RP_MODEL_API_KEY", "synthetic-placeholder")
+    responses.append(
+        (
+            200,
+            [
+                (0, {"choices": [{"delta": {"content": '{"text":'}}]}),
+                (0.15, {"choices": [{"delta": {"content": '"hello"'}}]}),
+                (0.15, {"choices": [{"delta": {"content": "}"}, "finish_reason": "stop"}]}),
+            ],
+        )
+    )
+    result = ModelRouter._one(
+        {"driver": "chat-completions", "base_url": base, "model": "demo", "timeout_seconds": 0.25},
+        {"messages": [{"role": "user", "content": "synthetic"}], "response_schema": {}},
+    )
+    assert result == {"output": {"text": "hello"}, "tool_calls": []}
+    assert requests[0]["payload"]["stream"] is True
+
+
+def test_public_provider_falls_back_on_stream_rejection(api, monkeypatch):
+    base, requests, responses = api
+    monkeypatch.setenv("RP_MODEL_API_KEY", "synthetic-placeholder")
+    responses.extend(
+        [
+            (400, {"error": {"message": "This model does not support streaming"}}),
+            (200, {"choices": [{"message": {"content": "{}"}}]}),
+        ]
+    )
+    result = ModelRouter._one(
+        {"driver": "chat-completions", "base_url": base, "model": "demo"},
+        {"messages": [{"role": "user", "content": "synthetic"}], "response_schema": {}},
+    )
+    assert result == {"output": {}, "tool_calls": []}
+    assert [request["payload"]["stream"] for request in requests] == [True, False]
 
 
 def test_native_tool_history_is_mapped_without_private_provider_code(api, monkeypatch):

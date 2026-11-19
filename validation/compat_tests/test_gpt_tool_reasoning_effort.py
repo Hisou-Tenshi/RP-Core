@@ -117,7 +117,7 @@ class GptReasoningEffortConflictTest(unittest.TestCase):
         self.assertNotIn("reasoning_effort", kw, "带 tools 的调用默认不带思考强度")
         self.assertEqual(kw["tools"], CHAT_TOOLS)
         self.assertEqual(kw["tool_choice"], "auto")
-        self.assertFalse(kw["stream"])
+        self.assertTrue(kw["stream"])
         self.assertEqual(content, "chat-ok")
         self.assertEqual(tool_calls, [])
 

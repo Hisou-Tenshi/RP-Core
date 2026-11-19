@@ -16,6 +16,7 @@ from llm_compat import (
     build_llm_timeout,
     build_openai_compat_client,
     call_with_deadline,
+    chat_completion,
     normalize_tool_calls as _normalize_tool_calls,
 )
 from error_text import format_exception_inline
@@ -241,41 +242,12 @@ def _call_openai_compat_text(
     )
     api_messages = _messages_to_openai_format(system_prompt, messages)
     try:
-        if not callable(stream_callback):
-            ensure_active()
-            completion = client.chat.completions.create(
-                model=model_name,
-                messages=api_messages,
-                temperature=0.7,
-                stream=False,
-            )
-            content = completion.choices[0].message.content or ""
-            return content, ""
-
-        ensure_active()
-        stream = client.chat.completions.create(
-            model=model_name,
-            messages=api_messages,
-            temperature=0.7,
-            stream=True,
+        completion = chat_completion(
+            client.chat.completions.create,
+            model=model_name, messages=api_messages, temperature=0.7,
+            on_text=stream_callback,
         )
-        parts: list[str] = []
-        for event in stream:
-            delta = ""
-            try:
-                delta = event.choices[0].delta.content or ""
-            except (AttributeError, IndexError, TypeError):
-
-                delta = ""
-            if not delta:
-                continue
-            parts.append(delta)
-            try:
-                ensure_active()
-                stream_callback(delta)
-            except Exception:
-                pass
-        return "".join(parts), ""
+        return completion.choices[0].message.content or "", ""
     except Exception as e:
         logger.error(f"{label} API 调用失败：{format_exception_inline(e)}")
         raise e
@@ -349,12 +321,11 @@ def call_openrouter_vision(
             }
         ],
         "temperature": 0.7,
-        "stream": False,
     }
 
     def _do():
         ensure_active()
-        completion = client.chat.completions.create(**payload)
+        completion = chat_completion(client.chat.completions.create, **payload)
         return completion.choices[0].message.content or ""
 
     try:
@@ -394,7 +365,6 @@ def call_gpt(model_name, system_prompt, messages, llm_path=None, reasoning_effor
                 "model": model_name,
                 "messages": api_messages,
                 "reasoning_effort": reasoning_effort or getattr(tenshi_config, "GPT_REASONING_EFFORT", "xhigh"),
-                "stream": False,
             },
             label="GPT",
         )
@@ -456,7 +426,7 @@ def _chat_completions_create(client, kwargs: dict, *, label: str):
     """
     try:
         ensure_active()
-        return client.chat.completions.create(**kwargs)
+        return chat_completion(client.chat.completions.create, **kwargs)
     except Exception as exc:
         if "reasoning_effort" not in kwargs or not _mentions_reasoning_effort(exc):
             raise
@@ -468,7 +438,7 @@ def _chat_completions_create(client, kwargs: dict, *, label: str):
     retry = {k: v for k, v in kwargs.items() if k != "reasoning_effort"}
     try:
         ensure_active()
-        result = client.chat.completions.create(**retry)
+        result = chat_completion(client.chat.completions.create, **retry)
     except Exception as exc:
         logger.error(f"{label}：去掉 reasoning_effort 后仍失败：{format_exception_inline(exc)}")
         raise
@@ -483,7 +453,7 @@ def call_gpt_with_tools(model_name, system_prompt, messages, tools, llm_path=Non
     历史模型在 chat/completions 下不允许「tools + reasoning_effort」共存，因此这里默认
     **不带思考强度**（GPT_TOOL_REASONING_EFFORT 留空 = 不传该参数）；若显式配了值而被打回，
     `_chat_completions_create` 会去掉该参数重试一次，不会让整条链判死。
-    这里不传 temperature（GPT-Flash 只接受默认值）。stream=False。
+    这里不传 temperature（GPT-Flash 只接受默认值），优先走流式。
 
     返回 (content_text, tool_calls_list)，元素形如 {id, type, function:{name, arguments}}。
     """
@@ -497,7 +467,7 @@ def call_gpt_with_tools(model_name, system_prompt, messages, tools, llm_path=Non
         path.get("base_url") or tenshi_config.GPT_BASE_URL,
     )
     api_messages = _messages_to_openai_format_with_tools(system_prompt, messages)
-    kwargs: dict = {"model": model_name, "messages": api_messages, "stream": False}
+    kwargs: dict = {"model": model_name, "messages": api_messages}
     if tools:
         kwargs["tools"] = tools
         kwargs["tool_choice"] = "auto"
@@ -534,11 +504,11 @@ def call_grok(model_name, system_prompt, messages, llm_path=None):
     try:
 
         ensure_active()
-        completion = client.chat.completions.create(
+        completion = chat_completion(
+            client.chat.completions.create,
             model=model_name,
             messages=grok_messages,
             temperature=0.7,
-            stream=False
         )
 
         content = completion.choices[0].message.content or ""
@@ -576,11 +546,11 @@ def _call_openai_compat_with_tools(
     api_messages = _messages_to_openai_format_with_tools(system_prompt, messages)
     try:
         ensure_active()
-        completion = client.chat.completions.create(
+        completion = chat_completion(
+            client.chat.completions.create,
             model=model_name,
             messages=api_messages,
             temperature=0.7,
-            stream=False,
             tools=tools or [],
             tool_choice="auto",
         )
@@ -647,11 +617,11 @@ def call_grok_with_tools(model_name, system_prompt, messages, tools, llm_path=No
 
     try:
         ensure_active()
-        completion = client.chat.completions.create(
+        completion = chat_completion(
+            client.chat.completions.create,
             model=model_name,
             messages=grok_messages,
             temperature=0.7,
-            stream=False,
             tools=tools or [],
             tool_choice="auto",
         )

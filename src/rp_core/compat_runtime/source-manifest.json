@@ -171,7 +171,7 @@
       "functions": 12,
       "unchanged_functions": 12,
       "changed_functions": [],
-      "reviewed_sha256": "41435c24b90b657ca800efc83b54cd26c6d6f11159c8139a12c252c25e688cc1"
+      "reviewed_sha256": "bf83d84f73a1a48e49c4735c2aba8342d85223c511a5640de4b9141230a1c45c"
     },
     {
       "path": "src/deferred_intent.py",
@@ -222,7 +222,7 @@
       "functions": 14,
       "unchanged_functions": 14,
       "changed_functions": [],
-      "reviewed_sha256": "fb66b2f56b86a2cbf027575eaa961e9d497d19901534e735e321ac5d988902b9"
+      "reviewed_sha256": "62529ed355a3800efc4d999112e6613cb0051996b537c6f0ee9f41737499041f"
     },
     {
       "path": "src/grok_modules.py",
@@ -231,7 +231,7 @@
       "functions": 35,
       "unchanged_functions": 35,
       "changed_functions": [],
-      "reviewed_sha256": "1b0477efee93b44dfb0cda7061912b75f33581a4ccd96a9f26802374e49a4f4f"
+      "reviewed_sha256": "38f488830fe4f39585633bc64d448d2a2e91c5364d3514c6c6dd52ce9176004f"
     },
     {
       "path": "src/image_utils.py",
@@ -264,7 +264,7 @@
       "functions": 6,
       "unchanged_functions": 6,
       "changed_functions": [],
-      "reviewed_sha256": "341d09f12830e95f82a835bc5d2d0c999ccb85c91d47772f4913a0925334e812"
+      "reviewed_sha256": "af9dcf61a3277b427679d3a0de9843ea6f1f43a7161ebf6e941c57839f007bb6"
     },
     {
       "path": "src/llm_routing.py",
@@ -442,7 +442,7 @@
       "functions": 19,
       "unchanged_functions": 19,
       "changed_functions": [],
-      "reviewed_sha256": "10a2ca80a4bd2980f8bb1e6186867be014195e3e88da23243c4658734b6aca19"
+      "reviewed_sha256": "bf1f7bd40d145197d97f2c65715510d64b5043c46d5b4ac164cd26a800989326"
     },
     {
       "path": "src/tenshi_config.py",
@@ -475,7 +475,7 @@
         "read_config_file",
         "_main_impl"
       ],
-      "reviewed_sha256": "13a023edc0e63d79de21f7eec5f3262f2d18fef0d993fe7d0839ecfd6ebe9437"
+      "reviewed_sha256": "b31a95cca81849dcc0524df7277360ebfb5f4de8e8272d05c9fb201aab953c58"
     },
     {
       "path": "src/tenshi_skills.py",
@@ -501,7 +501,7 @@
       "functions": 39,
       "unchanged_functions": 39,
       "changed_functions": [],
-      "reviewed_sha256": "b925492f79244be8107397d7a134c5470755b6b64353bacd82d229503ed4d4dd"
+      "reviewed_sha256": "82745c58a80c4a87216714c3c65b5ea55f569ab3525ebc6dac6e3ace360e3ec2"
     },
     {
       "path": "src/user_location.py",
