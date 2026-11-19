@@ -252,7 +252,7 @@ def test_public_call_history_sanitizer_only_emits_allowlisted_counters(tmp_path)
     assert "prompt" not in json.dumps(result)
 
 
-def test_public_call_history_sanitizer_uses_a_separate_100_attempt_window_per_provider(tmp_path):
+def test_public_call_history_sanitizer_uses_a_shared_500_attempt_window(tmp_path):
     import importlib.util
 
     source = Path(__file__).parents[1] / "scripts/probe_public_health.py"
@@ -260,17 +260,47 @@ def test_public_call_history_sanitizer_uses_a_separate_100_attempt_window_per_pr
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     rows = []
-    for index in range(105):
-        rows.append({"provider": "gpt", "route": "proxy3", "outcome": "success", "ts": index})
-        rows.append({"provider": "gemini", "route": "official", "outcome": "failure", "ts": index})
-    rows.append({"provider": "unknown", "route": "official", "outcome": "success"})
+    for index in range(505):
+        rows.append(
+            {"provider": "gpt", "route": "proxy3", "outcome": "success", "ts": index}
+            if index < 400
+            else {"provider": "gemini", "route": "official", "outcome": "failure", "ts": index}
+        )
+    rows.extend(
+        [
+            {"provider": "unknown", "route": "official", "outcome": "success"},
+            {"provider": "gpt", "route": "unknown", "outcome": "success"},
+            {"provider": "gpt", "route": [], "outcome": "success"},
+            {"provider": "gpt", "route": "official", "outcome": "unknown"},
+        ]
+    )
     history = tmp_path / "history.json"
     history.write_text(json.dumps(rows))
     result = module.sanitize_call_history(history)
-    assert result["window_per_provider"] == 100
-    assert result["sample_size"] == 200
-    assert result["providers"]["gpt"]["totokens"]["calls"] == 100
-    assert result["providers"]["gemini"]["official"]["failure"] == 100
+    assert result["window"] == result["sample_size"] == 500
+    assert "window_per_provider" not in result
+    assert result["providers"] == {
+        "gpt": {"totokens": {"calls": 395, "success": 395, "failure": 0}},
+        "gemini": {"official": {"calls": 105, "success": 0, "failure": 105}},
+    }
+
+
+def test_runtime_call_history_rolls_over_across_all_providers(tmp_path, monkeypatch):
+    from rp_core.compat_runtime.src import provider_call_stats
+
+    monkeypatch.setenv("RP_DATA_ROOT", str(tmp_path))
+    history = tmp_path / "data" / "provider_call_history.json"
+    history.parent.mkdir()
+    old_attempt = {"provider": "gemini", "route": "official", "outcome": "failure", "ts": 0}
+    gpt_attempt = {"provider": "gpt", "route": "totokens", "outcome": "success", "ts": 1}
+    history.write_text(json.dumps([old_attempt, *([gpt_attempt] * 498)]))
+    provider_call_stats.record("gpt", {"route_id": "proxy3"}, success=False)
+    assert json.loads(history.read_text())[0] == old_attempt
+    provider_call_stats.record("gpt", {"route_id": "proxy3"}, success=True)
+    rows = json.loads(history.read_text())
+    assert len(rows) == 500
+    assert all(row["provider"] == "gpt" and row["route"] == "totokens" for row in rows)
+    assert [row["outcome"] for row in rows[-2:]] == ["failure", "success"]
 
 
 def test_log_redaction_handles_chunk_boundaries_and_new_credentials(data):

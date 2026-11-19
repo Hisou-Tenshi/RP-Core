@@ -21,6 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CODE = ROOT / "src/rp_core/compat_runtime"
+CALL_HISTORY_LIMIT = 500
 VERDICTS = {
     "ok",
     "not_configured",
@@ -108,7 +109,7 @@ def sanitize(raw, instance, run_id, config_bytes):
 
 
 def sanitize_call_history(path: Path | None) -> dict:
-    """Publish only the last-100 provider/path counters; no prompt, model or output."""
+    """Aggregate the latest 500 allowed attempts across all providers."""
     allowed = {
         "claude": {
             "77",
@@ -137,9 +138,6 @@ def sanitize_call_history(path: Path | None) -> dict:
         rows = []
     if not isinstance(rows, list):
         rows = []
-    # The private runtime retains a 100-attempt window per provider. Apply the
-    # same bound here for older files before producing public aggregate counts.
-    per_provider = {}
     legacy = {
         "claude": {
             "proxy3": "totokens",
@@ -152,18 +150,15 @@ def sanitize_call_history(path: Path | None) -> dict:
         "gpt": {"proxy3": "totokens", "proxy1": "codeyu", "proxy2": "coderplan"},
         "grok": {"proxy2": "totokens", "proxy1": "coderplan"},
     }
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        provider = row.get("provider")
-        if provider not in allowed:
-            continue
-        per_provider.setdefault(provider, []).append(row)
-    rows = [row for provider in allowed for row in per_provider.get(provider, [])[-100:]]
     counts = {}
     accepted = 0
-    for row in rows:
+    # The runtime appends in recording order. Apply the same global limit to older files.
+    for row in reversed(rows):
+        if not isinstance(row, dict):
+            continue
         provider, route, outcome = row.get("provider"), row.get("route"), row.get("outcome")
+        if not isinstance(provider, str) or not isinstance(route, str):
+            continue
         route = legacy.get(provider, {}).get(route, route)
         if (
             provider not in allowed
@@ -177,10 +172,12 @@ def sanitize_call_history(path: Path | None) -> dict:
         stats["calls"] += 1
         stats[outcome] += 1
         accepted += 1
+        if accepted == CALL_HISTORY_LIMIT:
+            break
     return {
         "schema": 1,
         "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
-        "window_per_provider": 100,
+        "window": CALL_HISTORY_LIMIT,
         "sample_size": accepted,
         "providers": counts,
     }
@@ -246,7 +243,14 @@ def main():
             "paths": {
                 name: {
                     key: path[key]
-                    for key in ("ok", "verdict", "latency_ms", "models_total", "models_ok")
+                    for key in (
+                        "ok",
+                        "verdict",
+                        "severity",
+                        "latency_ms",
+                        "models_total",
+                        "models_ok",
+                    )
                 }
                 for name, path in item["paths"].items()
             }

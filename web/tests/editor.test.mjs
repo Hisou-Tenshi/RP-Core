@@ -244,28 +244,51 @@ test('health labels and history bridge old numbered names and new site names',as
   }
 });
 
-test('health panel renders sanitized near-100 provider route counts',async()=>{
-  const callStats={generated_at_utc:'2026-11-16T00:00:00Z',sample_size:100,providers:{gemini:{proxy3:{calls:31,success:29,failure:2},official:{calls:9,success:9,failure:0}}}};
-  const result=await page({healthResult:{available:true,latest:{instance_id:'example',generated_at_utc:'2026-11-16T00:00:00Z',run_id:'1',config_sha256:'d'.repeat(64),providers:{}},history:[],calls:callStats}});
+test('health panel orders the shared call window by configured provider and route rather than counts',async()=>{
+  const catalog=structuredClone(config);
+  [catalog.providers[0],catalog.providers[1]]=[catalog.providers[1],catalog.providers[0]];
+  catalog.path_policies.gemini.order=['official',...catalog.path_policies.gemini.order.filter(route=>route!=='official')];
+  const callStats={generated_at_utc:'2026-11-16T00:00:00Z',window:500,sample_size:500,providers:{claude:{official:{calls:9,success:9,failure:0}},gemini:{proxy3:{calls:460,success:458,failure:2},official:{calls:31,success:31,failure:0}}}};
+  const result=await page({catalog,healthResult:{available:true,latest:{instance_id:'example',generated_at_utc:'2026-11-16T00:00:00Z',run_id:'1',config_sha256:'d'.repeat(64),providers:{}},history:[],calls:callStats}});
   try{
     const {document}=result.dom.window;
     document.querySelector('[data-tab="health"]').click();
-    assert.match(document.querySelector('.call-stats').textContent,/最近 100 次通路调用/);
-    assert.match(document.querySelector('.call-stats').textContent,/To-Tokens/);
-    assert.match(document.querySelector('.call-stats').textContent,/31/);
-    assert.match(document.querySelector('.call-stats').textContent,/2/);
+    assert.match(document.querySelector('.call-stats h2').textContent,/最近 500 次通路调用 · 共 500 次/);
+    assert.deepEqual([...document.querySelectorAll('.call-stats tbody tr')].map(row=>[...row.cells].map(cell=>cell.textContent)),[
+      ['Gemini','Official','31','31','0'],['Gemini','To-Tokens','460','458','2'],['Claude','Official','9','9','0'],
+    ]);
   }finally{result.dom.window.close();}
 });
 
-test('health marks a route orange when only some of its models are available',async()=>{
+test('health panel does not label an old per-provider snapshot as a shared window',async()=>{
+  const timestamp='2026-11-16T00:00:00Z';
+  const latest={instance_id:'example',generated_at_utc:timestamp,run_id:'1',providers:{}};
+  const calls={generated_at_utc:timestamp,window_per_provider:100,sample_size:0,providers:{}};
+  const {dom}=await page({healthResult:{available:true,latest,history:[],calls}});
+  try{
+    assert.match(dom.window.document.querySelector('.call-stats h2').textContent,/旧统计口径/);
+  }finally{dom.window.close();}
+});
+
+test('health marks partial availability in the badge and history without recoloring healthy checks',async()=>{
   const latest={instance_id:'example',generated_at_utc:'2026-11-16T00:00:00Z',run_id:'1',providers:{claude:{models_ok:1,models_total:2,enabled:true,paths:{'Proxy 3':{ok:true,verdict:'ok',severity:'green',latency_ms:10,models:{'claude-opus-5-5':{ok:true,verdict:'ok'},'claude-haiku-5-5':{ok:false,verdict:'auth_denied'}}}}}}};
-  const {dom}=await page({healthResult:{available:true,latest,history:[],calls:null}});
+  const sample=(timestamp,run_id,status)=>({generated_at_utc:timestamp,run_id,providers:{claude:{paths:{'To-Tokens':{ok:true,verdict:'ok',...status}}}}});
+  const history=[
+    sample('2026-11-15T06:00:00Z','10',{models_ok:2,models_total:2}),
+    sample('2026-11-15T12:00:00Z','11',{models_ok:1,models_total:2}),
+    sample('2026-11-15T18:00:00Z','12',{severity:'warn',verdict:'quota_exhausted'}),
+    sample(latest.generated_at_utc,latest.run_id,{}),
+  ];
+  const {dom}=await page({healthResult:{available:true,latest,history,calls:null}});
   try{
     const {document}=dom.window;
     const pill=document.querySelector('.provider-card .pill');
     assert.match(pill.className,/warn/);
     assert.equal(pill.textContent,'部分可用');
     assert.equal([...document.querySelectorAll('.model-state')].filter(el=>el.classList.contains('red')).length,1);
+    const cells=[...document.querySelectorAll('.history-cell')];
+    assert.deepEqual(cells.map(cell=>cell.className),['history-cell green','history-cell warn','history-cell warn','history-cell warn']);
+    assert.match(cells.at(-1).title,/部分可用$/);
   }finally{dom.window.close();}
 });
 

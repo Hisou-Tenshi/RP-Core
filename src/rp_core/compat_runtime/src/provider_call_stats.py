@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-"""Keep up to 100 sanitized recent attempts per provider."""
+"""Keep a shared window of up to 500 sanitized recent route attempts."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import threading
 import time
 
 _LOCK = threading.Lock()
+_HISTORY_LIMIT = 500
 _PROVIDERS = {
     "claude",
     "gemini",
@@ -153,22 +154,10 @@ def record(provider: str, path: dict, *, success: bool) -> None:
                     "outcome": "success" if success else "failure",
                 }
             )
-            counts: dict[str, int] = {}
-            retained = []
-            for row in reversed(existing):
-                row_provider = (
-                    str(row.get("provider") or "").lower() if isinstance(row, dict) else ""
-                )
-                if row_provider not in _PROVIDERS:
-                    continue
-                if counts.get(row_provider, 0) >= 100:
-                    continue
-                counts[row_provider] = counts.get(row_provider, 0) + 1
-                retained.append(row)
-            existing = list(reversed(retained))
             temporary = target.with_name(target.name + ".tmp")
             temporary.write_text(
-                json.dumps(existing, separators=(",", ":")) + "\n", encoding="utf-8"
+                json.dumps(existing[-_HISTORY_LIMIT:], separators=(",", ":")) + "\n",
+                encoding="utf-8",
             )
             temporary.replace(target)
     except OSError:

@@ -95,7 +95,11 @@ Provider order on every page is Claude, Gemini, Grok, ChatGPT, DeepSeek, GLM, KI
 Qwen, OpenRouter, MagmaRouter. Routing rows and provider cards can be reordered by
 dragging (or with the ↑/↓ buttons); the drag order is saved with the public config.
 The health strips are 3px wide: green routes keep the full bar, orange
-(models partially available) is half height, and red is a quarter height.
+(partial model availability or another warning) is half height, and red is a
+quarter height. Each bar reflects its own check, not the current route state.
+Call statistics aggregate one shared window of up to 500 recorded route attempts
+per instance, displayed in configured provider and route order. Previously
+discarded attempts cannot be recovered when upgrading from the per-provider window.
 
 See [the Actions secret migration guide](provider-secrets.md) for the 13 new secret
 names, the public Claude Codeyu URL variable, and the safe cutover order.
@@ -131,8 +135,9 @@ the four independent credentials belong only in RP-Core Actions secrets.
 `.github/workflows/provider-health.yml` runs every six hours, on model configuration
 changes and on manual dispatch. It resolves registered instances, enters each same
 GitHub Environment used by `instance.yml`, and probes using that environment's
-RP-Core secrets. It checks out **only public RP-Core code**, uses a synthetic probe
-card, and never obtains a private checkout or Telegram token. Provider checks use
+RP-Core secrets. It checks out the public RP-Core code and only the bounded call
+counters file from the verified private data repository. It uses a synthetic probe
+card and never obtains a Telegram token. Provider checks use
 model listing/token counting, not text/image generation. Qwen embedding is checked
 through the non-generating model endpoint too; unsupported endpoints remain unknown.
 
@@ -144,6 +149,7 @@ instance identity and catalog SHA-256:
 ```
 health/<instance-id>/latest.json
 health/<instance-id>/history.json
+health/<instance-id>/calls.json
 ```
 
 History keeps 120 compact snapshots and never copies old Calling results. The console

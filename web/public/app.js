@@ -19,10 +19,9 @@ const legacyRouteIds = {
   gpt:{proxy3:'totokens',proxy1:'codeyu',proxy2:'coderplan'},
   grok:{proxy2:'totokens',proxy1:'coderplan'},
 };
-const routeLabel = (provider,route) => {
-  const id=legacyRouteIds[provider]?.[route]||route;
-  return (pathCatalog[provider]||[]).find(item=>item[0]===id)?.[1]||route;
-};
+const canonicalRouteId = (provider,route) => legacyRouteIds[provider]?.[route]||route;
+const routeLabel = (provider,route) => (pathCatalog[provider]||[])
+  .find(([id])=>id===canonicalRouteId(provider,route))?.[1]||route;
 const legacyPathNames = {
   claude:{'Proxy 3':'To-Tokens','Proxy 1':'Codeyu','Proxy 1 Base':'Codeyu Base','Proxy 1 Prime':'Codeyu Prime','Proxy 1 Max':'Codeyu Max','Proxy 2':'CoderPlan'},
   gemini:{'Gemini Proxy 3':'To-Tokens','Gemini Proxy':'Codeyu','Gemini Proxy 2':'CoderPlan'},
@@ -33,7 +32,7 @@ const pathName = (provider,name) => legacyPathNames[provider]?.[name]||name;
 const historyPath = (sample,provider,name) => Object.entries(sample.providers?.[provider]?.paths||{})
   .find(([candidate])=>pathName(provider,candidate)===pathName(provider,name))?.[1];
 const orderedRouteIds = provider => {
-  const order=state.config.path_policies[provider].order;
+  const order=state.config?.path_policies?.[provider]?.order||[];
   return [...order,...(pathCatalog[provider]||[]).map(([id])=>id).filter(id=>!order.includes(id))];
 };
 const descriptions = {
@@ -86,11 +85,16 @@ function color(item) {
   if (!item || item.verdict === 'unknown') return 'unknown';
   if (item.verdict === 'not_configured') return 'not_configured';
   // 通路的鉴权/连接正常，但它下面还有模型不可用（或未判定）时按「部分可用」显示橙色。
-  if (item.ok === true && item.models && Object.values(item.models).some(model => ['red','warn','unknown'].includes(color(model)))) return 'warn';
+  if (item.ok === true && (
+    (Number.isFinite(item.models_ok) && Number.isFinite(item.models_total) && item.models_ok < item.models_total) ||
+    Object.values(item.models||{}).some(model => ['red','warn','unknown'].includes(color(model)))
+  )) return 'warn';
   return item.severity === 'warn' || item.verdict === 'rate_limited' ? 'warn' : item.ok === true ? 'green' : item.ok === false ? 'red' : 'unknown';
 }
 const verdicts = {ok:'可用',not_configured:'未配置',dns_fail:'DNS 失败',tcp_fail:'连接失败',tls_fail:'TLS 失败',tls_cert_invalid:'证书不受信',auth_denied:'鉴权拒绝',blocked:'被拦截',model_not_found:'模型不可用',rate_limited:'限流',quota_exhausted:'额度问题',bad_request:'请求被拒',upstream_error:'上游错误',timeout:'超时',http_error:'请求异常',unknown:'未判定'};
-const badge = item => {const status=color(item);const text=status==='warn'&&item?.ok===true?'部分可用':(verdicts[item?.verdict] || '未判定');return `<span class="pill ${status}">${escape(text)}</span>`;};
+const statusLabel = (item,status) => status==='warn'&&item?.ok===true&&item.verdict==='ok'
+  ? '部分可用' : (verdicts[item?.verdict] || (item?'未判定':'无记录'));
+const badge = item => {const status=color(item);return `<span class="pill ${status}">${escape(statusLabel(item,status))}</span>`;};
 function modelCell(item) {
   const status = color(item); const glyph={green:'✓',red:'×',warn:'!',not_configured:'–',unknown:'·'}[status];
   return `<span class="model-state ${status}" title="${escape(verdicts[item?.verdict] || '未判定')}${item?.status ? ' · HTTP '+item.status:''}">${glyph}</span>`;
@@ -110,23 +114,38 @@ function renderHealth() {
   const reportUrl=`https://github.com/${state.session.repository}/actions/runs/${data.run_id}`;
   let html=`<div class="summary-grid">${tiles.map(([key,title,glyph,note])=>`<div class="stat-card"><span class="stat-label">${title}</span><span class="stat-icon ${key}">${glyph}</span><div class="stat-number ${key}">${counts[key]+(key==='warn'?counts.unknown:0)}</div><small>${note}</small></div>`).join('')}</div>`;
   html+=`<div class="health-meta"><span><span class="status-dot"></span>凭据来源 <strong>RP-Core Actions / ${escape(data.instance_id)}</strong></span><span>${stale?'⚠ 结果已过期 · ':''}${mismatch?'⚠ 等待新配置探活 · ':''}更新于 ${time(data.generated_at_utc)} (UTC+8)</span><a href="${escape(reportUrl)}" target="_blank" rel="noreferrer">查看本次运行 ↗</a></div>`;
+  const providerRank=new Map((state.config?.providers||[]).map((p,i)=>[p.key,i]));
+  const compareProviders = ([a],[b]) => (providerRank.get(a)??Infinity)-(providerRank.get(b)??Infinity)||a.localeCompare(b);
   if(calls){
     const labelsByProvider=Object.fromEntries((state.config?.providers||[]).map(p=>[p.key,p.label]));
-    const entries=Object.entries(calls.providers||{}).flatMap(([provider,routes])=>Object.entries(routes||{}).map(([route,stats])=>({provider,route,...stats})));
-    html+=`<section class="panel call-stats"><div class="panel-header"><div><h2>各厂商最近 100 次通路调用 · 共 ${Number(calls.sample_size)||0} 次</h2><p>每家厂商单独统计最近 100 次；只发布厂商、代理/官方和计数，不包含模型输入、回复或密钥。</p></div><small>更新于 ${time(calls.generated_at_utc)}</small></div><div class="table-scroll"><table><thead><tr><th>厂商</th><th>代理 / 官方</th><th>调用</th><th>成功</th><th>失败</th></tr></thead><tbody>${entries.sort((a,b)=>b.calls-a.calls).map(item=>`<tr><td>${escape(labelsByProvider[item.provider]||item.provider)}</td><td>${escape(routeLabel(item.provider,item.route))}</td><td>${Number(item.calls)||0}</td><td class="green">${Number(item.success)||0}</td><td class="${item.failure?'warn':''}">${Number(item.failure)||0}</td></tr>`).join('')||'<tr><td colspan="5">当前窗口暂无调用</td></tr>'}</tbody></table></div></section>`;
+    const entries=Object.entries(calls.providers||{}).sort(compareProviders).flatMap(([provider,routes])=>{
+      const rank=new Map(orderedRouteIds(provider).map((id,i)=>[id,i]));
+      const routeRank=route=>rank.get(canonicalRouteId(provider,route))??Infinity;
+      return Object.entries(routes||{}).sort(([a],[b])=>routeRank(a)-routeRank(b)||a.localeCompare(b))
+        .map(([route,stats])=>({provider,route,...stats}));
+    });
+    const window=Number(calls.window);
+    const title=window>0?`最近 ${window} 次通路调用`:'通路调用（旧统计口径）';
+    const note=window>0?'所有厂商共用一个统计窗口，按厂商及通路配置顺序显示。':'当前快照仍按厂商分别取样，等待下次探活更新。';
+    html+=`<section class="panel call-stats"><div class="panel-header"><div><h2>${title} · 共 ${Number(calls.sample_size)||0} 次</h2><p>${note}只发布厂商、代理/官方和计数，不包含模型输入、回复或密钥。</p></div><small>更新于 ${time(calls.generated_at_utc)}</small></div><div class="table-scroll"><table><thead><tr><th>厂商</th><th>代理 / 官方</th><th>调用</th><th>成功</th><th>失败</th></tr></thead><tbody>${entries.map(item=>`<tr><td>${escape(labelsByProvider[item.provider]||item.provider)}</td><td>${escape(routeLabel(item.provider,item.route))}</td><td>${Number(item.calls)||0}</td><td class="green">${Number(item.success)||0}</td><td class="${item.failure?'warn':''}">${Number(item.failure)||0}</td></tr>`).join('')||'<tr><td colspan="5">当前窗口暂无调用</td></tr>'}</tbody></table></div></section>`;
   }
-  html+='<div class="section-heading"><div><h2>模型 × 通路</h2><p>非生成检查 · 只验证可达性、鉴权和模型支持，不代表真实生成质量</p></div><div class="legend"><span><i style="background:var(--ok)"></i>可用</span><span><i style="background:var(--warn)"></i>限流</span><span><i style="background:var(--bad)"></i>不可用</span></div></div>';
+  html+='<div class="section-heading"><div><h2>模型 × 通路</h2><p>非生成检查 · 只验证可达性、鉴权和模型支持，不代表真实生成质量</p></div><div class="legend"><span><i style="background:var(--ok)"></i>可用</span><span><i style="background:var(--warn)"></i>部分可用 / 告警</span><span><i style="background:var(--bad)"></i>不可用</span></div></div>';
   if (stale || mismatch) html+='<div class="hint">过期结果或与当前模型配置不一致的结果不会用于阻断运行时通路。可触发新探活后再检查。</div>';
-  const providerRank=Object.fromEntries((state.config?.providers||[]).map((p,i)=>[p.key,i]));
-  const providerEntries=Object.entries(data.providers).sort(([a],[b])=>(providerRank[a]??99)-(providerRank[b]??99));
+  const providerEntries=Object.entries(data.providers).sort(compareProviders);
+  const samples=result.history.slice(-32);
   for (const [provider,item] of providerEntries) {
     const models=[...new Set(Object.values(item.paths).flatMap(p=>Object.keys(p.models || {})))];
     const label=state.config?.providers.find(p=>p.key===provider)?.label || provider;
     const paths=Object.entries(item.paths);
     html+=`<details class="provider-card" open><summary><span class="provider-logo">${escape(label.slice(0,1))}</span><span class="provider-name">${escape(label)}</span><span class="provider-meta"><span class="count">${item.models_ok ?? '–'} / ${item.models_total ?? '–'} 模型可用</span><span class="${item.enabled?'green':'red'}">${paths.filter(([,p])=>p.ok).length} / ${paths.length} 通路可用</span></span></summary><div class="table-scroll"><table><thead><tr><th>运行通路</th><th>当前状态</th><th>响应时间</th><th>最近 ${Math.min(result.history.length,32)} 次检查</th>${models.map(m=>`<th class="model-head" title="${escape(m)}">${escape(m)}</th>`).join('')}</tr></thead><tbody>`;
     for (const [name,path] of paths) {
-      const samples=result.history.slice(-32);
-      html+=`<tr><td class="path-name">${escape(pathName(provider,name))}</td><td>${badge(path)}</td><td class="latency">${path.latency_ms === null?'–':Math.round(path.latency_ms)+' ms'}</td><td><div class="history-strip">${samples.map(s=>{const old=historyPath(s,provider,name);return `<span class="history-cell ${color(old)}" title="${time(s.generated_at_utc)} · ${escape(verdicts[old?.verdict] || '无记录')}"></span>`;}).join('')}</div></td>${models.map(m=>`<td>${modelCell(path.models?.[m])}</td>`).join('')}</tr>`;
+      const strip=samples.map(s=>{
+        const current=s.generated_at_utc===data.generated_at_utc && (s.run_id==null || s.run_id===data.run_id);
+        const checked=current?path:historyPath(s,provider,name);
+        const status=color(checked);
+        return `<span class="history-cell ${status}" title="${time(s.generated_at_utc)} · ${escape(statusLabel(checked,status))}"></span>`;
+      }).join('');
+      html+=`<tr><td class="path-name">${escape(pathName(provider,name))}</td><td>${badge(path)}</td><td class="latency">${path.latency_ms === null?'–':Math.round(path.latency_ms)+' ms'}</td><td><div class="history-strip">${strip}</div></td>${models.map(m=>`<td>${modelCell(path.models?.[m])}</td>`).join('')}</tr>`;
     }
     html+='</tbody></table></div></details>';
   }
