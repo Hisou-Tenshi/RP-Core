@@ -1,13 +1,25 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-19T10:21:15+00:00",
+  "generated_at_utc": "2026-11-19T11:33:30+00:00",
   "window": 500,
-  "sample_size": 261,
+  "sample_size": 264,
   "providers": {
+    "gpt": {
+      "totokens": {
+        "calls": 60,
+        "success": 54,
+        "failure": 6
+      },
+      "openrouter": {
+        "calls": 6,
+        "success": 6,
+        "failure": 0
+      }
+    },
     "gemini": {
       "dragon": {
-        "calls": 14,
-        "success": 11,
+        "calls": 16,
+        "success": 13,
         "failure": 3
       },
       "totokens": {
@@ -29,18 +41,6 @@
         "calls": 5,
         "success": 0,
         "failure": 5
-      }
-    },
-    "gpt": {
-      "totokens": {
-        "calls": 59,
-        "success": 53,
-        "failure": 6
-      },
-      "openrouter": {
-        "calls": 6,
-        "success": 6,
-        "failure": 0
       }
     },
     "claude": {
