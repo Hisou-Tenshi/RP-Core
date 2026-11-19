@@ -79,12 +79,13 @@ function tab(name) {
   $('page-description').textContent = descriptions[state.tab];
   $('savebar').hidden = state.tab === 'health';
   location.hash = state.tab;
+  if (state.tab === 'models') renderModels();
   updateDirty();
 }
 function color(item) {
   if (!item || item.verdict === 'unknown') return 'unknown';
   if (item.verdict === 'not_configured') return 'not_configured';
-  // 通路的鉴权/连接正常，但它下面还有模型不可用（或未判定）时按「部分可用」显示橙色。
+  // 通路的鉴权/连接正常，但它下面还有模型不可用（或未判定）时显示黄色「部分可用」。
   if (item.ok === true && (
     (Number.isFinite(item.models_ok) && Number.isFinite(item.models_total) && item.models_ok < item.models_total) ||
     Object.values(item.models||{}).some(model => ['red','warn','unknown'].includes(color(model)))
@@ -129,7 +130,7 @@ function renderHealth() {
     const note=window>0?'所有厂商共用一个统计窗口，按厂商及通路配置顺序显示。':'当前快照仍按厂商分别取样，等待下次探活更新。';
     html+=`<section class="panel call-stats"><div class="panel-header"><div><h2>${title} · 共 ${Number(calls.sample_size)||0} 次</h2><p>${note}只发布厂商、代理/官方和计数，不包含模型输入、回复或密钥。</p></div><small>更新于 ${time(calls.generated_at_utc)}</small></div><div class="table-scroll"><table><thead><tr><th>厂商</th><th>代理 / 官方</th><th>调用</th><th>成功</th><th>失败</th></tr></thead><tbody>${entries.map(item=>`<tr><td>${escape(labelsByProvider[item.provider]||item.provider)}</td><td>${escape(routeLabel(item.provider,item.route))}</td><td>${Number(item.calls)||0}</td><td class="green">${Number(item.success)||0}</td><td class="${item.failure?'warn':''}">${Number(item.failure)||0}</td></tr>`).join('')||'<tr><td colspan="5">当前窗口暂无调用</td></tr>'}</tbody></table></div></section>`;
   }
-  html+='<div class="section-heading"><div><h2>模型 × 通路</h2><p>非生成检查 · 只验证可达性、鉴权和模型支持，不代表真实生成质量</p></div><div class="legend"><span><i style="background:var(--ok)"></i>可用</span><span><i style="background:var(--warn)"></i>部分可用 / 告警</span><span><i style="background:var(--bad)"></i>不可用</span></div></div>';
+  html+='<div class="section-heading"><div><h2>模型 × 通路</h2><p>非生成检查 · 只验证可达性、鉴权和模型支持，不代表真实生成质量</p></div><div class="legend"><span><i style="background:var(--ok)"></i>可用</span><span><i style="background:var(--warn-mark)"></i>部分可用 / 告警</span><span><i style="background:var(--bad)"></i>不可用</span></div></div>';
   if (stale || mismatch) html+='<div class="hint">过期结果或与当前模型配置不一致的结果不会用于阻断运行时通路。可触发新探活后再检查。</div>';
   const providerEntries=Object.entries(data.providers).sort(compareProviders);
   const samples=result.history.slice(-32);
@@ -152,19 +153,32 @@ function renderHealth() {
   $('health').innerHTML=html;
 }
 function options(values,selected) {return values.map(v=>`<option value="${escape(v)}"${v===selected?' selected':''}>${escape(v)}</option>`).join('');}
+const modelTiers = ['max','pro','flash','lite'];
+
+// Match config/models.py's _provider_list_sort_key for the full provider catalog.
+function compareModels(a, b) {
+  const orderA = a.order ?? Infinity;
+  const orderB = b.order ?? Infinity;
+  if (orderA !== orderB) return orderA - orderB;
+  return b.generation - a.generation
+    || modelTiers.indexOf(a.tier) - modelTiers.indexOf(b.tier)
+    || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+}
+
 function renderModels() {
   if (!state.config) return;
   const disabled=editable()?'':' disabled';const config=state.config;
   const query=state.search.toLowerCase();
   const rows=config.models.map((m,i)=>[m,i])
-    .filter(([m])=>`${m.id} ${m.note}`.toLowerCase().includes(query));
+    .filter(([m])=>`${m.id} ${m.note}`.toLowerCase().includes(query))
+    .sort(([a],[b])=>compareModels(a,b));
   const groups=new Map();
   for (const row of rows) {
     const key=row[0].provider;
     if (!groups.has(key)) groups.set(key,[]);
     groups.get(key).push(row);
   }
-  const rowHtml=([m,i])=>`<tr data-model="${i}"><td><input class="model-id" aria-label="模型 ID ${i+1}" data-field="id" value="${escape(m.id)}"${disabled}></td><td><select data-field="provider" aria-label="模型厂商 ${i+1}"${disabled}>${options(config.providers.map(p=>p.key),m.provider)}</select></td><td><select data-field="tier" aria-label="模型档位 ${i+1}"${disabled}>${options(['max','pro','flash','lite'],m.tier)}</select></td><td><input type="number" step="0.1" min="0" data-field="generation" aria-label="模型代际 ${i+1}" value="${m.generation}"${disabled}></td><td><input type="number" min="0" data-field="order" aria-label="模型顺序 ${i+1}" value="${m.order ?? ''}" placeholder="自动"${disabled}></td><td><input type="checkbox" data-field="in_chain" aria-label="进入主链 ${i+1}"${m.in_chain?' checked':''}${disabled}></td><td><input type="checkbox" data-field="vision" aria-label="支持视觉 ${i+1}"${m.vision?' checked':''}${disabled}></td><td><input class="model-slug" data-field="slug" aria-label="OpenRouter slug ${i+1}" value="${escape(m.slug)}"${disabled}></td><td><input class="model-note" data-field="note" aria-label="模型备注 ${i+1}" value="${escape(m.note)}"${disabled}></td><td><button class="button secondary danger" data-delete-model="${i}"${disabled}>移除</button></td></tr>`;
+  const rowHtml=([m,i])=>`<tr data-model="${i}"><td><input class="model-id" aria-label="模型 ID ${i+1}" data-field="id" value="${escape(m.id)}"${disabled}></td><td><select data-field="provider" aria-label="模型厂商 ${i+1}"${disabled}>${options(config.providers.map(p=>p.key),m.provider)}</select></td><td><select data-field="tier" aria-label="模型档位 ${i+1}"${disabled}>${options(modelTiers,m.tier)}</select></td><td><input type="number" step="0.1" min="0" data-field="generation" aria-label="模型代际 ${i+1}" value="${m.generation}"${disabled}></td><td><input type="number" min="0" data-field="order" aria-label="模型顺序 ${i+1}" value="${m.order ?? ''}" placeholder="自动"${disabled}></td><td><input type="checkbox" data-field="in_chain" aria-label="进入主链 ${i+1}"${m.in_chain?' checked':''}${disabled}></td><td><input type="checkbox" data-field="vision" aria-label="支持视觉 ${i+1}"${m.vision?' checked':''}${disabled}></td><td><input class="model-slug" data-field="slug" aria-label="OpenRouter slug ${i+1}" value="${escape(m.slug)}"${disabled}></td><td><input class="model-note" data-field="note" aria-label="模型备注 ${i+1}" value="${escape(m.note)}"${disabled}></td><td><button class="button secondary danger" data-delete-model="${i}"${disabled}>移除</button></td></tr>`;
   const sections=config.providers.map(p=>{
     const list=groups.get(p.key)||[];
     if (query && !list.length) return '';

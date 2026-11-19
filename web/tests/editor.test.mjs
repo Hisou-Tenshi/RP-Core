@@ -320,3 +320,40 @@ test('the model registry renders one table per provider in provider order',async
     assert.equal(tables.length,config.providers.length);
   } finally {dom.window.close();}
 });
+
+test('the model registry sorts all models without changing edit or save indices',async()=>{
+  const catalog=structuredClone(config);
+  const fixtures=[
+    ['old-max',4,'max',null,true],
+    ['same-lite',5,'lite',null,true],
+    ['manual-second',3,'max',2,true],
+    ['same-flash',5,'flash',null,true],
+    ['same-pro-b',5,'pro',null,true],
+    ['new-snapshot',6,'lite',null,false],
+    ['same-max',5,'max',null,true],
+    ['manual-first',1,'lite',0,false],
+    ['same-pro-a',5,'pro',null,true],
+  ];
+  const start=catalog.models.length;
+  catalog.models.push(...fixtures.map(([id,generation,tier,order,in_chain])=>({
+    id:`registry-fixture-${id}`, provider:'claude', generation, tier, order, in_chain, vision:false, note:'', slug:'',
+  })));
+  const {dom,writes}=await page({catalog});
+  try {
+    const {document,Event}=dom.window;
+    const search=document.querySelector('#model-search');
+    search.value='registry-fixture';
+    search.dispatchEvent(new Event('input',{bubbles:true}));
+    const rows=()=>[...document.querySelectorAll('#models [data-model]')];
+    const displayed=()=>rows().map(row=>row.querySelector('[data-field="id"]').value.replace('registry-fixture-',''));
+    assert.deepEqual(displayed(),['manual-first','manual-second','new-snapshot','same-max','same-pro-a','same-pro-b','same-flash','same-lite','old-max']);
+    assert.equal(document.querySelector('#save').disabled,true);
+
+    const order=rows()[2].querySelector('[data-field="order"]');
+    order.value='1';
+    order.dispatchEvent(new Event('input',{bubbles:true}));
+    await document.querySelector('#save').onclick();
+    assert.deepEqual(displayed().slice(0,3),['manual-first','new-snapshot','manual-second']);
+    assert.deepEqual(writes[0].config.models,catalog.models.map((model,i)=>i===start+5?{...model,order:1}:model));
+  } finally {dom.window.close();}
+});

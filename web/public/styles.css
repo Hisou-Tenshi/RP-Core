@@ -32,9 +32,9 @@
   --ok:#12804b;
   --ok-bg:#e5f6ed;
   --ok-border:#a9dcc6;
-  --warn:#9a6a06;
-  --warn-bg:#fdf3de;
-  --warn-border:#e4cd93;
+  --warn:#8a6b00;
+  --warn-bg:#fff5c2;
+  --warn-mark:#b08800;
   --bad:#bf3742;
   --bad-bg:#fdebed;
   --bad-border:#f0b8bd;
@@ -76,7 +76,7 @@
   --ok-border:rgba(62,207,142,.38);
   --warn:#eec069;
   --warn-bg:rgba(238,192,105,.14);
-  --warn-border:rgba(238,192,105,.38);
+  --warn-mark:var(--warn);
   --bad:#ff9198;
   --bad-bg:rgba(255,145,152,.14);
   --bad-border:rgba(255,145,152,.38);
@@ -169,6 +169,8 @@ p{color:var(--muted);margin:5px 0 0;font-size:13px}
 .unknown,.not_configured{color:var(--unknown)}
 .health-meta{display:flex;justify-content:space-between;gap:15px;padding:13px 17px;border:1px solid var(--line);border-radius:7px;background:var(--panel-inset);color:var(--text-soft);font-size:11px;flex-wrap:wrap;margin-bottom:24px}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:10px;border:1px solid currentColor;border-radius:4px;padding:1px 6px;line-height:1.5;font-weight:500}
+.pill.warn,.stat-icon.warn{background:var(--warn-bg)}
+.stat-icon.warn{opacity:1;border-radius:4px;padding:0 4px}
 .section-heading{display:flex;justify-content:space-between;align-items:center;margin:25px 0 15px;gap:15px}
 .section-heading p{font-size:11px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 15px;font-size:10px;color:var(--muted)}.legend span{display:inline-flex;align-items:center;white-space:nowrap}
@@ -200,7 +202,7 @@ tbody tr:hover{background:var(--row-hover)}
 .history-cell{width:3px;height:18px;border-radius:2px;background:var(--line-strong)}
 .history-cell.green{background:var(--ok)}
 .history-cell.red{background:var(--bad);height:4.5px}
-.history-cell.warn{background:var(--warn);height:9px}
+.history-cell.warn{background:var(--warn-mark);height:9px}
 .empty-state{padding:65px 25px;text-align:center;border:1px dashed var(--line-strong);border-radius:10px;color:var(--muted)}
 .empty-state strong{font-size:17px;display:block;color:var(--text);margin-bottom:10px}
 
