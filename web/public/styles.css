@@ -250,6 +250,17 @@ tbody tr:hover{background:var(--row-hover)}
 .call-stats{margin:20px 0}
 .call-stats .panel-header{margin-bottom:8px}
 .call-stats td{padding:8px 13px}
+.call-count{
+  display:grid;
+  grid-template-columns:4ch clamp(3.25rem,8vw,7rem);
+  align-items:center;
+  gap:8px;
+}
+.call-count-value{text-align:right;font-variant-numeric:tabular-nums}
+.call-count-track,.call-count-bar{display:block;height:6px;border-radius:3px}
+.call-count-track{background:var(--panel2)}
+.call-count-bar{background:currentColor}
+.call-count.total .call-count-bar{background:var(--accent)}
 
 /* ── Settings fields ──────────────────────────────────────────────────────── */
 .field-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
@@ -303,6 +314,8 @@ dialog pre{background:var(--code-bg);padding:18px;border-radius:6px;color:var(--
   .provider-card summary{padding:13px}
   .provider-meta{font-size:9px;gap:8px}.provider-meta .count{display:none}
   .panel{padding:18px}
+  .call-stats th,.call-stats td{padding-inline:7px}
+  .call-count{gap:5px}
   .toolbar input{flex:1;max-width:100%;width:140px}
   .toolbar select{max-width:130px}
   .toolbar .button{margin-left:0}

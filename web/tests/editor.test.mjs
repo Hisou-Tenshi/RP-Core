@@ -248,15 +248,23 @@ test('health panel orders the shared call window by configured provider and rout
   const catalog=structuredClone(config);
   [catalog.providers[0],catalog.providers[1]]=[catalog.providers[1],catalog.providers[0]];
   catalog.path_policies.gemini.order=['official',...catalog.path_policies.gemini.order.filter(route=>route!=='official')];
-  const callStats={generated_at_utc:'2026-11-16T00:00:00Z',window:500,sample_size:500,providers:{claude:{official:{calls:9,success:9,failure:0}},gemini:{proxy3:{calls:460,success:458,failure:2},official:{calls:31,success:31,failure:0}}}};
+  const callStats={generated_at_utc:'2026-11-16T00:00:00Z',window:500,sample_size:500,providers:{claude:{official:{calls:9,success:9,failure:0}},gemini:{proxy3:{calls:460,success:459,failure:1},official:{calls:31,success:31,failure:0}}}};
   const result=await page({catalog,healthResult:{available:true,latest:{instance_id:'example',generated_at_utc:'2026-11-16T00:00:00Z',run_id:'1',config_sha256:'d'.repeat(64),providers:{}},history:[],calls:callStats}});
   try{
     const {document}=result.dom.window;
     document.querySelector('[data-tab="health"]').click();
     assert.match(document.querySelector('.call-stats h2').textContent,/最近 500 次通路调用 · 共 500 次/);
     assert.deepEqual([...document.querySelectorAll('.call-stats tbody tr')].map(row=>[...row.cells].map(cell=>cell.textContent)),[
-      ['Gemini','Official','31','31','0'],['Gemini','To-Tokens','460','458','2'],['Claude','Official','9','9','0'],
+      ['Gemini','Official','31','31','0'],['Gemini','To-Tokens','460','459','1'],['Claude','Official','9','9','0'],
     ]);
+    const [official,proxy]=document.querySelectorAll('.call-stats tbody tr');
+    const width=cell=>parseFloat(cell.querySelector('.call-count-bar').style.width);
+    assert.equal(width(proxy.cells[2]),100);
+    assert.ok(width(proxy.cells[3])<100);
+    assert.equal(width(official.cells[2]),width(official.cells[3]));
+    assert.ok(width(proxy.cells[4])>10 && width(proxy.cells[4])<width(official.cells[2]));
+    assert.equal(width(official.cells[4]),0);
+    assert.ok(proxy.cells[4].querySelector('.call-count.red'));
   }finally{result.dom.window.close();}
 });
 
