@@ -192,9 +192,9 @@
       "id": "gemini-4-carbon",
       "provider": "gemini",
       "tier": "max",
-      "generation": 4.1,
+      "generation": 4,
       "slug": "google/gemini-4-carbon",
-      "note": "C > Ar",
+      "note": "",
       "in_chain": true,
       "vision": false,
       "order": null
@@ -332,17 +332,6 @@
       "order": 4
     },
     {
-      "id": "magma-1-xploded",
-      "provider": "magmarouter",
-      "tier": "pro",
-      "generation": 1,
-      "slug": "",
-      "note": "MagmaRouter 自调旗舰",
-      "in_chain": true,
-      "vision": false,
-      "order": 5
-    },
-    {
       "id": "gpt-6-luna",
       "provider": "gpt",
       "tier": "lite",
@@ -358,7 +347,7 @@
       "provider": "gpt",
       "tier": "max",
       "generation": 6.2,
-      "slug": "",
+      "slug": "openai/gpt-6.2-astra",
       "note": "仅注册，暂不安排调用",
       "in_chain": false,
       "vision": false,
@@ -369,7 +358,7 @@
       "provider": "gpt",
       "tier": "pro",
       "generation": 6.2,
-      "slug": "",
+      "slug": "openai/gpt-6.2-sol",
       "note": "仅注册，暂不安排调用",
       "in_chain": false,
       "vision": false,
@@ -380,7 +369,7 @@
       "provider": "gpt",
       "tier": "flash",
       "generation": 6.1,
-      "slug": "",
+      "slug": "openai/gpt-6.1-terra",
       "note": "仅注册，暂不安排调用",
       "in_chain": false,
       "vision": false,
@@ -413,7 +402,7 @@
       "provider": "kimi",
       "tier": "pro",
       "generation": 3.1,
-      "slug": "",
+      "slug": "moonshotai/kimi-k3.1-pro",
       "note": "仅注册，暂不安排调用",
       "in_chain": false,
       "vision": false,
@@ -429,6 +418,28 @@
       "in_chain": true,
       "vision": false,
       "order": null
+    },
+    {
+      "id": "gemini-4-neon",
+      "provider": "gemini",
+      "tier": "max",
+      "generation": 4.1,
+      "slug": "google/gemini-4-neon",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": null
+    },
+    {
+      "id": "kimi-k3.1-pro-xploded",
+      "provider": "magmarouter",
+      "tier": "max",
+      "generation": 3.1,
+      "slug": "",
+      "note": "",
+      "in_chain": true,
+      "vision": false,
+      "order": 5
     }
   ],
   "dialog_tiers": {
@@ -439,7 +450,7 @@
       "claude-opus-5-5"
     ],
     "medium": [
-      "gemini-4-argon"
+      "gemini-4-neon"
     ],
     "low": [
       "gemini-3.8-flash"
