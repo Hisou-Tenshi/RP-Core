@@ -167,17 +167,6 @@
       "order": null
     },
     {
-      "id": "claude-haiku-4-5-20251001",
-      "provider": "claude",
-      "tier": "lite",
-      "generation": 4.5,
-      "slug": "",
-      "note": "Haiku 4.5 日期快照(代理探活用)",
-      "in_chain": false,
-      "vision": false,
-      "order": null
-    },
-    {
       "id": "gemini-4-argon",
       "provider": "gemini",
       "tier": "pro",
