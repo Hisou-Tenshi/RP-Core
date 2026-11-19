@@ -132,8 +132,8 @@ same new-first order. Missing new keys omit those routes and retain old fallback
 These are ordinary public nonsecret model settings, editable through the console;
 the four independent credentials belong only in RP-Core Actions secrets.
 
-`.github/workflows/provider-health.yml` runs every six hours, on model configuration
-changes and on manual dispatch. It resolves registered instances, enters each same
+`.github/workflows/provider-health.yml` runs hourly at 17 minutes past the hour, on
+model configuration changes and on manual dispatch. It resolves registered instances, enters each same
 GitHub Environment used by `instance.yml`, and probes using that environment's
 RP-Core secrets. It checks out the public RP-Core code and only the bounded call
 counters file from the verified private data repository. It uses a synthetic probe
