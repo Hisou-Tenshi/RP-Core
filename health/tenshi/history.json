@@ -8809,5 +8809,348 @@
         }
       }
     }
+  },
+  {
+    "generated_at_utc": "2026-11-19T15:32:57+00:00",
+    "config_sha256": "974e5639ae519a2b1c42eeb71116fd685f27da0077ec6ac58031ffac532ef74b",
+    "run_id": "44555812053",
+    "providers": {
+      "claude": {
+        "paths": {
+          "77": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 173.6,
+            "models_total": 8,
+            "models_ok": 5
+          },
+          "To-Tokens": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 200.3,
+            "models_total": 8,
+            "models_ok": 8
+          },
+          "Dragon": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 265.3,
+            "models_total": 8,
+            "models_ok": 5
+          },
+          "Codeyu Base": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 140.0,
+            "models_total": 8,
+            "models_ok": 5
+          },
+          "Codeyu Prime": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 180.5,
+            "models_total": 8,
+            "models_ok": 8
+          },
+          "Codeyu Max": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 163.4,
+            "models_total": 8,
+            "models_ok": 8
+          },
+          "CoderPlan": {
+            "ok": false,
+            "verdict": "model_not_found",
+            "severity": "red",
+            "latency_ms": 679.2,
+            "models_total": 8,
+            "models_ok": 0
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 437.6,
+            "models_total": 8,
+            "models_ok": 7
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 167.5,
+            "models_total": 8,
+            "models_ok": 8
+          }
+        }
+      },
+      "gemini": {
+        "paths": {
+          "Dragon": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 296.2,
+            "models_total": 6,
+            "models_ok": 6
+          },
+          "To-Tokens": {
+            "ok": false,
+            "verdict": "upstream_error",
+            "severity": "red",
+            "latency_ms": 148.0,
+            "models_total": 6,
+            "models_ok": 0
+          },
+          "Codeyu": {
+            "ok": false,
+            "verdict": "auth_denied",
+            "severity": "red",
+            "latency_ms": 138.5,
+            "models_total": 6,
+            "models_ok": 0
+          },
+          "CoderPlan": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 692.4,
+            "models_total": 6,
+            "models_ok": 1
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 228.1,
+            "models_total": 6,
+            "models_ok": 6
+          }
+        }
+      },
+      "grok": {
+        "paths": {
+          "Dragon": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 261.3,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "To-Tokens": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 158.6,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "Codeyu": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 161.5,
+            "models_total": 2,
+            "models_ok": 1
+          },
+          "CoderPlan": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 976.0,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 215.9,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 174.5,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "gpt": {
+        "paths": {
+          "To-Tokens": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 149.2,
+            "models_total": 4,
+            "models_ok": 4
+          },
+          "Codeyu": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 146.1,
+            "models_total": 4,
+            "models_ok": 3
+          },
+          "77": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 467.4,
+            "models_total": 4,
+            "models_ok": 3
+          },
+          "Dragon": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 476.9,
+            "models_total": 4,
+            "models_ok": 2
+          },
+          "CoderPlan": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 684.3,
+            "models_total": 4,
+            "models_ok": 3
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 237.2,
+            "models_total": 4,
+            "models_ok": 4
+          },
+          "OpenAI": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 703.9,
+            "models_total": 4,
+            "models_ok": 4
+          }
+        }
+      },
+      "deepseek": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 436.6,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "Dragon": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 264.8,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 487.3,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "glm": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 306.0,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "Dragon": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 259.5,
+            "models_total": 2,
+            "models_ok": 2
+          },
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 240.2,
+            "models_total": 2,
+            "models_ok": 2
+          }
+        }
+      },
+      "kimi": {
+        "paths": {
+          "Dragon": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 258.9,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      },
+      "qwen": {
+        "paths": {
+          "Official": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 817.1,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      },
+      "openrouter": {
+        "paths": {
+          "OpenRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 77.5,
+            "models_total": 1,
+            "models_ok": 1
+          }
+        }
+      },
+      "magmarouter": {
+        "paths": {
+          "MagmaRouter": {
+            "ok": true,
+            "verdict": "ok",
+            "severity": "green",
+            "latency_ms": 549.4,
+            "models_total": 6,
+            "models_ok": 5
+          }
+        }
+      }
+    }
   }
 ]

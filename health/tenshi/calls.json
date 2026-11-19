@@ -1,52 +1,30 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-19T11:53:28+00:00",
+  "generated_at_utc": "2026-11-19T15:32:57+00:00",
   "window": 500,
-  "sample_size": 264,
+  "sample_size": 297,
   "providers": {
     "gpt": {
       "totokens": {
-        "calls": 60,
-        "success": 54,
-        "failure": 6
-      },
-      "openrouter": {
-        "calls": 6,
-        "success": 6,
-        "failure": 0
-      }
-    },
-    "gemini": {
-      "dragon": {
-        "calls": 16,
-        "success": 13,
-        "failure": 3
-      },
-      "totokens": {
-        "calls": 58,
-        "success": 54,
-        "failure": 4
-      },
-      "openrouter": {
-        "calls": 5,
-        "success": 4,
-        "failure": 1
+        "calls": 66,
+        "success": 59,
+        "failure": 7
       },
       "official": {
-        "calls": 5,
-        "success": 0,
-        "failure": 5
+        "calls": 1,
+        "success": 1,
+        "failure": 0
       },
-      "coderplan": {
-        "calls": 5,
-        "success": 0,
-        "failure": 5
+      "openrouter": {
+        "calls": 7,
+        "success": 6,
+        "failure": 1
       }
     },
     "claude": {
       "77": {
-        "calls": 30,
-        "success": 29,
+        "calls": 40,
+        "success": 39,
         "failure": 1
       },
       "totokens": {
@@ -63,6 +41,33 @@
         "calls": 4,
         "success": 2,
         "failure": 2
+      }
+    },
+    "gemini": {
+      "official": {
+        "calls": 9,
+        "success": 0,
+        "failure": 9
+      },
+      "coderplan": {
+        "calls": 9,
+        "success": 0,
+        "failure": 9
+      },
+      "dragon": {
+        "calls": 23,
+        "success": 16,
+        "failure": 7
+      },
+      "totokens": {
+        "calls": 58,
+        "success": 54,
+        "failure": 4
+      },
+      "openrouter": {
+        "calls": 5,
+        "success": 4,
+        "failure": 1
       }
     }
   }
