@@ -217,7 +217,7 @@
       "generation": 4,
       "slug": "",
       "note": "仅注册，暂不安排在链内调用",
-      "in_chain": false,
+      "in_chain": true,
       "vision": false,
       "order": null
     },
@@ -456,6 +456,7 @@
       "gemini-4-argon"
     ],
     "minimal": [
+      "gemini-4-hydrogen",
       "gemini-3.8-flash"
     ]
   },
