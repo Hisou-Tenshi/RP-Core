@@ -203,6 +203,72 @@ def test_queue_failure_requires_reconciliation(root, monkeypatch):
     assert calls == ["probe", "cleanup"]
 
 
+@pytest.mark.parametrize(("configured", "expected"), [("1500", 720), ("300", 300), ("nan", 720)])
+def test_summary_host_reserves_time_for_finalization(root, monkeypatch, configured, expected):
+    host.prepare(root)
+    monkeypatch.setenv("RP_ALLOW_LIVE", "1")
+    monkeypatch.setenv("LOG_UPDATE_SOFT_TIMEOUT_SECONDS", configured)
+    monkeypatch.setattr(host, "dependency_status", lambda: {"synthetic": True})
+
+    class Process:
+        def __init__(self, *args, env, **kwargs):
+            assert float(env["LOG_UPDATE_SOFT_TIMEOUT_SECONDS"]) == expected
+
+        def wait(self, *, timeout):
+            assert timeout == 1500
+            return host.SUMMARY_DEFERRED_EXIT
+
+    monkeypatch.setattr(host.subprocess, "Popen", Process)
+    assert host.run_full(root, "summary")["status"] == "deferred"
+
+
+def test_maintenance_saves_summary_progress_without_advancing_its_schedule(root, monkeypatch):
+    monkeypatch.setenv("RP_ALLOW_LIVE", "1")
+    monkeypatch.setattr(service, "merge_staging", lambda root: None)
+    ledger = root / ".rp/maintenance.json"
+    write_json(ledger, {"summary": 1})
+    states = iter(["deferred", "skipped", "completed"])
+    saved = []
+
+    def run(root, task, **kwargs):
+        if task == "summary":
+            status = next(states)
+            write_json(root / "data/summary_cursor.json", {"status": status})
+            return {"status": status}
+        return {"status": "completed"}
+
+    def persist(root, branch, *, task):
+        saved.append((task, json.loads(ledger.read_text())["summary"]))
+        if task == "summary":
+            assert (root / "data/summary_cursor.json").is_file()
+
+    monkeypatch.setattr(service, "run_full", run)
+    monkeypatch.setattr(service, "persist", persist)
+    config = {
+        "persistence": {"driver": "git"},
+        "maintenance_seconds": {"summary": 10800, "cleanup": 86400},
+    }
+    result = service.run_queue(root, config)
+    assert result["deferred"] == 1 and result["failed"] == 0
+    assert saved == [("summary", 1), ("cleanup", 1)]
+    assert service.run_queue(root, config)["skipped"] == 1
+    assert saved[-1] == ("summary", 1)
+    assert service.run_queue(root, config)["deferred"] == 0
+    assert saved[-1][0] == "summary" and saved[-1][1] > 1
+
+
+def test_queued_summary_can_resume_without_spending_failure_attempts(root, monkeypatch):
+    monkeypatch.setenv("RP_ALLOW_LIVE", "1")
+    write_json(root / "inbox/summary.json", {"full_task": "summary"})
+    outcomes = iter(["deferred"] * 4 + ["completed"])
+    monkeypatch.setattr(service, "run_full", lambda *a, **kw: {"status": next(outcomes)})
+    config = {"persistence": {"driver": "local"}, "maintenance_seconds": {"summary": 10800}}
+    for _ in range(4):
+        result = service.run_queue(root, config)
+        assert result["deferred"] == 1 and result["failed"] == 0
+    assert service.run_queue(root, config, event_id="summary")["processed"] == 1
+
+
 def test_unauthorized_event_never_reaches_model(root, monkeypatch):
     monkeypatch.setenv("RP_ALLOW_LIVE", "1")
     queue(root)

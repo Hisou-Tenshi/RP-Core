@@ -335,7 +335,7 @@ class ContextMaskedSummaryTest(unittest.TestCase):
             {"msg_id": "m1", "time": _ts(0), "user_query": "秘密", "bot_answer": "知道了",
              "context_masked": True},
         ]
-        self.assertEqual(log_update.global_segment_and_summarize(list(msgs)), (None, None))
+        self.assertEqual(log_update.global_segment_and_summarize(list(msgs)), (None, None, "completed"))
 
 
 if __name__ == "__main__":

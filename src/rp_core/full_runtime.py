@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import math
 import os
 import re
 import shutil
@@ -23,6 +24,7 @@ from rp_core.protocol import RPCError, validate
 from rp_core.settings import DEFAULT_FILES, IDENTITY_SCHEMA, load_io, read_json
 
 CODE = Path(__file__).parent / "compat_runtime"
+SUMMARY_DEFERRED_EXIT = 75  # log_update.py paused at a batch boundary.
 DEPENDENCIES = (
     "telegram",
     "numpy",
@@ -402,6 +404,17 @@ def run_full(
     with view(root) as workspace:
         env = environment(root, workspace, shadow=shadow, payload=payload)
         env["RP_ACTIVE_TASK"] = task
+        if task == "summary":
+            # A summary batch can take minutes. Leave most of the remaining time
+            # for the in-flight batch, knowledge base finalization, and cursor save.
+            soft_timeout = min(12 * 60, timeout / 2)
+            try:
+                configured = float(env.get("LOG_UPDATE_SOFT_TIMEOUT_SECONDS", ""))
+            except ValueError:
+                configured = 0.0
+            if math.isfinite(configured) and configured > 0:
+                soft_timeout = min(soft_timeout, configured)
+            env["LOG_UPDATE_SOFT_TIMEOUT_SECONDS"] = str(soft_timeout)
         result_path = root / "logs/full-result.json"
         if task == "reply":
             result_path.unlink(missing_ok=True)
@@ -421,6 +434,7 @@ def run_full(
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait()
+                log.write(f"[rp-core] {task} exceeded its {timeout}s process timeout.\n".encode())
                 code = 124
         sanitize_logs(root, env)
         if task == "reply":
@@ -455,8 +469,9 @@ def run_full(
                 "shadow": shadow,
                 "public_code_only": True,
             }
-        skipped = task in ("perception", "force-perception") and code == 2
-        if code != 0 and not skipped:
+        skipped = task in ("perception", "force-perception", "summary") and code == 2
+        deferred = task == "summary" and code == SUMMARY_DEFERRED_EXIT
+        if code != 0 and not (skipped or deferred):
             raise RPCError(
                 "full_runtime_failed",
                 "The compatibility task failed; details remain in private logs.",
@@ -469,7 +484,7 @@ def run_full(
         return {
             "engine": "full",
             "task": task,
-            "status": "skipped" if skipped else "completed",
+            "status": "deferred" if deferred else "skipped" if skipped else "completed",
             "shadow": shadow,
             "public_code_only": True,
         }

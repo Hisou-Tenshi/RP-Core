@@ -345,6 +345,7 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
         "quarantined": 0,
         "skipped": 0,
         "failed": 0,
+        "deferred": 0,
     }
     items = []
     safe_tasks = {"probe", "summary", "archive", "cleanup", "daily-backup", "weekly-backup"}
@@ -420,9 +421,14 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
         if remote:
             persist(root, branch, task=task)
 
+    summary_attempted = False
     for _, _, identifier, task, payload, receipt, attempts in sorted(
         items, key=lambda row: row[:3]
     )[: config.get("max_events", 25)]:
+        if task == "summary":
+            if summary_attempted:
+                continue
+            summary_attempted = True
         if task == "reply":
             authorize(root, payload)
         attempts += 1
@@ -439,6 +445,10 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
             counts["failed" if safe else "quarantined"] += 1
             continue
         outcome = result.get("status") if isinstance(result, dict) else None
+        if task == "summary" and outcome == "deferred":
+            save_receipt(receipt, identifier, task, "deferred", attempts - 1)
+            counts["deferred"] += 1
+            continue
         if task == "reply" and outcome not in ("sent", "no_send", "already_completed"):
             status = "retryable_failure" if outcome == "retryable_failure" else "delivery_unknown"
             save_receipt(
@@ -458,15 +468,23 @@ def run_queue(root: Path, config: dict, *, event_id=None, require_remote=False):
         for task, interval in config.get("maintenance_seconds", {}).items():
             if task not in TASKS or task == "reply":
                 raise RPCError("invalid_configuration", "Invalid maintenance task.")
+            if task == "summary" and summary_attempted:
+                continue
             if time.time() - done.get(task, 0) < interval:
                 continue
             try:
-                execute(root, task, {}, remote=False, branch=branch)
+                result = execute(root, task, {}, remote=False, branch=branch)
             except Exception:
                 counts["failed"] += 1
+                counts.setdefault("maintenance_failed", []).append(task)
             else:
-                done[task] = time.time()
-                write_json(ledger, done)
+                status = result.get("status")
+                if task == "summary" and status in {"deferred", "skipped"}:
+                    # The remaining work stays due through closed execution windows.
+                    counts[status] += 1
+                else:
+                    done[task] = time.time()
+                    write_json(ledger, done)
             # Commit task data and the maintenance ledger together, also on failure.
             # Persistence failures remain fatal: no further delivery is safe then.
             if remote:

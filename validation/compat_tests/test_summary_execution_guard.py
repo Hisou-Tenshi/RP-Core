@@ -11,14 +11,17 @@
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import sys
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)
 
+import log_update
 import tenshi_config
 from log_update import (
     evaluate_summary_execution_guard,
@@ -107,6 +110,70 @@ class SummaryExecutionGuardTest(unittest.TestCase):
         self.assertFalse(summary_cut_observation_complete(_local(2026, 8, 24, 4, 11), day, 6))
         self.assertFalse(summary_cut_observation_complete(_local(2026, 8, 24, 5, 59), day, 6))
         self.assertTrue(summary_cut_observation_complete(_local(2026, 8, 24, 6, 0), day, 6))
+
+
+    def test_budget_pause_returns_only_completed_chunk_and_resumes_after_cursor(self):
+        now = _local(2026, 8, 24, 7)
+        messages = [
+            {"time": _local(2026, 8, day, 21, minute).timestamp(), "user_query": text}
+            for day, minute, text in [(21, 0, "first"), (21, 1, "first-two"),
+                                      (22, 0, "second"), (22, 1, "second-two")]
+        ]
+
+        class FrozenDatetime(datetime.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return now.astimezone(tz)
+
+        def summarize(text, *, existing_summary, summary_day):
+            event = {"event_id": f"{summary_day}-1", "description": text}
+            return json.dumps({"narrative_memory": {"significant_events": [event]}})
+
+        clock = mock.Mock()
+        clock.monotonic.side_effect = [10, 800, 0]
+        with (
+            mock.patch.object(log_update.datetime, "datetime", FrozenDatetime),
+            mock.patch.object(log_update, "time", clock),
+            mock.patch.object(log_update, "load_latest_memory_from_storage", return_value="{}"),
+            mock.patch.object(log_update, "get_summary_with_fallback", side_effect=summarize) as run,
+            mock.patch.object(log_update, "apply_intelligent_merge", side_effect=lambda base, patch: patch),
+            mock.patch.object(log_update, "ensure_mem_mgr", return_value=None),
+            mock.patch.object(log_update, "ensure_rag", return_value=None),
+            mock.patch("bond_reflect.collect_day_evidence"),
+        ):
+            memory, cursor, status = log_update.global_segment_and_summarize(
+                messages, start_monotonic=0, soft_timeout_seconds=720,
+            )
+            self.assertEqual(status, "deferred")
+            self.assertEqual(cursor, messages[1]["time"])
+            self.assertIn("first-two", memory)
+            self.assertNotIn("second-two", memory)
+            self.assertEqual(run.call_count, 1)
+
+            _, cursor, status = log_update.global_segment_and_summarize(
+                [message for message in messages if message["time"] > cursor],
+                start_monotonic=0, soft_timeout_seconds=720,
+            )
+            self.assertEqual(status, "completed")
+            self.assertEqual(cursor, messages[3]["time"])
+            self.assertEqual(run.call_count, 2)
+
+    def test_deferred_summary_saves_cursor_before_exiting_and_fails_if_save_fails(self):
+        with (
+            mock.patch.object(log_update, "load_local_data", return_value=[{}]),
+            mock.patch.object(log_update, "evaluate_summary_execution_guard", return_value=(False, "")),
+            mock.patch.object(log_update, "load_summary_cursor_timestamp", return_value=10),
+            mock.patch.object(log_update, "process_summaries", return_value=(True, 20, "deferred")),
+            mock.patch.object(log_update, "push_knowledge_base_and_check_success", return_value=True),
+            mock.patch.object(log_update, "FileLock"),
+            mock.patch.object(log_update, "save_summary_cursor_timestamp", side_effect=[True, False]) as save,
+            mock.patch.object(log_update.tenshi_config, "GITHUB_OUTPUT", None),
+            mock.patch.object(log_update, "ensure_mem_mgr") as manager,
+        ):
+            self.assertEqual(log_update.main(), log_update.SUMMARY_DEFERRED_EXIT)
+            save.assert_called_once_with(20)
+            self.assertEqual(log_update.main(), 1)
+            manager.assert_not_called()
 
 
 if __name__ == "__main__":

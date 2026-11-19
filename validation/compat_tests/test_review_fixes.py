@@ -447,24 +447,24 @@ class ReviewRegressions(unittest.TestCase):
         self.assertEqual(plain.call_count, 1)
         self.assertEqual(plain.call_args.args[:2], ("gemini", model))
 
-    def test_provider_call_history_keeps_100_per_provider_and_only_route_metadata(self):
+    def test_provider_call_history_keeps_newest_500_across_providers_and_only_route_metadata(self):
         import provider_call_stats
 
+        attempts = [("gemini", "official")] * 110 + [("gpt", "proxy3")] * 400
         with tempfile.TemporaryDirectory() as temporary, mock.patch.dict(
             os.environ, {"RP_DATA_ROOT": temporary}
-        ):
-            for index in range(104):
+        ), mock.patch.object(provider_call_stats.time, "time", side_effect=range(len(attempts))):
+            for index, (provider, route) in enumerate(attempts):
                 provider_call_stats.record(
-                    "gpt", {"route_id": "proxy3", "api_key": "never-store"}, success=index % 2 == 0
-                )
-                provider_call_stats.record(
-                    "gemini", {"route_id": "official"}, success=True
+                    provider, {"route_id": route, "api_key": "never-store"}, success=index % 2 == 0
                 )
             path = Path(temporary) / "data/provider_call_history.json"
             rows = json.loads(path.read_text())
-        self.assertEqual(sum(row["provider"] == "gpt" for row in rows), 100)
-        self.assertEqual(sum(row["provider"] == "gemini" for row in rows), 100)
-        self.assertEqual(set(rows[-1]), {"ts", "provider", "route", "outcome"})
+        self.assertEqual([row["ts"] for row in rows], list(range(10, 510)))
+        self.assertEqual([row["provider"] for row in rows], ["gemini"] * 100 + ["gpt"] * 400)
+        self.assertEqual([row["route"] for row in rows], ["official"] * 100 + ["totokens"] * 400)
+        self.assertEqual([row["outcome"] for row in rows[-2:]], ["success", "failure"])
+        self.assertTrue(all(set(row) == {"ts", "provider", "route", "outcome"} for row in rows))
         self.assertNotIn("never-store", json.dumps(rows))
 
     def test_public_path_policy_reorders_and_disables_actual_paths(self):

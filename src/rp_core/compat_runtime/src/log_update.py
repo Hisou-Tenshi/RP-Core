@@ -50,9 +50,14 @@ DOWNLOAD_DIR = tenshi_config.DOWNLOAD_DIR_PATH
 KB_FILE = tenshi_config.KB_FILE_PATH
 SUMMARY_CURSOR_FILE = tenshi_config.SUMMARY_CURSOR_FILE
 try:
-    LOG_UPDATE_SOFT_TIMEOUT_SECONDS = int(os.getenv("LOG_UPDATE_SOFT_TIMEOUT_SECONDS", "1500"))
+    LOG_UPDATE_SOFT_TIMEOUT_SECONDS = float(os.getenv("LOG_UPDATE_SOFT_TIMEOUT_SECONDS", "1500"))
 except Exception:
     LOG_UPDATE_SOFT_TIMEOUT_SECONDS = 1500
+
+
+# Summary outcomes recognized by the RP Core host.
+SUMMARY_SKIPPED_EXIT = 2
+SUMMARY_DEFERRED_EXIT = 75
 
 
 logger = setup_logger("SummaryUpdate", tenshi_config.SUMMARY_UPDATE_LOG_PATH, level=logging.DEBUG)
@@ -1232,7 +1237,7 @@ def summary_cut_observation_complete(now_local: datetime.datetime, day: datetime
 
 
 def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_timeout_seconds=None):
-    """Summarize pending messages by TIMEZONE_OFFSET day buckets (chronological order expected).
+    """Summarize by TIMEZONE_OFFSET day buckets and report whether the budget stopped the run.
 
     Rules:
     - No LLM-based segmentation.
@@ -1255,7 +1260,7 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
     pending_messages = [m for m in pending_messages if not is_context_masked_message(m)]
     if not pending_messages:
         logger.info("待总结消息全部标记为 context_masked；跳过总结。")
-        return None, None
+        return None, None, "completed"
     pending_messages.sort(key=lambda x: x['time'])
     all_pending = pending_messages
 
@@ -1401,7 +1406,7 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
                 f"今晚 02~{last_cut_hour:02d} 观察窗尚未结束（本地 {now_local.strftime('%Y-%m-%d %H:%M')}）；"
                 f"开放式沉默不能当作切点（之后仍可能在 02~{last_cut_hour:02d} 出现对话）。本轮跳过，不推进 cursor。"
             )
-            return None, None
+            return None, None, "skipped"
 
         if pre_cutoff:
             period_end_date = calendar_today
@@ -1411,7 +1416,7 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
                 logger.info(
                     f"日界前调度：今日 02~{last_cut_hour:02d} 没有满足沉默阈值的切点；本轮跳过。"
                 )
-                return None, None
+                return None, None, "skipped"
             period_start_cut = _resolve_cut_for_date(period_start_date, effective_times_all)
             gate_date = period_end_date
             today_cut = float(period_end_cut)
@@ -1425,7 +1430,7 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
             today_cut = _best_hour_cut_for_date(gate_date, effective_times_all)
             if today_cut is None:
                 logger.info("当日 02~06 未找到满足沉默阈值的切点；按硬门禁本次不做任何总结。")
-                return None, None
+                return None, None, "skipped"
             today_cut = float(today_cut)
             logger.info(
                 f"日界后调度（本地 {now_local.strftime('%Y-%m-%d %H:%M')}）："
@@ -1446,7 +1451,7 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
         all_pending = filtered
         if not all_pending:
             logger.info("切点之前无可总结消息；跳过。")
-            return None, None
+            return None, None, "completed"
         effective_times_all = _effective_times_in_range()
 
         first_dt = datetime.datetime.fromtimestamp(float(all_pending[0]["time"]), tz)
@@ -1469,21 +1474,18 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
         current_global_memory = load_latest_memory_from_storage()
         last_start = 0
 
+        def _should_defer(chunk):
+            if len(chunk) < 2 or start_monotonic is None or not soft_timeout_seconds:
+                return False
+            if time.monotonic() - start_monotonic < soft_timeout_seconds:
+                return False
+            logger.info("达到总结软时限，将保存已完成分片，剩余分片等待下次续跑。")
+            return True
+
         def _summarize_chunk(chunk):
-            nonlocal current_global_memory, updated, max_summarized_time, last_start
-            if not chunk:
-                return
+            nonlocal current_global_memory, updated, max_summarized_time
             if len(chunk) < 2:
                 return
-
-            if start_monotonic is not None and soft_timeout_seconds:
-                if (time.monotonic() - start_monotonic) >= float(soft_timeout_seconds):
-                    logger.warning(
-                        f"接近运行时限（soft_timeout={soft_timeout_seconds}s），暂停后续分片总结，等待下次续跑。"
-                    )
-                    return
-
-
 
             try:
                 missing = []
@@ -1699,14 +1701,19 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
                 continue
             while sp_idx < len(split_points) and mtf >= split_points[sp_idx]:
                 chunk = all_pending[last_start:i]
+                if _should_defer(chunk):
+                    return (current_global_memory if updated else None), max_summarized_time, "deferred"
                 _summarize_chunk(chunk)
                 last_start = i
                 sp_idx += 1
 
         if last_start < len(all_pending):
-            _summarize_chunk(all_pending[last_start:])
+            chunk = all_pending[last_start:]
+            if _should_defer(chunk):
+                return (current_global_memory if updated else None), max_summarized_time, "deferred"
+            _summarize_chunk(chunk)
 
-        return (current_global_memory, max_summarized_time) if updated else (None, None)
+        return (current_global_memory if updated else None), max_summarized_time, "completed"
 
     except Exception as e:
         if updated:
@@ -1714,7 +1721,7 @@ def global_segment_and_summarize(pending_messages, start_monotonic=None, soft_ti
                 f"分片总结中途失败；将落盘并交由后续流程推送已成功合并的记忆（latest_ts={max_summarized_time}）：{e}",
                 exc_info=True,
             )
-            return (current_global_memory, max_summarized_time)
+            return current_global_memory, max_summarized_time, "completed"
         logger.critical(f"Segmentation failed: {str(e)}", exc_info=True)
         raise
 
@@ -1722,7 +1729,7 @@ def process_summaries(local_data, last_cursor_time=None):
     """Run the summarization pipeline.
 
     Returns:
-        tuple[bool, float | None]: (kb_updated, latest_summarized_time)
+        tuple[bool, float | None, str]: (kb_updated, latest_summarized_time, status)
     """
     run_start_monotonic = time.monotonic()
     def _normalize_shared_experience_index(kb_obj: dict) -> None:
@@ -1818,9 +1825,9 @@ def process_summaries(local_data, last_cursor_time=None):
 
     if not pending_chronological:
         logger.info("summary cursor 之后没有新消息；跳过总结。")
-        return False, None
+        return False, None, "completed"
 
-    new_memory, latest_summarized_time = global_segment_and_summarize(
+    new_memory, latest_summarized_time, status = global_segment_and_summarize(
         pending_chronological,
         start_monotonic=run_start_monotonic,
         soft_timeout_seconds=LOG_UPDATE_SOFT_TIMEOUT_SECONDS,
@@ -1928,24 +1935,26 @@ def process_summaries(local_data, last_cursor_time=None):
             )
             _kb_saved = save_json_safely(kb_core, KB_FILE)
             if not _kb_saved:
-                logger.error("KB 保存失败，返回 False 以阻止 data/ 推送。")
-                return False, None
+                raise RuntimeError("KB 保存失败。")
             logger.info("知识库已在本地更新（log_update）。")
 
 
-            try:
-                import bond_reflect
+            if status != "deferred":
+                try:
+                    import bond_reflect
 
-                _today = datetime.datetime.now(_local_tz()).strftime("%Y-%m-%d")
-                bond_reflect.reflect(_today, bond_reflect.default_llm)
-            except Exception as e:
-                logger.warning(f"[bond] 反思失败（不影响总结）：{format_exception_inline(e)}")
-            return True, latest_summarized_time
+                    _today = datetime.datetime.now(_local_tz()).strftime("%Y-%m-%d")
+                    bond_reflect.reflect(_today, bond_reflect.default_llm)
+                except Exception as e:
+                    logger.warning(f"[bond] 反思失败（不影响总结）：{format_exception_inline(e)}")
+            return True, latest_summarized_time, status
         except Exception as e:
             logger.error(f"保存知识库失败：{format_exception_inline(e)}")
-            return False, None
+            if status == "deferred":
+                raise
+            return False, None, "completed"
     logger.info("本次未生成新的 summaries；知识库不会更新。")
-    return False, None
+    return False, None, status
 
 
 
@@ -2099,7 +2108,7 @@ def main():
             with open(tenshi_config.GITHUB_OUTPUT, "a") as f:
                 f.write("updated=false\n")
         logger.info("=== 任务完成 ===")
-        return
+        return SUMMARY_SKIPPED_EXIT
 
 
 
@@ -2107,7 +2116,7 @@ def main():
 
 
     last_cursor_time = load_summary_cursor_timestamp()
-    summary_success, latest_summarized_time = process_summaries(
+    summary_success, latest_summarized_time, status = process_summaries(
         local_data_snapshot,
         last_cursor_time=last_cursor_time
     )
@@ -2144,6 +2153,12 @@ def main():
             f.write(f"updated={'true' if is_updated else 'false'}\n")
 
 
+
+    if status == "skipped":
+        return SUMMARY_SKIPPED_EXIT
+    if status == "deferred":
+        # The host persists KB and cursor before the next scheduled attempt.
+        return 1 if summary_success and not is_updated else SUMMARY_DEFERRED_EXIT
 
     if ensure_mem_mgr():
         try:
@@ -2197,4 +2212,4 @@ def main():
     logger.info("=== 任务完成 ===")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
