@@ -170,19 +170,25 @@ test('current routes start checked unless saved as disabled, with named sites an
   }finally{dom.window.close();}
 });
 
-test('per-vendor routes save named priorities and unchecking disables a route',async()=>{
-  const {dom,writes}=await page();
+test('per-vendor routes save named priorities and preserve existing disabled routes',async()=>{
+  const catalog=structuredClone(config);
+  const order=['dragon','totokens','codeyu','coderplan','official','openrouter'];
+  catalog.path_policies.gemini={order:[...order],disabled:['openrouter']};
+  const {dom,writes}=await page({catalog});
   try{
     const {document,Event}=dom.window;
-    const before=[...config.path_policies.gemini.order];
     document.querySelector('[data-route-move][data-provider="gemini"][data-index="0"][data-direction="1"]').click();
-    assert.deepEqual(config.path_policies.gemini.order,before);
-    assert.deepEqual(document.querySelector('#save').disabled,false);
+    assert.deepEqual(catalog.path_policies.gemini,{order,disabled:['openrouter']});
+    assert.equal(document.querySelector('#save').disabled,false);
     const official=document.querySelector('[data-provider="gemini"][data-route-enabled="official"]');
+    assert.equal(official.checked,true);
     official.checked=false;official.dispatchEvent(new Event('change',{bubbles:true}));
     await document.querySelector('#save').onclick();
-    assert.deepEqual(writes[0].config.path_policies.gemini.order.slice(0,2),['totokens','dragon']);
-    assert.deepEqual(writes[0].config.path_policies.gemini.disabled,['official']);
+    assert.equal(writes.length,1);
+    assert.deepEqual(writes[0].config.path_policies.gemini,{
+      order:['totokens','dragon','codeyu','coderplan','official','openrouter'],
+      disabled:['openrouter','official'],
+    });
     assert.deepEqual(validateConfig(writes[0].config),[]);
   }finally{dom.window.close();}
 });
