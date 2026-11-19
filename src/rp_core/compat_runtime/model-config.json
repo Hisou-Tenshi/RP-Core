@@ -509,7 +509,9 @@
         "official",
         "openrouter"
       ],
-      "disabled": []
+      "disabled": [
+        "openrouter"
+      ]
     },
     "gpt": {
       "order": [
