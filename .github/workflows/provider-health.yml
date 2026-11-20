@@ -25,7 +25,7 @@ jobs:
       matrix: ${{ steps.registry.outputs.matrix }}
       has_instances: ${{ steps.registry.outputs.has_instances }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - id: registry
@@ -86,7 +86,7 @@ jobs:
       RP_DATA_TOKEN: ${{ secrets.RP_INSTANCE_TOKEN || secrets.TENSHI_BOT_ACTION_TOKEN || secrets.GH_TOKEN }}
     steps:
       - name: Checkout only public RP-Core code
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
           fetch-depth: 1
@@ -106,7 +106,7 @@ jobs:
           private="$(gh api "repos/$RP_DATA_REPOSITORY" --jq .private)"
           test "$private" = true
       - name: Read only sanitized private call counters
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ env.RP_DATA_REPOSITORY }}
           token: ${{ env.RP_DATA_TOKEN }}
