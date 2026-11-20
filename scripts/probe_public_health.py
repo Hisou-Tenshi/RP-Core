@@ -29,15 +29,24 @@ VERDICTS = {
     "tcp_fail",
     "tls_fail",
     "tls_cert_invalid",
+    "tls_cert_expiring",
     "auth_denied",
     "blocked",
     "model_not_found",
+    "model_method_unsupported",
     "rate_limited",
     "quota_exhausted",
+    "key_budget_exhausted",
     "bad_request",
     "upstream_error",
     "timeout",
     "http_error",
+    "probe_endpoint_unsupported",
+    "probe_request_rejected",
+    "invalid_probe_response",
+    "empty_model_list",
+    "incomplete_model_list",
+    "unexpected_redirect",
     "unknown",
 }
 
@@ -52,8 +61,8 @@ def status(item):
         "ok": item.get("ok") if type(item.get("ok")) is bool else None,
         "verdict": verdict if verdict in VERDICTS else "unknown",
         "severity": item.get("severity")
-        if item.get("severity") in {"green", "red", "warn", "not_configured"}
-        else "warn",
+        if item.get("severity") in {"green", "red", "warn", "not_configured", "unknown"}
+        else "unknown",
         "status": number(item.get("status")),
         "latency_ms": number(item.get("latency_ms")),
     }
@@ -79,10 +88,16 @@ def sanitize(raw, instance, run_id, config_bytes):
                 "checks": {
                     key: status(value)
                     for key, value in (item.get("checks") or {}).items()
-                    if key in {"network", "auth", "model"} and isinstance(value, dict)
+                    if key in {"network", "auth", "model", "account"} and isinstance(value, dict)
                 },
                 "models": {
-                    key: status(value)
+                    key: {
+                        **status(value),
+                        "method": value["method"]
+                        if value.get("method")
+                        in {"models_list", "count_tokens", "model_detail", "none"}
+                        else None,
+                    }
                     for key, value in (item.get("models") or {}).items()
                     if key in ids and isinstance(value, dict)
                 },

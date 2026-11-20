@@ -79,21 +79,22 @@ SCHEMA_EXPECTED = 4
 HISTORY_LIMIT = 60
 MD_HISTORY_LIMIT = 12
 
-SEVERITIES = ("green", "warn", "red", "not_configured")
+SEVERITIES = ("green", "warn", "red", "unknown", "not_configured")
 SEV_SET = set(SEVERITIES)
 
 
 
 
 
-WARN_VERDICTS = {"rate_limited"}
+WARN_VERDICTS = {"rate_limited", "tls_cert_expiring", "key_budget_exhausted"}
 
-SEV_EMOJI = {"green": "✅", "warn": "⚠️", "red": "❌", "not_configured": "➖", "missing": "—"}
-SEV_SHORT = {"green": "绿", "warn": "黄", "red": "红", "not_configured": "未配置", "missing": "无数据"}
+SEV_EMOJI = {"green": "✅", "warn": "⚠️", "red": "❌", "unknown": "·", "not_configured": "➖", "missing": "—"}
+SEV_SHORT = {"green": "绿", "warn": "黄", "red": "红", "unknown": "未判定", "not_configured": "未配置", "missing": "无数据"}
 SEV_CSS = {
     "green": "sev-green",
     "warn": "sev-warn",
     "red": "sev-red",
+    "unknown": "sev-grey",
     "not_configured": "sev-grey",
     "missing": "sev-missing",
 }
@@ -102,6 +103,7 @@ SEV_FILL = {
     "green": "#2da44e",
     "warn": "#d4a72c",
     "red": "#cf222e",
+    "unknown": "#afb8c1",
     "not_configured": "#afb8c1",
     "missing": "#eaeef2",
 }
@@ -109,6 +111,7 @@ SEV_LABEL = {
     "green": "绿 · 照常调用",
     "warn": "黄 · 照常调用（不 ban）",
     "red": "红 · 运行时最外层 ban 掉",
+    "unknown": "未判定 · 照常调用",
     "not_configured": "未配置 · 跳过",
     "missing": "本次无记录",
 }
@@ -120,24 +123,34 @@ VERDICT_LABELS = {
     "tcp_fail": "❌ 连接失败",
     "tls_fail": "❌ TLS 失败",
     "tls_cert_invalid": "⚠️ 证书不受信",
+    "tls_cert_expiring": "⚠️ 证书即将到期",
     "auth_denied": "❌ key 被拒",
     "blocked": "❌ 被拦截",
     "model_not_found": "❌ 模型不可用（模型级 ban）",
+    "model_method_unsupported": "❌ 模型不支持所需接口",
     "rate_limited": "⚠️ 限流",
     "quota_exhausted": "❌ 额度问题",
+    "key_budget_exhausted": "⚠️ 密钥预算已用尽",
     "bad_request": "❌ 请求被拒",
     "upstream_error": "❌ 上游错误",
     "timeout": "❌ 超时",
     "http_error": "❌ 请求异常",
+    "probe_endpoint_unsupported": "❓ 探活端点不支持",
+    "probe_request_rejected": "❓ 探活请求被拒",
+    "invalid_probe_response": "❓ 探活响应格式异常",
+    "empty_model_list": "❓ 模型列表为空",
+    "incomplete_model_list": "❓ 模型列表未列全",
+    "unexpected_redirect": "❓ 探活端点发生重定向",
     "unknown": "❓ 未判定",
 }
 
 PROBE_METHOD_LABELS = {
-    "official_non_call": "不真实调用模型（官方非生成端点：DNS/TCP/TLS → 列模型鉴权 → 模型列表 / count tokens）",
+    "official_non_call": "不真实调用模型（官方非生成端点：DNS/TCP/TLS → 鉴权 → 模型列表 / 详情 / count tokens / 账户状态）",
 }
 MODEL_METHOD_LABELS = {
     "models_list": "模型列表",
     "count_tokens": "count tokens",
+    "model_detail": "模型详情",
     "countTokens": "count tokens",
     "none": "未校验",
 }
@@ -236,6 +249,10 @@ def path_severity(path: object) -> str:
     """整条通路的严重度。字段缺失时按 verdict / ok 推导，保证旧数据也能着色。"""
     item = _dict(path)
     explicit = _text(item.get("severity")).lower()
+    if (explicit == "green" or not explicit and item.get("ok") is True) and (
+        (_num(item.get("models_total")) or 0) > 0 and item.get("models_ok") == 0
+    ):
+        return "unknown"
     if explicit in SEV_SET:
         return explicit
     verdict = _text(item.get("verdict")).lower()
@@ -323,7 +340,7 @@ def _path_rows(provider_entry: dict) -> list[dict]:
                 "severity": path_severity(item),
                 "verdict": _text(item.get("verdict")).lower(),
                 "verdict_text": _text(item.get("verdict_text")),
-                "checks": {key: _dict(checks.get(key)) for key in ("network", "auth", "model")},
+                "checks": {key: _dict(checks.get(key)) for key in ("network", "auth", "model", "account")},
                 "model_check_method": _text(item.get("model_check_method")),
                 "status": item.get("status"),
                 "latency_ms": _num(item.get("latency_ms")),
@@ -493,7 +510,9 @@ def overall_conclusion(data: dict) -> tuple[str, str]:
     if red:
         return "❌", f"存在 {red} 条红通路（运行时在最外层 ban 掉；其余通路照常调用）"
     if warn:
-        return "⚠️", f"全部通路可用；{warn} 条标黄（照常调用，不 ban）"
+        return "⚠️", f"{warn} 条通路有告警（照常调用）"
+    if counts["unknown"]:
+        return "·", f"{counts['unknown']} 条通路尚未判定"
     if grey == total:
         return "➖", "全部通路未配置"
     return "✅", "全部通路正常（照常调用）"
@@ -505,6 +524,8 @@ def provider_conclusion(provider: dict) -> tuple[str, str]:
         return "❌", f"{counts['red']} 条红"
     if counts["warn"]:
         return "⚠️", f"{counts['warn']} 条黄"
+    if counts["unknown"]:
+        return "·", f"{counts['unknown']} 条未判定"
     if counts["green"]:
         return "✅", "全部可用"
     if provider["paths"]:
@@ -620,6 +641,8 @@ def _record_provider_cell(record: dict, provider_name: str) -> tuple[str, str]:
             return "❌", f"红 {counts['red']}"
         if counts["warn"]:
             return "⚠️", f"黄 {counts['warn']}"
+        if counts["unknown"]:
+            return "·", f"未判定 {counts['unknown']}"
         if counts["green"]:
             return "✅", "全绿"
         if provider["paths"]:
@@ -823,6 +846,7 @@ BADGE_CSS = {
     "green": "green",
     "warn": "warn",
     "red": "red",
+    "unknown": "grey",
     "not_configured": "grey",
     "missing": "grey",
     "grey": "grey",
@@ -980,6 +1004,7 @@ def _provider_section_html(provider: dict) -> str:
         _badge("green", f"绿 {counts['green']}") if counts["green"] else "",
         _badge("warn", f"黄 {counts['warn']}") if counts["warn"] else "",
         _badge("red", f"红 {counts['red']}") if counts["red"] else "",
+        _badge("grey", f"未判定 {counts['unknown']}") if counts["unknown"] else "",
         _badge("grey", f"未配置 {counts['not_configured']}") if counts["not_configured"] else "",
         '<span class="spacer"></span>',
     ]
@@ -1041,6 +1066,7 @@ def _path_detail_html(provider: dict, path: dict) -> str:
         ("网络", _check_chip("网络", checks["network"])),
         ("鉴权", _check_chip("鉴权", checks["auth"])),
         ("模型", _check_chip("模型", checks["model"])),
+        *([("账户", _check_chip("账户", checks["account"]))] if checks["account"] else []),
         ("base_url", f'<code>{esc(path["base_url"] or "（未配置）")}</code>'),
         ("key（掩码）", f'<code>{esc(path["key_masked"] or "（未配置）")}</code>'),
         ("探测模型", f'<code>{esc(path["model"] or provider["probe_model"] or "—")}</code>'),
@@ -1176,7 +1202,7 @@ def _overview_table_html(data: dict) -> str:
         )
     return (
         '<div class="table-wrap"><table class="data"><thead><tr>'
-        "<th>类别</th><th>通路数</th><th>通路状态（绿 / 黄 / 红 / 未配置）</th>"
+        "<th>类别</th><th>通路数</th><th>通路状态（绿 / 黄 / 红 / 未判定 / 未配置）</th>"
         "<th>模型覆盖</th><th>结论</th>"
         "</tr></thead><tbody>"
         + "".join(rows)
@@ -1189,6 +1215,7 @@ def _legend_html() -> str:
         ("green", "绿 · 可用", "三层检查通过（网络 / 鉴权 / 模型），运行时照常调用。"),
         ("warn", "黄 · 可用但不理想", "端点活着，只是这次探测本身不理想（瞬时限流）。不 ban，照常调用。"),
         ("red", "红 · 不可用", "通路级：整条通路被 ban（丢通路 / 传空 key）。模型矩阵格：该「通路 × 模型」组合被 ban（模型级，2026-10-29 起）。自动走下一档，不影响其它通路。"),
+        ("unknown", "灰 · 未判定", "非生成检查未得到模型可用性的结论，运行时照常调用。"),
         ("not_configured", "灰 · 未配置", "该通路没有配 key / URL，跳过，不参与判定。"),
     ]
     blocks = []
@@ -1253,7 +1280,7 @@ def render_html(data: dict, records: list[dict], notes: list[str]) -> str:
 
     footer_items = [
         "面板由 <code>scripts/build_provider_health_dashboard.py</code> 生成，纯静态自包含（无 CDN / 无外链 / 无 JS），可离线打开。",
-        "数据来自 <code>scripts/probe_provider_paths.py</code>：全程只走官方非生成端点（DNS/TCP/TLS → 列模型鉴权 → 模型列表 / count tokens），不发真实生成请求、不产生生成费用。",
+        "数据来自 <code>scripts/probe_provider_paths.py</code>：全程只走官方非生成端点（DNS/TCP/TLS → 鉴权 → 模型列表 / 详情 / count tokens / 账户状态），不发真实生成请求、不产生生成费用。",
         "fail-open：模型层拿不到结论时按「没结论」处理，不 ban；黄通路照常调用；红通路只在最外层 ban，其它通路不受影响。",
         "历史来自 <code>reports/provider_health/history.jsonl</code>，每次探活追加一行；坏行会被跳过。",
         "同一份输入的渲染结果稳定（不使用当前时间），可直接 diff。",
@@ -1367,8 +1394,8 @@ def build_markdown(data: dict, records: list[dict], notes: list[str]) -> str:
         lines.append("_暂无数据：没有读到任何 provider（JSON 缺失 / 空 providers / 旧数据格式）。_")
         lines.append("")
     else:
-        lines.append("| 类别 | 通路数 | 绿 | 黄 | 红 | 未配置 | 模型覆盖 | 结论 |")
-        lines.append("|---|---|---|---|---|---|---|---|")
+        lines.append("| 类别 | 通路数 | 绿 | 黄 | 红 | 未判定 | 未配置 | 模型覆盖 | 结论 |")
+        lines.append("|---|---|---|---|---|---|---|---|---|")
         for provider in data["providers"]:
             provider_counts = provider["counts"]
             coverage_cell = (
@@ -1380,7 +1407,7 @@ def build_markdown(data: dict, records: list[dict], notes: list[str]) -> str:
             lines.append(
                 f"| {_md_code(provider['name'])} | {len(provider['paths'])} | "
                 f"{provider_counts['green']} | {provider_counts['warn']} | "
-                f"{provider_counts['red']} | {provider_counts['not_configured']} | "
+                f"{provider_counts['red']} | {provider_counts['unknown']} | {provider_counts['not_configured']} | "
                 f"{coverage_cell} | {emoji} {_md_cell(text)} |"
             )
         coverage_total_cell = "—"
@@ -1388,7 +1415,7 @@ def build_markdown(data: dict, records: list[dict], notes: list[str]) -> str:
             coverage_total_cell = f"{data['coverage']['ok']}/{data['coverage']['total']}"
         lines.append(
             f"| **合计** | {total_paths} | {counts['green']} | {counts['warn']} | "
-            f"{counts['red']} | {counts['not_configured']} | "
+            f"{counts['red']} | {counts['unknown']} | {counts['not_configured']} | "
             f"{coverage_total_cell} | {overall_emoji} |"
         )
         lines.append("")
@@ -1406,7 +1433,7 @@ def build_markdown(data: dict, records: list[dict], notes: list[str]) -> str:
             lines.append(
                 f"### {_md_code(provider['name'])} · {emoji} {_md_cell(text)}"
                 f"（绿 {counts_p['green']} / 黄 {counts_p['warn']} / 红 {counts_p['red']}"
-                f" / 未配置 {counts_p['not_configured']}）"
+                f" / 未判定 {counts_p['unknown']} / 未配置 {counts_p['not_configured']}）"
             )
             lines.append("")
             if not provider["paths"]:

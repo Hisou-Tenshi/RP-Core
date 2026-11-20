@@ -436,7 +436,7 @@ class ProbeNonCallTest(unittest.TestCase):
             mod.classify_model_list(self._target(), {"ok": True, "status": 200, "body": miss})[0],
             "model_not_found",
         )
-        self.assertEqual(mod.classify_model_list(self._target(), {"ok": True, "status": 200, "body": "{}"})[0], "unknown")
+        self.assertEqual(mod.classify_model_list(self._target(), {"ok": True, "status": 200, "body": "{}"})[0], "invalid_probe_response")
         self.assertEqual(mod.classify_model_list(self._target(), {"ok": False, "status": 401, "body": ""})[0], "unknown")
         self.assertEqual(mod.classify_model_list(self._target(api_key=""), None)[0], "not_configured")
 
@@ -456,9 +456,14 @@ class ProbeNonCallTest(unittest.TestCase):
             )[0],
             "model_not_found",
         )
-        self.assertEqual(mod.classify_count_tokens(target, self._result(404, body="<html>404 Not Found</html>"))[0], "unknown")
-        self.assertEqual(mod.classify_count_tokens(target, self._result(400))[0], "unknown")
+        self.assertEqual(mod.classify_count_tokens(target, self._result(404, body="<html>404 Not Found</html>"))[0], "probe_endpoint_unsupported")
+        self.assertEqual(mod.classify_count_tokens(target, self._result(400))[0], "probe_request_rejected")
         self.assertEqual(mod.classify_count_tokens(target, self._result(429))[0], "rate_limited")
+        quota = self._result(429, body='{"error":{"code":"insufficient_quota"}}')
+        self.assertEqual(mod.classify_count_tokens(target, quota)[0], "quota_exhausted")
+        invalid_count = self._result(200, True, '<html>OK</html>')
+        self.assertEqual(mod.classify_count_tokens(target, invalid_count)[0], "invalid_probe_response")
+        self.assertEqual(mod.classify_count_tokens(target, self._result(504))[0], "timeout")
         self.assertEqual(mod.classify_count_tokens(target, self._result(502))[0], "upstream_error")
         self.assertEqual(mod.classify_count_tokens(target, self._result(None, error="timeout"))[0], "timeout")
 

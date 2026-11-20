@@ -120,9 +120,23 @@ def test_health_publisher_drops_credentials_urls_bodies_and_freeform_errors():
                         "key_masked": "not-for-publication",
                         "verdict_text": "upstream body and diagnostic errors",
                         "models": {
-                            model_id: {"ok": True, "verdict": "ok", "error": "sensitive details"}
+                            model_id: {
+                                "ok": None,
+                                "verdict": "probe_endpoint_unsupported",
+                                "severity": "unknown",
+                                "method": "model_detail",
+                                "error": "sensitive details",
+                            }
                         },
-                        "checks": {"auth": {"ok": True, "verdict": "ok", "body": "sensitive body"}},
+                        "checks": {
+                            "auth": {"ok": True, "verdict": "ok", "body": "sensitive body"},
+                            "account": {
+                                "ok": True,
+                                "verdict": "key_budget_exhausted",
+                                "severity": "warn",
+                                "limit_remaining": 0,
+                            },
+                        },
                     }
                 },
             }
@@ -130,11 +144,25 @@ def test_health_publisher_drops_credentials_urls_bodies_and_freeform_errors():
     }
     result = publisher.sanitize(raw, "example", "123", config)
     text = json.dumps(result)
-    for forbidden in ("sensitive", "base_url", "key_masked", "verdict_text", "upstream", "body"):
+    for forbidden in (
+        "sensitive",
+        "base_url",
+        "key_masked",
+        "verdict_text",
+        "upstream",
+        "body",
+        "limit_remaining",
+    ):
         assert forbidden not in text
     assert result["credential_source"] == "rp-core-actions:example"
     assert result["config_sha256"] == hashlib.sha256(config).hexdigest()
-    assert result["providers"]["claude"]["paths"]["Official"]["models"][model_id]["ok"] is True
+    path = result["providers"]["claude"]["paths"]["Official"]
+    assert path["checks"]["account"]["verdict"] == "key_budget_exhausted"
+    model = path["models"][model_id]
+    assert model["ok"] is None
+    assert model["verdict"] == "probe_endpoint_unsupported"
+    assert model["severity"] == "unknown"
+    assert model["method"] == "model_detail"
 
 
 def test_public_probe_reads_only_private_call_counters_without_telegram_credentials():

@@ -8,7 +8,8 @@
       "published_sha256": "0647f3a9e4ddc233cf426b2dd2dd01573464d77ed925d6438a2fe3b0af3198eb",
       "functions": 54,
       "unchanged_functions": 54,
-      "changed_functions": []
+      "changed_functions": [],
+      "reviewed_sha256": "e0b1a07dc16369d9291426f0a9910ae19709404f7edfe3fc4b3313b6c4d62f74"
     },
     {
       "path": "scripts/clean_tenshi_log.py",
@@ -33,7 +34,7 @@
       "functions": 52,
       "unchanged_functions": 52,
       "changed_functions": [],
-      "reviewed_sha256": "0dd0dae029901a1e6c042947d734a46be8283b47f52e09a4b0dc239c43caec31"
+      "reviewed_sha256": "c81d90dd7574b63cabf8bb9f8ecfb0a4dfea66c2cef757200b23565339dc780d"
     },
     {
       "path": "scripts/sticker_catalog_build.py",

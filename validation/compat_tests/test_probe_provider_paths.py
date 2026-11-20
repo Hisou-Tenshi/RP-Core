@@ -125,22 +125,24 @@ def _fake_network(*, dns_ok: bool = True):
 
 
 @contextlib.contextmanager
-def _fake_endpoints(protocol: str, auth_result: dict, count_fn=None):
-    """mock 鉴权（GET /models）与（可选）count tokens 端点。"""
-    auth = lambda target, timeout: auth_result
-    count = count_fn or (lambda target, timeout: _http_result(404, body="<html>404 Not Found</html>"))
-    with mock.patch.dict(mod.AUTH_CALLERS, {protocol: auth}):
+def _fake_endpoints(protocol: str, auth_result: dict, count_fn=None, detail_fn=None):
+    def auth(target, timeout):
+        return auth_result
+
+    def unsupported(target, timeout):
+        return _http_result(404, body="<html>404 Not Found</html>")
+
+    count = {protocol: count_fn or unsupported} if protocol in mod.COUNT_TOKEN_CALLERS else {}
+    with (
+        mock.patch.dict(mod.AUTH_CALLERS, {protocol: auth}),
+        mock.patch.dict(mod.COUNT_TOKEN_CALLERS, count),
+        mock.patch.object(mod, "get_model_detail", detail_fn or unsupported),
+    ):
+        yield
 
 
-        if protocol in mod.COUNT_TOKEN_CALLERS:
-            with mock.patch.dict(mod.COUNT_TOKEN_CALLERS, {protocol: count}):
-                yield
-        else:
-            yield
-
-
-def _probe(target: dict, auth_result: dict, count_fn=None, *, all_models: bool = True, dns_ok: bool = True) -> dict:
-    with _fake_network(dns_ok=dns_ok), _fake_endpoints(target["protocol"], auth_result, count_fn):
+def _probe(target: dict, auth_result: dict, count_fn=None, *, detail_fn=None, all_models: bool = True, dns_ok: bool = True) -> dict:
+    with _fake_network(dns_ok=dns_ok), _fake_endpoints(target["protocol"], auth_result, count_fn, detail_fn):
         return mod.probe_target(target, timeout=1.0, all_models=all_models)
 
 
@@ -456,17 +458,65 @@ class ProbeModelsTest(unittest.TestCase):
         self.assertEqual(item["models_ok"], 0, "只有 2 个模型登记在这条通路上时不能显示 7/7")
         self.assertIs(item["ok"], True, "通路级 gate 语义不变：warn 仍照常调用")
 
-    def test_all_unknown_is_fail_open(self):
-        def _count(target, timeout):
-            return _http_result(404, body="<html>404 Not Found</html>")
+    def test_unsupported_endpoints_are_gray_and_fail_open(self):
+        item = _probe(_target(self.MODELS), _http_result(404))
+        for entry in item["models"].values():
+            self.assertEqual(entry["verdict"], "probe_endpoint_unsupported")
+            self.assertIsNone(entry["ok"])
+        self.assertEqual(item["checks"]["model"]["verdict"], "probe_endpoint_unsupported")
+        self.assertEqual(item["severity"], "unknown")
+        self.assertIs(item["ok"], True)
 
-        item = _probe(_target(self.MODELS), _http_result(200, body="{}"), _count)
-        for model_id in self.MODELS:
-            entry = item["models"][model_id]
-            self.assertEqual(entry["verdict"], "unknown")
-            self.assertIsNone(entry["ok"], "unknown 不参与 ban")
-        self.assertEqual(item["checks"]["model"]["verdict"], "unknown")
-        self.assertIsNone(item["checks"]["model"]["ok"])
+    def test_paginated_catalog_and_unavailable_token_count_fall_back_to_model_detail(self):
+        first, second = self.MODELS
+
+        def detail(target, timeout):
+            self.assertEqual(target["model"], second)
+            return _http_result(200, json_body={"id": second})
+
+        item = _probe(
+            _target(self.MODELS),
+            _http_result(200, json_body={"data": [{"id": first}], "has_more": True}),
+            detail_fn=detail,
+        )
+        self.assertEqual(item["models"][second]["method"], "model_detail")
+        self.assertEqual(item["models_ok"], 2)
+
+    def test_generic_404_with_model_url_does_not_ban_the_model(self):
+        item = _probe(
+            _target(self.MODELS),
+            _http_result(404),
+            lambda target, timeout: _http_result(
+                404, json_body={"error": {"message": "not found: /v1/models/example"}}
+            ),
+        )
+        self.assertEqual(item["severity"], "unknown")
+        self.assertIs(item["ok"], True)
+
+    def test_account_checks_classify_budget_and_only_use_official_account_endpoints(self):
+        scenarios = [
+            (mod.OPENROUTER_DEFAULT_BASE, {"data": {"limit_remaining": 0}}, "key_budget_exhausted", True),
+            (mod.DEEPSEEK_DEFAULT_BASE, {"is_available": False}, "quota_exhausted", False),
+        ]
+        for base, payload, verdict, allowed in scenarios:
+            with self.subTest(base=base), mock.patch.object(mod, "http_json", return_value=_http_result(200, json_body=payload)) as request:
+                item = _probe(_target(self.MODELS, protocol="openai", base_url=base), _ok_model_list(self.MODELS))
+                self.assertEqual(item["checks"]["account"]["verdict"], verdict)
+                self.assertEqual(item["verdict"], verdict)
+                self.assertIs(item["ok"], allowed)
+                request.assert_called_once()
+
+    def test_only_native_openai_uses_input_token_count(self):
+        for base in (mod.OPENAI_DEFAULT_BASE, "https://example.invalid/v1"):
+            with self.subTest(base=base), mock.patch.object(mod, "http_json", return_value=_http_result(200, json_body={"input_tokens": 1})) as request:
+                item = _probe(_target(self.MODELS, protocol="openai", base_url=base), _http_result(404))
+                if base == mod.OPENAI_DEFAULT_BASE:
+                    self.assertEqual(item["models_ok"], len(self.MODELS))
+                    self.assertEqual(request.call_count, len(self.MODELS))
+                    self.assertTrue(all(call.args[0].endswith("/responses/input_tokens") for call in request.call_args_list))
+                else:
+                    request.assert_not_called()
+                    self.assertEqual(item["severity"], "unknown")
 
     def test_any_ok_dominates_red_models(self):
         def _count(target, timeout):
@@ -522,25 +572,27 @@ class ProbeModelsTest(unittest.TestCase):
         empty = _probe(_target(self.MODELS, api_key=""), _ok_model_list(self.MODELS))
         self.assertEqual(empty["key_masked"], "")
 
-    def test_openai_protocol_only_uses_model_list(self):
+    def test_compatible_route_preserves_catalog_miss_when_detail_endpoint_is_unsupported(self):
         target = _target(
-            ["gpt-6-luna"],
-            provider="gpt",
-            name="OpenAI",
-            protocol="openai",
-            base_url="https://api.openai.com/v1",
+            ["gpt-6-luna"], provider="gpt", protocol="openai", base_url="https://example.invalid/v1"
         )
-
-        def _count(target, timeout):
-            raise AssertionError("openai 兼容协议不该调 count tokens")
-
-
-
-        item = _probe(target, _ok_model_list(["gpt-6-luna-mini"]), _count)
+        with mock.patch.object(mod, "count_tokens_openai") as count:
+            item = _probe(target, _ok_model_list(["gpt-6-luna-mini"]))
+        count.assert_not_called()
         entry = item["models"]["gpt-6-luna"]
         self.assertEqual(entry["verdict"], "model_not_found")
         self.assertIs(entry["ok"], False)
         self.assertEqual(entry["method"], "models_list")
+
+    def test_gemini_metadata_can_confirm_model_does_not_support_chat(self):
+        model = "gemini-4-neon"
+        target = _target([model], provider="gemini", protocol="gemini")
+        result = _http_result(200, json_body={
+            "models": [{"name": f"models/{model}", "supportedGenerationMethods": ["embedContent"]}],
+        })
+        item = _probe(target, result)
+        self.assertEqual(item["verdict"], "model_method_unsupported")
+        self.assertIs(item["models"][model]["ok"], False)
 
 
 class AggregateModelsTest(unittest.TestCase):

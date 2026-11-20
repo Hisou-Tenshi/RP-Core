@@ -96,7 +96,8 @@ Qwen, OpenRouter, MagmaRouter. Routing rows and provider cards can be reordered 
 dragging (or with the ↑/↓ buttons); the drag order is saved with the public config.
 The health strips are 3px wide. Green routes keep the full bar, gold
 (partial model availability or another warning) is three-fifths height, and red
-is a quarter height. Each bar reflects its own check, not the current route state.
+is a quarter height. Gray marks inconclusive checks. Each bar reflects the
+result recorded at its timestamp.
 Call statistics aggregate one shared window of up to 500 recorded route attempts
 per instance, displayed in configured provider and route order. Previously
 discarded attempts cannot be recovered when upgrading from the per-provider window.
@@ -137,13 +138,16 @@ model configuration changes and on manual dispatch. It resolves registered insta
 GitHub Environment used by `instance.yml`, and probes using that environment's
 RP-Core secrets. It checks out the public RP-Core code and only the bounded call
 counters file from the verified private data repository. It uses a synthetic probe
-card and never obtains a Telegram token. Provider checks use
-model listing/token counting, not text/image generation. Qwen embedding is checked
-through the non-generating model endpoint too; unsupported endpoints remain unknown.
+card and uses non-generating checks. The probe checks DNS, TCP and TLS,
+then uses the model list, model details and input token counting where supported.
+It checks DeepSeek balance availability and OpenRouter key limits on their official
+endpoints. OpenRouter uses the model list filtered for the current key.
+Qwen embedding uses model metadata. Inconclusive checks allow the runtime to
+try the route.
 
 Raw responses, key prefixes, URLs, upstream bodies, headers and freeform errors stay
 in temporary runner files and are discarded. A whitelist serializer publishes only
-status, model IDs, numeric latency/status/counts, timestamp, workflow run ID, public
+status, allowlisted check methods, model IDs, numeric latency/status/counts, timestamp, workflow run ID, public
 instance identity and catalog SHA-256:
 
 ```

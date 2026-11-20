@@ -157,7 +157,7 @@ p{color:var(--muted);margin:5px 0 0;font-size:13px}
 .heading-actions{display:flex;align-items:center;gap:12px}
 
 /* ── Summary cards / health ───────────────────────────────────────────────── */
-.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:16px;margin-bottom:22px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:16px;margin-bottom:22px}
 .stat-card{position:relative;padding:19px 23px;background:var(--panel);border:1px solid var(--line);border-radius:9px}
 .stat-label{font-size:12px;color:var(--muted)}
 .stat-number{font-size:35px;font-weight:600;letter-spacing:-1px;line-height:1.5}

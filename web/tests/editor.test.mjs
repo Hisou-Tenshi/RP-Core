@@ -307,6 +307,38 @@ test('health marks partial availability in the badge and history without recolor
   }finally{dom.window.close();}
 });
 
+test('health keeps unverified models gray in legacy and current snapshots',async()=>{
+  const generated_at_utc='2026-11-16T00:00:00Z';
+  const reason='probe_endpoint_unsupported';
+  const latest={instance_id:'example',generated_at_utc,run_id:'2',providers:{claude:{paths:{
+    CoderPlan:{ok:true,verdict:reason,severity:'unknown',models_ok:0,models_total:1,latency_ms:10,
+      checks:{model:{verdict:reason,status:404}},
+      models:{'claude-opus-5-5':{ok:null,verdict:reason,status:404,method:'model_detail'}}},
+  }}}};
+  const history=[
+    {generated_at_utc:'2026-11-15T18:00:00Z',providers:{claude:{paths:{
+      CoderPlan:{ok:true,verdict:'ok',severity:'green',models_ok:0,models_total:1},
+    }}}},
+    {generated_at_utc,run_id:'2'},
+  ];
+  const {dom}=await page({healthResult:{available:true,latest,history,calls:null}});
+  try{
+    const {document}=dom.window;
+    const pill=document.querySelector('.pill');
+    assert.ok(pill.classList.contains('unknown'));
+    assert.equal(pill.textContent,'探活端点不支持');
+    assert.match(pill.title,/模型 · 探活端点不支持 · HTTP 404/);
+    assert.equal(document.querySelector('.model-state').textContent,'·');
+    assert.match(document.querySelector('.model-state').title,/HTTP 404 · 模型详情/);
+    const cells=[...document.querySelectorAll('.history-cell')];
+    assert.ok(cells.every(cell=>cell.classList.contains('unknown')));
+    assert.match(cells[0].title,/未判定$/);
+    assert.equal(document.querySelector('.stat-number.warn').textContent,'0');
+    assert.equal(document.querySelector('.stat-number.unknown').textContent,'1');
+    assert.match(document.querySelector('.provider-meta').textContent,/0 \/ 1 通路可用/);
+  }finally{dom.window.close();}
+});
+
 test('dragging a provider reorders the fallback chain and saves it',async()=>{
   const {dom,writes}=await page();
   try{

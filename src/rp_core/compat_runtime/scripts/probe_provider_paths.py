@@ -37,6 +37,10 @@ from llm_routing import (
 ANTHROPIC_VERSION = "2023-06-01"
 GEMINI_DEFAULT_BASE = "https://generativelanguage.googleapis.com"
 ANTHROPIC_DEFAULT_BASE = "https://api.anthropic.com"
+OPENAI_DEFAULT_BASE = "https://api.openai.com/v1"
+OPENROUTER_DEFAULT_BASE = "https://openrouter.ai/api/v1"
+DEEPSEEK_DEFAULT_BASE = "https://api.deepseek.com"
+TLS_EXPIRY_WARNING_DAYS = 14
 USER_AGENT = "Tenshi-provider-health/1.0"
 BODY_EXCERPT_LIMIT = 600
 
@@ -50,20 +54,39 @@ VERDICTS: dict[str, str] = {
     "tcp_fail": "❌ 连接失败",
     "tls_fail": "❌ TLS 失败",
     "tls_cert_invalid": "⚠️ 证书不受信",
+    "tls_cert_expiring": "⚠️ 证书即将到期",
     "auth_denied": "❌ key 被拒",
     "blocked": "❌ 被拦截",
+    "model_method_unsupported": "❌ 模型不支持所需接口",
     "model_not_found": "❌ 模型不可用（模型级 ban）",
     "rate_limited": "⚠️ 限流",
     "quota_exhausted": "❌ 额度问题",
+    "key_budget_exhausted": "⚠️ 密钥预算已用尽",
     "bad_request": "❌ 请求被拒",
     "upstream_error": "❌ 上游错误",
     "timeout": "❌ 超时",
     "http_error": "❌ 请求异常",
+    "probe_endpoint_unsupported": "❓ 探活端点不支持",
+    "probe_request_rejected": "❓ 探活请求被拒",
+    "invalid_probe_response": "❓ 探活响应格式异常",
+    "empty_model_list": "❓ 模型列表为空",
+    "incomplete_model_list": "❓ 模型列表未列全",
+    "unexpected_redirect": "❓ 探活端点发生重定向",
     "unknown": "❓ 未判定",
 }
 
 
-WARN_VERDICTS = {"rate_limited"}
+WARN_VERDICTS = {"rate_limited", "tls_cert_expiring", "key_budget_exhausted"}
+INCONCLUSIVE_VERDICTS = {
+    "unknown",
+    "probe_endpoint_unsupported",
+    "probe_request_rejected",
+    "invalid_probe_response",
+    "empty_model_list",
+    "incomplete_model_list",
+    "unexpected_redirect",
+}
+UNSUPPORTED_PROBE_STATUSES = {404, 405, 501}
 
 
 def severity_of(verdict: str) -> str:
@@ -71,6 +94,8 @@ def severity_of(verdict: str) -> str:
         return "green"
     if verdict == "not_configured":
         return "not_configured"
+    if verdict in INCONCLUSIVE_VERDICTS:
+        return "unknown"
     if verdict in WARN_VERDICTS:
         return "warn"
     return "red"
@@ -687,6 +712,11 @@ def probe_tls(host: str, port: int, timeout: float) -> dict:
     return out
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def http_json(url: str, *, headers: dict, payload: dict | None = None, timeout: float) -> dict:
     body = json.dumps(payload).encode("utf-8") if payload is not None else None
     req = urllib.request.Request(url, data=body, method="POST" if body is not None else "GET")
@@ -709,7 +739,7 @@ def http_json(url: str, *, headers: dict, payload: dict | None = None, timeout: 
         "error": None,
     }
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.build_opener(_NoRedirect()).open(req, timeout=timeout) as resp:
             raw = resp.read(HTTP_BODY_READ_LIMIT)
             out["status"] = resp.status
             out["ok"] = 200 <= resp.status < 300
@@ -738,19 +768,33 @@ def http_json(url: str, *, headers: dict, payload: dict | None = None, timeout: 
     return out
 
 
-def _error_message(result: dict) -> str:
+def _response_json(result: dict):
     data = result.get("json")
-    if not isinstance(data, dict):
+    if data is None:
         try:
-            data = json.loads(result.get("body") or "{}")
+            return json.loads(result.get("body") or "")
         except (ValueError, TypeError):
-            return ""
+            return None
+    return data
+
+
+def _response_error(result: dict) -> dict:
+    data = _response_json(result)
     err = data.get("error") if isinstance(data, dict) else None
     if isinstance(err, dict):
-        return str(err.get("message") or "")
-    if isinstance(err, str):
         return err
-    return ""
+    if isinstance(err, str):
+        return {"message": err}
+    return {}
+
+
+def count_tokens_openai(target: dict, timeout: float) -> dict:
+    return http_json(
+        f"{OPENAI_DEFAULT_BASE}/responses/input_tokens",
+        headers={"Authorization": f"Bearer {target['api_key']}"},
+        payload={"model": target["model"], "input": "ping"},
+        timeout=timeout,
+    )
 
 
 def count_tokens_anthropic(target: dict, timeout: float) -> dict:
@@ -803,8 +847,10 @@ def auth_gemini(target: dict, timeout: float) -> dict:
 
 
 def auth_openai_compatible(target: dict, timeout: float) -> dict:
+    base = target["base_url"]
+    endpoint = "/models/user" if base == OPENROUTER_DEFAULT_BASE else "/models"
     return http_json(
-        f"{target['base_url']}/models",
+        f"{base}{endpoint}",
         headers={"Authorization": f"Bearer {target['api_key']}"},
         timeout=timeout,
     )
@@ -817,6 +863,28 @@ AUTH_CALLERS = {
 }
 
 
+def get_model_detail(target: dict, timeout: float) -> dict:
+    model = urllib.parse.quote(target["model"], safe="")
+    base = target["base_url"]
+    if target["protocol"] == "anthropic":
+        return http_json(
+            f"{base or ANTHROPIC_DEFAULT_BASE}/v1/models/{model}",
+            headers={"x-api-key": target["api_key"], "anthropic-version": ANTHROPIC_VERSION},
+            timeout=timeout,
+        )
+    if target.get("protocol") == "gemini":
+        return http_json(
+            f"{base or GEMINI_DEFAULT_BASE}/v1beta/models/{model}",
+            headers={"x-goog-api-key": target["api_key"]},
+            timeout=timeout,
+        )
+    return http_json(
+        f"{base}/models/{model}",
+        headers={"Authorization": f"Bearer {target['api_key']}"},
+        timeout=timeout,
+    )
+
+
 def classify_network(target: dict, layers: dict) -> tuple[str, str]:
     """第一层：网络是否通。"""
     if layers.get("dns") and not layers["dns"]["ok"]:
@@ -827,6 +895,9 @@ def classify_network(target: dict, layers: dict) -> tuple[str, str]:
         if layers["tls"].get("unverified_ok"):
             return "tls_cert_invalid", f"TLS 可握手但证书不受信：{layers['tls'].get('cert_error')}"
         return "tls_fail", f"TLS 握手失败：{layers['tls'].get('error')}"
+    days_left = (layers.get("tls") or {}).get("days_left")
+    if days_left is not None and days_left < TLS_EXPIRY_WARNING_DAYS:
+        return "tls_cert_expiring", f"TLS 证书剩余约 {days_left} 天"
     return "ok", "网络可达"
 
 
@@ -836,34 +907,57 @@ def classify_auth(target: dict, result: dict | None) -> tuple[str, str]:
         return "not_configured", "未配置 key"
     if result is None:
         return "unknown", "未执行鉴权探测"
-    status = result.get("status")
-    message = _error_message(result)
-    detail = f"HTTP {status}" + (
-        f"：{message[:200]}"
-        if message
-        else (f"：{result.get('error')}" if result.get("error") else "")
-    )
     if result.get("ok"):
-        return "ok", f"鉴权通过（{detail}）"
-    if status == 404:
-        return "unknown", f"该通路未实现列模型端点（404），本次不下结论：{detail}"
-    if status in (401, 403):
+        if _extract_model_ids(_response_json(result)) is None:
+            return "invalid_probe_response", "列模型响应无法核验鉴权"
+        return "ok", f"列模型请求通过（HTTP {result.get('status')}）"
+    return _classify_probe_http_error(result, "列模型")
+
+
+def _classify_probe_http_error(
+    result: dict, endpoint: str, *, model_specific: bool = False
+) -> tuple[str, str]:
+    status = result.get("status")
+    error = _response_error(result)
+    message = str(error.get("message") or "")
+    transport_error = str(result.get("error") or "")
+    detail = f"HTTP {status}" if status is not None else "无 HTTP 响应"
+    if message or transport_error:
+        detail += f"：{(message or transport_error)[:200]}"
+    if status is not None and 300 <= status < 400:
+        return "unexpected_redirect", f"{endpoint}发生重定向：{detail}"
+    if model_specific and status in (400, 404):
+        if error.get("code") == "model_not_found" or _is_model_missing(message, status):
+            return "model_not_found", f"模型不可用：{detail}"
+    if status in UNSUPPORTED_PROBE_STATUSES:
+        return "probe_endpoint_unsupported", f"{endpoint}端点不支持：{detail}"
+    error_details = error.get("details")
+    invalid_key = (
+        isinstance(error_details, list)
+        and any(isinstance(item, dict) and item.get("reason") == "API_KEY_INVALID" for item in error_details)
+    )
+    if status in (401, 403) or (status == 400 and invalid_key):
         low = (result.get("body") or "").lower()
         if status == 403 and any(
             w in low for w in ("cloudflare", "<html", "access denied", "forbidden by", "waf")
         ):
             return "blocked", f"被代理侧 / WAF 拒绝（403）：{detail}"
         return "auth_denied", f"key 被拒（{status}）：{detail}"
+    quota_codes = ("insufficient_quota", "insufficient_balance", "billing_hard_limit_reached")
+    if status == 402 or (status in (400, 429) and any(error.get(k) in quota_codes for k in ("code", "type"))):
+        return "quota_exhausted", f"额度不足：{detail}"
     if status == 429:
-        return "rate_limited", f"限流（429）：{detail}"
-    if status in (402, 451):
-        return "quota_exhausted", f"额度 / 风控（{status}）：{detail}"
+        return "rate_limited", f"限流：{detail}"
+    if status == 451:
+        return "blocked", f"通路受访问限制：{detail}"
+    if status in (408, 504) or any(marker in transport_error.lower() for marker in ("timeout", "timed out")):
+        return "timeout", f"请求超时：{detail}"
     if status and status >= 500:
         return "upstream_error", f"上游错误（{status}）：{detail}"
-    if result.get("error") and "timeout" in str(result["error"]).lower():
-        return "timeout", f"请求超时：{detail}"
-    if result.get("error"):
-        return "http_error", f"{result['error']}：{detail}"
+    if status is not None and 400 <= status < 500:
+        return "probe_request_rejected", f"{endpoint}请求被拒：{detail}"
+    if transport_error:
+        return "http_error", detail
     return "unknown", detail
 
 
@@ -881,12 +975,14 @@ _MODEL_MISSING_MARKERS = (
 )
 
 
-def _is_model_missing(message: str, body: str) -> bool:
+def _is_model_missing(message: str, status: int) -> bool:
     """错误是「这个模型在该通路上不可用」，而不是「端点没实现」。"""
-    low = f"{message} {body}".lower()
-    if "model" not in low:
+    low = message.lower()
+    if "model" not in low or any(endpoint in low for endpoint in ("/models", "counttokens", "count_tokens")):
         return False
-    return any(marker in low for marker in _MODEL_MISSING_MARKERS)
+    return (status == 404 and low.startswith("model:")) or any(
+        marker in low for marker in _MODEL_MISSING_MARKERS
+    )
 
 
 def _extract_model_ids(payload: dict | list | str | None) -> list[str] | None:
@@ -900,21 +996,19 @@ def _extract_model_ids(payload: dict | list | str | None) -> list[str] | None:
     if not isinstance(data, dict):
         return None
     ids: list[str] = []
+    has_empty_list = False
     for key in ("data", "models"):
         raw = data.get(key)
         if not isinstance(raw, list):
             continue
+        has_empty_list |= not raw
         for item in raw:
             if not isinstance(item, dict):
                 continue
             value = item.get("id") or item.get("name")
-            if not value:
-                continue
-            value = str(value)
-            if value.startswith("models/"):
-                value = value[len("models/") :]
-            ids.append(value)
-    return ids or None
+            if isinstance(value, str) and value:
+                ids.append(value.removeprefix("models/"))
+    return ids if ids or has_empty_list else None
 
 
 def _match_model(candidates: list[str], ids: list[str]) -> str | None:
@@ -946,18 +1040,29 @@ def classify_model_list(target: dict, auth_result: dict | None) -> tuple[str, st
     if auth_result is None:
         return "unknown", "未执行鉴权探测，无法核对模型列表"
     if not auth_result.get("ok"):
+        verdict, detail = _classify_probe_http_error(auth_result, "列模型")
+        if verdict in INCONCLUSIVE_VERDICTS:
+            return verdict, detail
         return "unknown", "鉴权未通过，本次不核对模型列表（由鉴权层下结论）"
-    ids = _extract_model_ids(
-        auth_result.get("json")
-        if auth_result.get("json") is not None
-        else (auth_result.get("body") or "")
-    )
+    payload = _response_json(auth_result)
+    ids = _extract_model_ids(payload)
     if ids is None:
-        return "unknown", "该通路的列模型响应不可解析，本次不核对模型"
+        return "invalid_probe_response", "该通路的列模型响应无法读取模型 ID"
     candidates = [c for c in (target.get("model_candidates") or [target["model"]]) if c]
     hit = _match_model(candidates, ids)
     if hit:
+        if target.get("protocol") == "gemini":
+            models = payload.get("models")
+            for model in models if isinstance(models, list) else []:
+                if isinstance(model, dict) and model.get("name") in (hit, f"models/{hit}"):
+                    if _gemini_chat_unsupported(target, model):
+                        return "model_method_unsupported", "Gemini 模型元数据未列出对话生成接口"
+                    break
         return "ok", f"模型在官方模型列表里（{hit}）{_NO_GENERATIVE_CALL_NOTE}"
+    if payload.get("has_more") is True or payload.get("nextPageToken"):
+        return "incomplete_model_list", "模型列表还有后续分页，当前页未找到该模型"
+    if not ids:
+        return "empty_model_list", "该通路返回空模型列表"
     return "model_not_found", (
         f"模型不在该通路的模型列表里（探测 {candidates[0]}，列表 {len(ids)} 个）"
         f"{_NO_GENERATIVE_CALL_NOTE}；该「通路×模型」组合按红处理，运行时模型级 ban"
@@ -970,46 +1075,81 @@ def classify_count_tokens(target: dict, result: dict | None) -> tuple[str, str]:
         return "not_configured", "未配置 key"
     if result is None:
         return "unknown", "未执行 token 计数探测"
-    status = result.get("status")
-    message = _error_message(result)
-    body = result.get("body") or ""
-    detail = f"HTTP {status}" + (
-        f"：{message[:200]}"
-        if message
-        else (f"：{result.get('error')}" if result.get("error") else "")
+    if not result.get("ok"):
+        return _classify_probe_http_error(result, "token 计数", model_specific=True)
+    payload = _response_json(result)
+    field = "totalTokens" if target.get("protocol") == "gemini" else "input_tokens"
+    count = payload.get(field) if isinstance(payload, dict) else None
+    if type(count) is int and count >= 0:
+        return "ok", f"输入 token 计数通过{_NO_GENERATIVE_CALL_NOTE}"
+    return "invalid_probe_response", "token 计数返回成功状态，但没有有效的计数"
+
+
+def _gemini_chat_unsupported(target: dict, metadata: dict) -> bool:
+    methods = metadata.get("supportedGenerationMethods")
+    return (
+        target.get("protocol") == "gemini"
+        and isinstance(methods, list)
+        and all(isinstance(method, str) for method in methods)
+        and "generateContent" not in methods
     )
-    if result.get("ok"):
-        return "ok", f"官方 count tokens 通过{_NO_GENERATIVE_CALL_NOTE}"
-    if status in (401, 403):
-        low = body.lower()
-        if status == 403 and any(
-            w in low for w in ("cloudflare", "<html", "access denied", "forbidden by", "waf")
-        ):
-            return "blocked", f"被代理侧 / WAF 拒绝（403）：{detail}"
-        return "auth_denied", f"key 被拒（{status}）：{detail}"
-    if status == 404:
-        if _is_model_missing(message, body):
-            return "model_not_found", f"模型不可用（404）：{detail}"
-        return "unknown", f"该通路未实现 token 计数端点（404），本次不下结论：{detail}"
-    if status in (405, 501):
-        return "unknown", f"该通路不支持 token 计数（{status}），本次不下结论：{detail}"
-    if status == 429:
-        return "rate_limited", f"限流（429）：{detail}"
-    if status in (402, 451):
-        return "quota_exhausted", f"额度 / 风控（{status}）：{detail}"
-    if status and status >= 500:
-        return "upstream_error", f"上游错误（{status}）：{detail}"
-    if status == 400:
-        return "unknown", f"该通路不接受 token 计数请求（400），本次不下结论：{detail}"
-    if result.get("error") and "timeout" in str(result["error"]).lower():
-        return "timeout", f"请求超时：{detail}"
-    if result.get("error"):
-        return "http_error", f"{result['error']}：{detail}"
-    return "unknown", detail
+
+
+def classify_model_detail(target: dict, result: dict) -> tuple[str, str]:
+    if not result.get("ok"):
+        return _classify_probe_http_error(result, "模型详情", model_specific=True)
+    payload = _response_json(result)
+    if isinstance(payload, dict):
+        ids = [
+            value.removeprefix("models/")
+            for key in ("id", "name", "baseModelId")
+            if isinstance(value := payload.get(key), str)
+        ]
+        if _match_model([target["model"]], ids):
+            if _gemini_chat_unsupported(target, payload):
+                return "model_method_unsupported", "Gemini 模型元数据未列出对话生成接口"
+            return "ok", f"模型详情核对通过{_NO_GENERATIVE_CALL_NOTE}"
+    return "invalid_probe_response", "模型详情未返回与探测目标匹配的模型 ID"
+
+
+def probe_account(target: dict, timeout: float) -> dict | None:
+    base = target["base_url"]
+    if base == OPENROUTER_DEFAULT_BASE:
+        url = f"{base}/key"
+    elif base in (DEEPSEEK_DEFAULT_BASE, f"{DEEPSEEK_DEFAULT_BASE}/v1"):
+        url = f"{DEEPSEEK_DEFAULT_BASE}/user/balance"
+    else:
+        return None
+    result = http_json(url, headers={"Authorization": f"Bearer {target['api_key']}"}, timeout=timeout)
+    payload = _response_json(result)
+    verdict, detail = "invalid_probe_response", "账户检查响应格式异常"
+    if not result.get("ok"):
+        verdict, detail = _classify_probe_http_error(result, "账户检查")
+        # A separate read endpoint can fail even while the model API works.
+        if verdict in ("upstream_error", "timeout", "http_error", "blocked"):
+            verdict = "unknown"
+        if result.get("status") == 403:
+            verdict = "probe_request_rejected"
+    elif isinstance(payload, dict):
+        if base == OPENROUTER_DEFAULT_BASE:
+            data = payload.get("data")
+            if isinstance(data, dict) and "limit_remaining" in data:
+                remaining = data["limit_remaining"]
+                if type(remaining) in (int, float) and remaining <= 0:
+                    verdict, detail = "key_budget_exhausted", "密钥预算已用尽"
+                elif remaining is None or type(remaining) in (int, float):
+                    verdict, detail = "ok", "密钥状态检查通过"
+        else:
+            available = payload.get("is_available")
+            if available is True:
+                verdict, detail = "ok", "账户余额状态检查通过"
+            elif available is False:
+                verdict, detail = "quota_exhausted", "账户余额不足"
+    return _check(verdict, detail, status=result.get("status"), latency_ms=result.get("latency_ms"))
 
 
 def _model_method_label(method: str | None) -> str:
-    return {"models_list": "模型列表", "count_tokens": "count tokens", "none": "未校验"}.get(
+    return {"models_list": "模型列表", "count_tokens": "count tokens", "model_detail": "模型详情", "none": "未校验"}.get(
         method or "none", str(method)
     )
 
@@ -1038,7 +1178,7 @@ def _model_entry(
 def _model_available(entry: dict | None) -> bool:
     """模型是否**真正可用**（报告里的 ✅）。
 
-    注意 warn 档（model_not_found / rate_limited）的 `ok` 也是 True —— 那是给运行时
+    注意 warn 档（如 rate_limited）的 `ok` 也是 True —— 那是给运行时
     gate 用的「不 ban」语义；但统计「模型覆盖」（models_ok / 矩阵表头）时必须只算
     真正 ok 的模型，否则代理只服务 haiku 时，7 个模型里 4 个 404 也会显示 7/7。
     """
@@ -1065,7 +1205,6 @@ def _probe_model_plan(target: dict, all_models: bool) -> list[tuple[str, str]]:
 
 def _probe_one_model(
     target: dict,
-    native_model: str,
     path_model: str,
     auth_result: dict | None,
     timeout: float,
@@ -1074,32 +1213,54 @@ def _probe_one_model(
 
     先核对鉴权响应的模型列表；列表里没有该模型，再对该模型发官方 count tokens 复核
     （有些代理的列表不全 / 日期快照对不上，以 count tokens 的实际结论为准）。
-    列表响应不可解析 → count tokens；count tokens 端点也没实现 → unknown（fail-open）。
+    列表没有结论时尝试 count tokens 和模型详情，并保留未完成校验的原因。
     """
     probe_target_dict = dict(target)
     probe_target_dict["model"] = path_model
     probe_target_dict["model_candidates"] = [path_model]
 
     verdict, detail = classify_model_list(probe_target_dict, auth_result)
-    method = "models_list"
-    result: dict | None = None
-    status = (auth_result or {}).get("status")
-    latency_ms = (auth_result or {}).get("latency_ms")
+    entry = _model_entry(
+        verdict, detail, method="models_list", status=(auth_result or {}).get("status"),
+        latency_ms=(auth_result or {}).get("latency_ms"),
+    )
+    if verdict not in INCONCLUSIVE_VERDICTS and verdict != "model_not_found":
+        return entry
+    if (auth_result or {}).get("status") in (401, 402, 403, 429, 451):
+        return entry
 
-    count_caller = COUNT_TOKEN_CALLERS.get(target.get("protocol"))
-    if count_caller is not None and verdict in ("unknown", "model_not_found"):
+    count_caller = COUNT_TOKEN_CALLERS.get(target["protocol"])
+    if target["protocol"] == "openai" and target["base_url"] == OPENAI_DEFAULT_BASE:
+        count_caller = count_tokens_openai
+    if count_caller is not None:
         result = count_caller(probe_target_dict, timeout)
         count_verdict, count_detail = classify_count_tokens(probe_target_dict, result)
-        method = "count_tokens"
-        status = result.get("status")
-        latency_ms = result.get("latency_ms")
+        count_entry = _model_entry(
+            count_verdict, count_detail, method="count_tokens", status=result.get("status"),
+            latency_ms=result.get("latency_ms"),
+        )
+        if count_verdict not in INCONCLUSIVE_VERDICTS:
+            if count_verdict not in ("upstream_error", "timeout", "http_error"):
+                return count_entry
+            entry = count_entry
+        elif verdict in INCONCLUSIVE_VERDICTS and (
+            count_verdict != "probe_endpoint_unsupported" or verdict == "unknown"
+        ):
+            entry = count_entry
+    if target["base_url"] == OPENROUTER_DEFAULT_BASE:
+        return entry
 
-        if count_verdict != "unknown":
-            verdict, detail = count_verdict, count_detail
-        elif verdict == "unknown":
-            detail = count_detail
-
-    return _model_entry(verdict, detail, method=method, status=status, latency_ms=latency_ms)
+    result = get_model_detail(probe_target_dict, timeout)
+    detail_verdict, detail_text = classify_model_detail(probe_target_dict, result)
+    if detail_verdict in ("ok", "model_not_found", "model_method_unsupported") or (
+        entry["verdict"] in ("unknown", "probe_endpoint_unsupported")
+        and detail_verdict != "probe_endpoint_unsupported"
+    ):
+        return _model_entry(
+            detail_verdict, detail_text, method="model_detail", status=result.get("status"),
+            latency_ms=result.get("latency_ms"),
+        )
+    return entry
 
 
 def probe_models(
@@ -1113,7 +1274,7 @@ def probe_models(
     checks: dict[str, dict] = {}
     for native_model, path_model in _probe_model_plan(target, all_models):
         checks[native_model] = _probe_one_model(
-            target, native_model, path_model, auth_result, timeout
+            target, path_model, auth_result, timeout
         )
 
         if not all_models and checks[native_model].get("ok") is True:
@@ -1168,7 +1329,10 @@ def _aggregate_models(checks: dict[str, dict]) -> tuple[str, str]:
     reds = [e for e in entries if e.get("ok") is False]
     if reds:
         return reds[0]["verdict"], f"{len(reds)}/{total} 个模型不可用：{reds[0]['detail'][:160]}"
-    return "unknown", f"{total} 个模型均未下结论：{entries[0]['detail'][:160]}"
+    verdict = entries[0]["verdict"]
+    if verdict in INCONCLUSIVE_VERDICTS and all(e["verdict"] == verdict for e in entries):
+        return verdict, f"{total} 个模型均未下结论：{entries[0]['detail'][:160]}"
+    return "unknown", f"{total} 个模型均未下结论（原因见逐模型检查）"
 
 
 def _aggregate_model_method(checks: dict[str, dict]) -> str:
@@ -1184,7 +1348,7 @@ def _aggregate_model_method(checks: dict[str, dict]) -> str:
     )
     for group in groups:
         for entry in group:
-            if entry.get("method") in ("models_list", "count_tokens"):
+            if entry.get("method") in ("models_list", "count_tokens", "model_detail"):
                 return entry["method"]
     return "none"
 
@@ -1207,7 +1371,7 @@ def _check(
     注意 `unknown` 也算「没结论」：例如某些代理不实现「列模型」/ count tokens 端点，
     这不能说明通路坏（真实调用可能完全正常），不能因此 ban 掉。
     """
-    if verdict is None or verdict in ("unknown", "not_configured"):
+    if verdict is None or verdict == "not_configured" or verdict in INCONCLUSIVE_VERDICTS:
         ok: bool | None = None
         severity = "unknown"
     elif verdict == "ok":
@@ -1257,12 +1421,13 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
     )
     https_ok = parsed.scheme == "https"
 
-    if network_ok and target["api_key"] and https_ok:
+    tls_ok = bool(layers["tls"] and layers["tls"]["ok"])
+    if network_ok and target["api_key"] and https_ok and tls_ok:
         auth_result = AUTH_CALLERS[target["protocol"]](target, timeout)
 
     if not target["api_key"]:
         model_checks = _mark_models(target, "not_configured", "未配置 key", all_models=all_models)
-    elif not network_ok:
+    elif not network_ok or (https_ok and not tls_ok):
         model_checks = _mark_models(
             target, "unknown", "网络不可达，未做模型校验", all_models=all_models
         )
@@ -1310,6 +1475,11 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         ),
     }
 
+    if auth_result is not None and auth_result.get("status") not in (401, 403):
+        account = probe_account(target, timeout)
+        if account is not None:
+            checks["account"] = account
+
     reds = [name for name, c in checks.items() if c["ok"] is False]
     if not target["api_key"]:
         severity = "not_configured"
@@ -1327,9 +1497,11 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         verdict = checks[warnings[0]]["verdict"] if warnings else "ok"
         if warnings:
             detail = checks[warnings[0]]["verdict_text"]
+        elif mv in INCONCLUSIVE_VERDICTS:
+            severity, verdict, detail = "unknown", mv, md
         else:
             unknown = [name for name, c in checks.items() if c["ok"] is None]
-            detail = "三层检查均通过" + (
+            detail = "已完成的通路检查通过" + (
                 f"（{'、'.join(unknown)} 未下结论，按可用处理）" if unknown else ""
             )
 
@@ -1348,7 +1520,7 @@ def probe_target(target: dict, timeout: float, *, all_models: bool = True) -> di
         "key_masked": (target["api_key"][:4] + "…")
         if len(target["api_key"]) > 10
         else ("***" if target["api_key"] else ""),
-        "ok": severity in ("green", "warn"),
+        "ok": severity in ("green", "warn", "unknown"),
         "severity": severity,
         "verdict": verdict,
         "verdict_text": detail,
@@ -1419,8 +1591,12 @@ def build_markdown(context: dict, results: list[dict]) -> str:
         ok = [i for i in items if i["ok"]]
         red = [i for i in items if not i["ok"] and i["verdict"] != "not_configured"]
         configured = [i for i in items if i["verdict"] != "not_configured"]
-        if ok:
-            verdict_cell = "✅ 绿（照常调用）"
+        if any(i["severity"] == "green" for i in items):
+            verdict_cell = "✅ 有通路通过"
+        elif any(i["severity"] == "warn" for i in items):
+            verdict_cell = "⚠️ 有探活告警（照常调用）"
+        elif ok:
+            verdict_cell = "❓ 未判定（照常调用）"
         elif not configured:
             verdict_cell = "➖ 未配置（无可用 key，运行时不构建任何通路）"
         else:
@@ -1429,7 +1605,7 @@ def build_markdown(context: dict, results: list[dict]) -> str:
         models_ok = sum(
             1
             for model_id in model_ids
-            if any(_model_available((i.get("models") or {}).get(model_id)) for i in items)
+            if any(i["ok"] and _model_available((i.get("models") or {}).get(model_id)) for i in items)
         )
         lines.append(
             f"| `{provider}` | {len(ok)}/{len(items)} | {models_ok}/{len(model_ids)} | "
@@ -1455,7 +1631,7 @@ def build_markdown(context: dict, results: list[dict]) -> str:
     lines.append("")
     lines.append("| 类别 | 通路 | 代表模型 | 结论 | 网络 | 鉴权 | 模型校验 | 模型 | 延迟 | 说明 |")
     lines.append("|---|---|---|---|---|---|---|---|---|---|")
-    method_labels = {"models_list": "列表", "count_tokens": "count"}
+    method_labels = {"models_list": "列表", "count_tokens": "count", "model_detail": "详情"}
     for item in results:
         checks = item.get("checks") or {}
 
@@ -1491,7 +1667,7 @@ def build_markdown(context: dict, results: list[dict]) -> str:
         models_ok = sum(
             1
             for model_id in model_ids
-            if any(_model_available((i.get("models") or {}).get(model_id)) for i in items)
+            if any(i["ok"] and _model_available((i.get("models") or {}).get(model_id)) for i in items)
         )
         lines.append(f"### `{provider}`（模型 {models_ok}/{len(model_ids)} 可用）")
         lines.append("")
@@ -1550,7 +1726,7 @@ def write_outputs(
         }
         state = provider_model_state.setdefault(item["provider"], {})
         for model_id, model_entry in item_models.items():
-            state[model_id] = state.get(model_id, False) or _model_available(model_entry)
+            state[model_id] = state.get(model_id, False) or (item["ok"] and _model_available(model_entry))
         if item["ok"]:
             entry["enabled"] = True
 
@@ -1575,6 +1751,9 @@ def write_outputs(
                 f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "warn"
             ],
             "red": [f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "red"],
+            "unknown": [
+                f"{i['provider']}/{i['name']}" for i in results if i.get("severity") == "unknown"
+            ],
             "not_configured": [
                 f"{i['provider']}/{i['name']}" for i in results if i["verdict"] == "not_configured"
             ],
