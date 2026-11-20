@@ -1,9 +1,58 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-19T20:32:23+00:00",
+  "generated_at_utc": "2026-11-20T02:18:55+00:00",
   "window": 500,
-  "sample_size": 309,
+  "sample_size": 323,
   "providers": {
+    "gpt": {
+      "openrouter": {
+        "calls": 8,
+        "success": 7,
+        "failure": 1
+      },
+      "codeyu": {
+        "calls": 1,
+        "success": 0,
+        "failure": 1
+      },
+      "totokens": {
+        "calls": 70,
+        "success": 62,
+        "failure": 8
+      },
+      "official": {
+        "calls": 1,
+        "success": 1,
+        "failure": 0
+      }
+    },
+    "gemini": {
+      "dragon": {
+        "calls": 34,
+        "success": 23,
+        "failure": 11
+      },
+      "official": {
+        "calls": 13,
+        "success": 1,
+        "failure": 12
+      },
+      "totokens": {
+        "calls": 59,
+        "success": 54,
+        "failure": 5
+      },
+      "coderplan": {
+        "calls": 11,
+        "success": 0,
+        "failure": 11
+      },
+      "openrouter": {
+        "calls": 5,
+        "success": 4,
+        "failure": 1
+      }
+    },
     "claude": {
       "77": {
         "calls": 42,
@@ -24,50 +73,6 @@
         "calls": 4,
         "success": 2,
         "failure": 2
-      }
-    },
-    "gemini": {
-      "official": {
-        "calls": 12,
-        "success": 1,
-        "failure": 11
-      },
-      "dragon": {
-        "calls": 27,
-        "success": 17,
-        "failure": 10
-      },
-      "coderplan": {
-        "calls": 11,
-        "success": 0,
-        "failure": 11
-      },
-      "totokens": {
-        "calls": 58,
-        "success": 54,
-        "failure": 4
-      },
-      "openrouter": {
-        "calls": 5,
-        "success": 4,
-        "failure": 1
-      }
-    },
-    "gpt": {
-      "totokens": {
-        "calls": 67,
-        "success": 60,
-        "failure": 7
-      },
-      "official": {
-        "calls": 1,
-        "success": 1,
-        "failure": 0
-      },
-      "openrouter": {
-        "calls": 7,
-        "success": 6,
-        "failure": 1
       }
     }
   }
