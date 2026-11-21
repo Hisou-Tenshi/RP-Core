@@ -1,29 +1,34 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-21T02:13:37+00:00",
+  "generated_at_utc": "2026-11-21T06:35:13+00:00",
   "window": 500,
-  "sample_size": 403,
+  "sample_size": 432,
   "providers": {
     "gemini": {
       "dragon": {
-        "calls": 79,
-        "success": 58,
-        "failure": 21
-      },
-      "totokens": {
-        "calls": 69,
-        "success": 61,
-        "failure": 8
+        "calls": 90,
+        "success": 64,
+        "failure": 26
       },
       "official": {
-        "calls": 16,
-        "success": 1,
-        "failure": 15
+        "calls": 21,
+        "success": 2,
+        "failure": 19
       },
       "coderplan": {
-        "calls": 14,
+        "calls": 15,
         "success": 0,
-        "failure": 14
+        "failure": 15
+      },
+      "codeyu": {
+        "calls": 2,
+        "success": 0,
+        "failure": 2
+      },
+      "totokens": {
+        "calls": 74,
+        "success": 61,
+        "failure": 13
       },
       "openrouter": {
         "calls": 5,
@@ -31,38 +36,16 @@
         "failure": 1
       }
     },
-    "gpt": {
-      "openrouter": {
-        "calls": 11,
-        "success": 10,
-        "failure": 1
-      },
-      "codeyu": {
-        "calls": 4,
-        "success": 0,
-        "failure": 4
-      },
-      "totokens": {
-        "calls": 81,
-        "success": 72,
-        "failure": 9
-      },
-      "official": {
-        "calls": 1,
-        "success": 1,
-        "failure": 0
-      }
-    },
     "claude": {
-      "77": {
-        "calls": 44,
-        "success": 43,
-        "failure": 1
-      },
       "totokens": {
-        "calls": 37,
-        "success": 37,
+        "calls": 38,
+        "success": 38,
         "failure": 0
+      },
+      "77": {
+        "calls": 45,
+        "success": 43,
+        "failure": 2
       },
       "codeyu_prime": {
         "calls": 38,
@@ -73,6 +56,35 @@
         "calls": 4,
         "success": 2,
         "failure": 2
+      }
+    },
+    "gpt": {
+      "totokens": {
+        "calls": 83,
+        "success": 74,
+        "failure": 9
+      },
+      "openrouter": {
+        "calls": 11,
+        "success": 10,
+        "failure": 1
+      },
+      "codeyu": {
+        "calls": 4,
+        "success": 0,
+        "failure": 4
+      },
+      "official": {
+        "calls": 1,
+        "success": 1,
+        "failure": 0
+      }
+    },
+    "deepseek": {
+      "official": {
+        "calls": 1,
+        "success": 1,
+        "failure": 0
       }
     }
   }
