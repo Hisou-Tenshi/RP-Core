@@ -488,7 +488,10 @@
         "openrouter",
         "official"
       ],
-      "disabled": []
+      "disabled": [
+        "openrouter",
+        "official"
+      ]
     },
     "gemini": {
       "order": [
@@ -513,7 +516,10 @@
         "openrouter",
         "official"
       ],
-      "disabled": []
+      "disabled": [
+        "official",
+        "openrouter"
+      ]
     },
     "grok": {
       "order": [
@@ -524,7 +530,10 @@
         "openrouter",
         "official"
       ],
-      "disabled": []
+      "disabled": [
+        "openrouter",
+        "official"
+      ]
     },
     "deepseek": {
       "order": [
@@ -533,7 +542,9 @@
         "fireworks_pro",
         "openrouter"
       ],
-      "disabled": []
+      "disabled": [
+        "openrouter"
+      ]
     },
     "glm": {
       "order": [
@@ -541,7 +552,9 @@
         "dragon",
         "openrouter"
       ],
-      "disabled": []
+      "disabled": [
+        "openrouter"
+      ]
     },
     "qwen": {
       "order": [],
@@ -553,7 +566,9 @@
     },
     "openrouter": {
       "order": [],
-      "disabled": []
+      "disabled": [
+        "official"
+      ]
     },
     "kimi": {
       "order": [
