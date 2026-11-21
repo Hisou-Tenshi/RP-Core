@@ -1,13 +1,45 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-21T11:00:24+00:00",
+  "generated_at_utc": "2026-11-21T17:59:12+00:00",
   "window": 500,
-  "sample_size": 486,
+  "sample_size": 500,
   "providers": {
+    "gemini": {
+      "dragon": {
+        "calls": 157,
+        "success": 126,
+        "failure": 31
+      },
+      "official": {
+        "calls": 24,
+        "success": 2,
+        "failure": 22
+      },
+      "codeyu": {
+        "calls": 6,
+        "success": 0,
+        "failure": 6
+      },
+      "totokens": {
+        "calls": 73,
+        "success": 57,
+        "failure": 16
+      },
+      "coderplan": {
+        "calls": 14,
+        "success": 0,
+        "failure": 14
+      },
+      "openrouter": {
+        "calls": 4,
+        "success": 3,
+        "failure": 1
+      }
+    },
     "gpt": {
       "totokens": {
-        "calls": 91,
-        "success": 81,
+        "calls": 90,
+        "success": 80,
         "failure": 10
       },
       "codeyu": {
@@ -26,42 +58,10 @@
         "failure": 0
       }
     },
-    "gemini": {
-      "dragon": {
-        "calls": 114,
-        "success": 84,
-        "failure": 30
-      },
-      "official": {
-        "calls": 24,
-        "success": 2,
-        "failure": 22
-      },
-      "codeyu": {
-        "calls": 5,
-        "success": 0,
-        "failure": 5
-      },
-      "totokens": {
-        "calls": 78,
-        "success": 62,
-        "failure": 16
-      },
-      "coderplan": {
-        "calls": 15,
-        "success": 0,
-        "failure": 15
-      },
-      "openrouter": {
-        "calls": 5,
-        "success": 4,
-        "failure": 1
-      }
-    },
     "claude": {
       "totokens": {
-        "calls": 43,
-        "success": 43,
+        "calls": 39,
+        "success": 39,
         "failure": 0
       },
       "77": {
@@ -70,14 +70,9 @@
         "failure": 7
       },
       "codeyu_prime": {
-        "calls": 38,
-        "success": 38,
+        "calls": 24,
+        "success": 24,
         "failure": 0
-      },
-      "codeyu_base": {
-        "calls": 4,
-        "success": 2,
-        "failure": 2
       }
     },
     "deepseek": {
