@@ -1,13 +1,25 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-22T17:10:06+00:00",
+  "generated_at_utc": "2026-11-22T22:28:53+00:00",
   "window": 500,
   "sample_size": 500,
   "providers": {
+    "claude": {
+      "totokens": {
+        "calls": 29,
+        "success": 29,
+        "failure": 0
+      },
+      "77": {
+        "calls": 57,
+        "success": 44,
+        "failure": 13
+      }
+    },
     "gemini": {
       "totokens": {
-        "calls": 51,
-        "success": 38,
+        "calls": 43,
+        "success": 30,
         "failure": 13
       },
       "dragon": {
@@ -36,18 +48,6 @@
         "failure": 1
       }
     },
-    "claude": {
-      "totokens": {
-        "calls": 23,
-        "success": 23,
-        "failure": 0
-      },
-      "77": {
-        "calls": 51,
-        "success": 44,
-        "failure": 7
-      }
-    },
     "gpt": {
       "codeyu": {
         "calls": 17,
@@ -55,13 +55,13 @@
         "failure": 17
       },
       "totokens": {
-        "calls": 69,
-        "success": 61,
-        "failure": 8
+        "calls": 66,
+        "success": 60,
+        "failure": 6
       },
       "openrouter": {
-        "calls": 9,
-        "success": 8,
+        "calls": 8,
+        "success": 7,
         "failure": 1
       },
       "official": {
