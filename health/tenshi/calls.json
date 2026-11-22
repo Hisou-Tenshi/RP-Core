@@ -1,77 +1,72 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-22T07:59:54+00:00",
+  "generated_at_utc": "2026-11-22T17:10:06+00:00",
   "window": 500,
   "sample_size": 500,
   "providers": {
     "gemini": {
+      "totokens": {
+        "calls": 51,
+        "success": 38,
+        "failure": 13
+      },
       "dragon": {
-        "calls": 181,
-        "success": 150,
-        "failure": 31
+        "calls": 239,
+        "success": 206,
+        "failure": 33
       },
       "official": {
-        "calls": 23,
+        "calls": 21,
         "success": 2,
-        "failure": 21
+        "failure": 19
       },
       "codeyu": {
         "calls": 6,
         "success": 0,
         "failure": 6
       },
-      "totokens": {
-        "calls": 71,
-        "success": 56,
-        "failure": 15
-      },
       "coderplan": {
-        "calls": 13,
+        "calls": 11,
         "success": 0,
-        "failure": 13
+        "failure": 11
       },
       "openrouter": {
-        "calls": 3,
-        "success": 2,
-        "failure": 1
-      }
-    },
-    "gpt": {
-      "totokens": {
-        "calls": 88,
-        "success": 79,
-        "failure": 9
-      },
-      "codeyu": {
-        "calls": 5,
-        "success": 0,
-        "failure": 5
-      },
-      "openrouter": {
-        "calls": 10,
-        "success": 9,
-        "failure": 1
-      },
-      "official": {
         "calls": 1,
-        "success": 1,
-        "failure": 0
+        "success": 0,
+        "failure": 1
       }
     },
     "claude": {
       "totokens": {
-        "calls": 39,
-        "success": 39,
+        "calls": 23,
+        "success": 23,
         "failure": 0
       },
       "77": {
         "calls": 51,
         "success": 44,
         "failure": 7
+      }
+    },
+    "gpt": {
+      "codeyu": {
+        "calls": 17,
+        "success": 0,
+        "failure": 17
       },
-      "codeyu_prime": {
-        "calls": 8,
+      "totokens": {
+        "calls": 69,
+        "success": 61,
+        "failure": 8
+      },
+      "openrouter": {
+        "calls": 9,
         "success": 8,
+        "failure": 1
+      },
+      "official": {
+        "calls": 1,
+        "success": 1,
         "failure": 0
       }
     },
