@@ -1,68 +1,78 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-23T03:43:54+00:00",
+  "generated_at_utc": "2026-11-23T15:58:26+00:00",
   "window": 500,
   "sample_size": 500,
   "providers": {
     "claude": {
       "totokens": {
-        "calls": 34,
-        "success": 34,
-        "failure": 0
+        "calls": 40,
+        "success": 39,
+        "failure": 1
       },
       "77": {
-        "calls": 37,
-        "success": 23,
-        "failure": 14
+        "calls": 21,
+        "success": 3,
+        "failure": 18
+      },
+      "codeyu_prime": {
+        "calls": 1,
+        "success": 1,
+        "failure": 0
+      },
+      "dragon": {
+        "calls": 1,
+        "success": 0,
+        "failure": 1
       }
     },
     "gpt": {
-      "codeyu": {
-        "calls": 25,
+      "77": {
+        "calls": 2,
         "success": 0,
-        "failure": 25
+        "failure": 2
+      },
+      "codeyu": {
+        "calls": 26,
+        "success": 0,
+        "failure": 26
       },
       "totokens": {
-        "calls": 48,
-        "success": 44,
+        "calls": 42,
+        "success": 38,
         "failure": 4
       },
       "openrouter": {
-        "calls": 5,
-        "success": 4,
-        "failure": 1
-      },
-      "official": {
-        "calls": 1,
-        "success": 1,
+        "calls": 3,
+        "success": 3,
         "failure": 0
       }
     },
     "gemini": {
       "official": {
-        "calls": 34,
-        "success": 9,
-        "failure": 25
-      },
-      "totokens": {
-        "calls": 45,
-        "success": 18,
-        "failure": 27
-      },
-      "dragon": {
-        "calls": 249,
-        "success": 197,
-        "failure": 52
+        "calls": 33,
+        "success": 11,
+        "failure": 22
       },
       "codeyu": {
-        "calls": 11,
+        "calls": 15,
         "success": 0,
-        "failure": 11
+        "failure": 15
+      },
+      "totokens": {
+        "calls": 67,
+        "success": 34,
+        "failure": 33
+      },
+      "dragon": {
+        "calls": 247,
+        "success": 180,
+        "failure": 67
       },
       "coderplan": {
-        "calls": 10,
+        "calls": 1,
         "success": 0,
-        "failure": 10
+        "failure": 1
       }
     },
     "deepseek": {
