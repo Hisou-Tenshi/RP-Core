@@ -1,19 +1,19 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-24T15:54:31+00:00",
+  "generated_at_utc": "2026-11-25T01:26:43+00:00",
   "window": 500,
   "sample_size": 500,
   "providers": {
     "gpt": {
       "totokens": {
-        "calls": 39,
-        "success": 36,
+        "calls": 46,
+        "success": 43,
         "failure": 3
       },
       "codeyu": {
-        "calls": 17,
+        "calls": 9,
         "success": 0,
-        "failure": 17
+        "failure": 9
       },
       "77": {
         "calls": 2,
@@ -23,24 +23,24 @@
     },
     "gemini": {
       "totokens": {
-        "calls": 117,
-        "success": 64,
-        "failure": 53
+        "calls": 128,
+        "success": 70,
+        "failure": 58
       },
       "dragon": {
-        "calls": 151,
-        "success": 34,
-        "failure": 117
+        "calls": 140,
+        "success": 12,
+        "failure": 128
       },
       "official": {
-        "calls": 51,
+        "calls": 56,
         "success": 15,
-        "failure": 36
+        "failure": 41
       },
       "codeyu": {
-        "calls": 32,
+        "calls": 37,
         "success": 2,
-        "failure": 30
+        "failure": 35
       },
       "coderplan": {
         "calls": 8,
@@ -50,14 +50,14 @@
     },
     "claude": {
       "totokens": {
-        "calls": 44,
-        "success": 43,
+        "calls": 36,
+        "success": 35,
         "failure": 1
       },
       "77": {
-        "calls": 30,
+        "calls": 29,
         "success": 2,
-        "failure": 28
+        "failure": 27
       },
       "codeyu_prime": {
         "calls": 1,
