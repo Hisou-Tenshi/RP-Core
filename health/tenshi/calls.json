@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-26T15:15:39+00:00",
+  "generated_at_utc": "2026-11-26T23:53:14+00:00",
   "window": 500,
   "sample_size": 500,
   "providers": {
     "gpt": {
       "totokens": {
-        "calls": 55,
-        "success": 52,
+        "calls": 56,
+        "success": 53,
         "failure": 3
       },
       "codeyu": {
@@ -18,36 +18,41 @@
     },
     "gemini": {
       "totokens": {
-        "calls": 159,
-        "success": 116,
-        "failure": 43
+        "calls": 161,
+        "success": 120,
+        "failure": 41
       },
       "dragon": {
-        "calls": 159,
+        "calls": 161,
         "success": 0,
-        "failure": 159
-      },
-      "codeyu": {
-        "calls": 43,
-        "success": 9,
-        "failure": 34
+        "failure": 161
       },
       "official": {
-        "calls": 34,
+        "calls": 33,
         "success": 1,
-        "failure": 33
+        "failure": 32
+      },
+      "coderplan": {
+        "calls": 1,
+        "success": 0,
+        "failure": 1
+      },
+      "codeyu": {
+        "calls": 41,
+        "success": 9,
+        "failure": 32
       }
     },
     "claude": {
       "totokens": {
-        "calls": 29,
-        "success": 29,
+        "calls": 28,
+        "success": 28,
         "failure": 0
       },
       "77": {
-        "calls": 17,
+        "calls": 15,
         "success": 0,
-        "failure": 17
+        "failure": 15
       }
     },
     "deepseek": {
