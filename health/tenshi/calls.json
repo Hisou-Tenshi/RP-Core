@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-27T09:40:58+00:00",
+  "generated_at_utc": "2026-11-27T19:57:39+00:00",
   "window": 500,
   "sample_size": 500,
   "providers": {
     "claude": {
       "totokens": {
-        "calls": 36,
-        "success": 34,
+        "calls": 39,
+        "success": 37,
         "failure": 2
       },
       "dragon": {
@@ -16,26 +16,26 @@
         "failure": 0
       },
       "77": {
-        "calls": 12,
+        "calls": 8,
         "success": 0,
-        "failure": 12
+        "failure": 8
       }
     },
     "gemini": {
       "totokens": {
-        "calls": 168,
-        "success": 132,
-        "failure": 36
+        "calls": 175,
+        "success": 144,
+        "failure": 31
       },
       "dragon": {
-        "calls": 168,
+        "calls": 175,
         "success": 0,
-        "failure": 168
+        "failure": 175
       },
       "official": {
-        "calls": 28,
+        "calls": 24,
         "success": 1,
-        "failure": 27
+        "failure": 23
       },
       "coderplan": {
         "calls": 1,
@@ -43,15 +43,15 @@
         "failure": 1
       },
       "codeyu": {
-        "calls": 36,
+        "calls": 31,
         "success": 8,
-        "failure": 28
+        "failure": 23
       }
     },
     "gpt": {
       "totokens": {
-        "calls": 47,
-        "success": 45,
+        "calls": 43,
+        "success": 41,
         "failure": 2
       },
       "codeyu": {
