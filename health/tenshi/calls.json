@@ -1,13 +1,52 @@
 {
   "schema": 1,
-  "generated_at_utc": "2026-11-27T19:57:39+00:00",
+  "generated_at_utc": "2026-11-28T03:19:39+00:00",
   "window": 500,
   "sample_size": 500,
   "providers": {
+    "gpt": {
+      "totokens": {
+        "calls": 41,
+        "success": 39,
+        "failure": 2
+      },
+      "codeyu": {
+        "calls": 2,
+        "success": 0,
+        "failure": 2
+      }
+    },
+    "gemini": {
+      "totokens": {
+        "calls": 177,
+        "success": 148,
+        "failure": 29
+      },
+      "dragon": {
+        "calls": 177,
+        "success": 0,
+        "failure": 177
+      },
+      "official": {
+        "calls": 23,
+        "success": 1,
+        "failure": 22
+      },
+      "codeyu": {
+        "calls": 30,
+        "success": 7,
+        "failure": 23
+      },
+      "coderplan": {
+        "calls": 1,
+        "success": 0,
+        "failure": 1
+      }
+    },
     "claude": {
       "totokens": {
-        "calls": 39,
-        "success": 37,
+        "calls": 42,
+        "success": 40,
         "failure": 2
       },
       "dragon": {
@@ -16,48 +55,9 @@
         "failure": 0
       },
       "77": {
-        "calls": 8,
+        "calls": 5,
         "success": 0,
-        "failure": 8
-      }
-    },
-    "gemini": {
-      "totokens": {
-        "calls": 175,
-        "success": 144,
-        "failure": 31
-      },
-      "dragon": {
-        "calls": 175,
-        "success": 0,
-        "failure": 175
-      },
-      "official": {
-        "calls": 24,
-        "success": 1,
-        "failure": 23
-      },
-      "coderplan": {
-        "calls": 1,
-        "success": 0,
-        "failure": 1
-      },
-      "codeyu": {
-        "calls": 31,
-        "success": 8,
-        "failure": 23
-      }
-    },
-    "gpt": {
-      "totokens": {
-        "calls": 43,
-        "success": 41,
-        "failure": 2
-      },
-      "codeyu": {
-        "calls": 2,
-        "success": 0,
-        "failure": 2
+        "failure": 5
       }
     }
   }
